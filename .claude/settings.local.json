@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm audit *)",
+      "Bash(npm view *)",
+      "Bash(node -e \"const v=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); const stable=v.filter\\(x=>!x.includes\\('canary'\\)&&!x.includes\\('beta'\\)&&!x.includes\\('rc'\\)\\); console.log\\(stable.slice\\(-10\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(npm install *)",
+      "Bash(del *)",
+      "Bash(npx tsc *)",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const keys=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','RAZORPAY_KEY_ID','RAZORPAY_KEY_SECRET','ANTHROPIC_API_KEY']; keys.forEach\\(k=>console.log\\(k+'='+\\(process.env[k]?'SET':'MISSING'\\)\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:4000/health)",
+      "Bash(npx expo *)",
+      "Bash(cat /tmp/expo_out.log)",
+      "Bash(jobs)",
+      "Bash(curl -s http://localhost:8082/status)",
+      "Bash(curl -s \"http://localhost:8082/index.bundle?platform=android&dev=true&hot=false\" -o /tmp/bundle_out.txt)",
+      "Bash(echo \"Exit: $?\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s \"http://localhost:8082/node_modules/expo-router/entry.bundle?platform=android&dev=true&hot=false\" -o /tmp/bundle_router.txt)",
+      "Bash(pkill -f \"expo start\")",
+      "Bash(pkill -f \"metro\")",
+      "Bash(curl -s \"http://localhost:8082/node_modules/expo-router/entry.bundle?platform=android&dev=true&hot=false\" -o /tmp/bundle2.txt)",
+      "Bash(npx kill-port *)",
+      "Bash(lsof -ti:8082)",
+      "Bash(xargs kill -9)",
+      "Bash(lsof -ti:8083)",
+      "Bash(curl -s \"http://localhost:8082/node_modules/expo-router/entry.bundle?platform=android&dev=true&hot=false\" -o /tmp/bundle3.txt)",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e \"console.log\\(require\\('M:/3-1/s-box-c1/mobile/node_modules/babel-preset-expo/package.json'\\).version\\)\")",
+      "Bash(curl *)",
+      "Bash(ipconfig)",
+      "Bash(findstr /i \"IPv4\")",
+      "PowerShell(netstat *)",
+      "PowerShell(New-NetFirewallRule *)"
+    ]
+  }
+}

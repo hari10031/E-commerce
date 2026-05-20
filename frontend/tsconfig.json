@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "src/routes/**/*",
+    "src/router.tsx",
+    "src/routeTree.gen.ts",
+    "src/lib/store.tsx",
+    "src/components/layout/app-shell.tsx",
+    "src/components/shop/hero-slider.tsx",
+    "src/components/shop/product-card.tsx",
+    "src/components/ui/calendar.tsx",
+    "src/components/ui/chart.tsx"
+  ]
+}
