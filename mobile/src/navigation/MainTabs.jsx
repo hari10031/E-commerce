@@ -112,8 +112,9 @@ function CreateTabButton({ onPress }) {
   const insets = useSafeAreaInsets();
   const lift = 16 + insets.bottom;
   return (
-    <Pressable onPress={onPress} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <View
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <Pressable
+        onPress={onPress}
         style={{
           top: -lift,
           width: 58,
@@ -130,8 +131,8 @@ function CreateTabButton({ onPress }) {
         }}
       >
         <Ionicons name="add" size={32} color="#ffffff" />
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 

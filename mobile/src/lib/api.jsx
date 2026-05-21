@@ -279,7 +279,12 @@ export const getInventory = (params = {}) => {
   return apiFetch(`/analytics/inventory${query ? `?${query}` : ''}`);
 };
 export const getCategorySales = () => apiFetch('/analytics/category-sales');
-export const getEmployeePerformance = () => apiFetch('/analytics/employee-performance');
+export const getEmployeePerformance = (params = {}) => {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => v != null && qs.set(k, v));
+  const query = qs.toString();
+  return apiFetch(`/analytics/employee-performance${query ? `?${query}` : ''}`);
+};
 export const getSalesSummary = () => apiFetch('/analytics/sales-summary');
 export const getCategoryInventory = () => apiFetch('/analytics/category-inventory');
 

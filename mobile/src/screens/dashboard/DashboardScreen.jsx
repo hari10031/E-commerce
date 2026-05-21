@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, RefreshControl, Modal } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, RefreshControl, Modal, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,9 +71,19 @@ function SubCategoryDetailProducts({ subCategoryId }) {
       {products.map((p) => {
         const variants = p.variants ?? [];
         const totalQty = variants.reduce((s, v) => s + (v.quantity || 0), 0);
+        const primaryImg = (p.images ?? []).find(i => i.is_primary) || (p.images ?? [])[0];
+        const totalSold = variants.reduce((s, v) => s + (v.sold_count || 0), 0);
 
         return (
           <View key={p.id} className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 shadow-sm">
+            {primaryImg?.url && (
+              <Image
+                source={{ uri: primaryImg.url }}
+                className="w-full rounded-xl mb-3"
+                style={{ height: 120 }}
+                resizeMode="cover"
+              />
+            )}
             <View className="flex-row justify-between items-start mb-2">
               <View className="flex-1 mr-2">
                 <Text className="text-sm font-semibold text-gray-900">{p.title}</Text>
@@ -81,7 +91,7 @@ function SubCategoryDetailProducts({ subCategoryId }) {
               </View>
               <View className="items-end">
                 <Text className="text-xs font-semibold text-amber-600">{formatPrice(p.base_price)}</Text>
-                <Text className="text-[10px] text-gray-400 mt-0.5">{totalQty} in stock</Text>
+                <Text className="text-[10px] text-gray-400 mt-0.5">{totalQty} in stock · {totalSold} sold</Text>
               </View>
             </View>
 
@@ -96,9 +106,12 @@ function SubCategoryDetailProducts({ subCategoryId }) {
                         {[v.color, v.size].filter(Boolean).join(' · ')}
                       </Text>
                     </View>
-                    <Text className={`text-xs font-semibold ${v.quantity > 0 ? 'text-gray-800' : 'text-red-500'}`}>
-                      {v.quantity > 0 ? `${v.quantity} left` : 'Out of stock'}
-                    </Text>
+                    <View className="flex-row items-center">
+                      <Text className="text-[10px] text-gray-400 mr-2">{v.sold_count || 0} sold</Text>
+                      <Text className={`text-xs font-semibold ${v.quantity > 0 ? 'text-gray-800' : 'text-red-500'}`}>
+                        {v.quantity > 0 ? `${v.quantity} left` : 'Out of stock'}
+                      </Text>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -221,7 +234,7 @@ export default function DashboardScreen({ navigation }) {
     const inStock = items.filter((c) => Number(c.itemsLeft) > 0);
     return {
       ...m,
-      subCount: inStock.length,
+      subCount: items.length,
       productCount: inStock.reduce((s, c) => s + (c.productCount || 0), 0),
       variantCount: inStock.reduce((s, c) => s + (c.variantCount || 0), 0),
       itemsLeft: inStock.reduce((s, c) => s + (c.itemsLeft || 0), 0),

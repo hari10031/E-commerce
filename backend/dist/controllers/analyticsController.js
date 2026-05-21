@@ -10,7 +10,7 @@ exports.getCategorySales = getCategorySales;
 const supabase_1 = require("../supabase");
 async function getDashboardStats(_req, res) {
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const [allOrders, monthOrders, totalCount, pendingCount, lowStock, outOfStock, totalProducts, totalCustomers, totalEmployees,] = await Promise.all([
+    const [allOrders, monthOrders, totalCount, pendingCount, lowStock, outOfStock, totalProducts, totalCustomers, totalEmployees, allOffline, monthOffline,] = await Promise.all([
         supabase_1.supabase.from('orders').select('total_amount').not('status', 'eq', 'cancelled'),
         supabase_1.supabase
             .from('orders')
@@ -25,10 +25,18 @@ async function getDashboardStats(_req, res) {
         supabase_1.supabase.from('products').select('id', { count: 'exact', head: true }).eq('published', true),
         supabase_1.supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
         supabase_1.supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'employee'),
+        supabase_1.supabase.from('offline_sales').select('quantity, unit_price'),
+        supabase_1.supabase.from('offline_sales').select('quantity, unit_price').gte('created_at', monthStart),
     ]);
+    const onlineRevenue = allOrders.data?.reduce((s, o) => s + Number(o.total_amount), 0) ?? 0;
+    const onlineRevenueMonth = monthOrders.data?.reduce((s, o) => s + Number(o.total_amount), 0) ?? 0;
+    const offlineRevenue = (allOffline.data ?? []).reduce((s, o) => s + Number(o.unit_price) * Number(o.quantity), 0);
+    const offlineRevenueMonth = (monthOffline.data ?? []).reduce((s, o) => s + Number(o.unit_price) * Number(o.quantity), 0);
     res.json({
-        totalRevenue: allOrders.data?.reduce((s, o) => s + Number(o.total_amount), 0) ?? 0,
-        revenueThisMonth: monthOrders.data?.reduce((s, o) => s + Number(o.total_amount), 0) ?? 0,
+        totalRevenue: onlineRevenue + offlineRevenue,
+        revenueThisMonth: onlineRevenueMonth + offlineRevenueMonth,
+        onlineRevenue,
+        offlineRevenue,
         totalOrders: totalCount.count ?? 0,
         pendingOrders: pendingCount.count ?? 0,
         lowStockVariants: lowStock.count ?? 0,
@@ -67,10 +75,31 @@ async function getInventory(req, res) {
     res.json(filtered);
 }
 // Per-employee offline-sales performance + top performer.
-async function getEmployeePerformance(_req, res) {
-    const { data: sales, error } = await supabase_1.supabase
+async function getEmployeePerformance(req, res) {
+    const period = req.query.period;
+    let since;
+    if (period === 'today') {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        since = d.toISOString();
+    }
+    else if (period === 'week') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        since = d.toISOString();
+    }
+    else if (period === 'month') {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        since = d.toISOString();
+    }
+    let query = supabase_1.supabase
         .from('offline_sales')
-        .select('quantity, unit_price, sold_by, seller:profiles!sold_by(id, name)');
+        .select('quantity, unit_price, sold_by, created_at, seller:profiles!sold_by(id, name)');
+    if (since) {
+        query = query.gte('created_at', since);
+    }
+    const { data: sales, error } = await query;
     if (error)
         return res.status(500).json({ error: error.message });
     const map = {};

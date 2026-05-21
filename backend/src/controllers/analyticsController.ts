@@ -8,6 +8,7 @@ export async function getDashboardStats(_req: AuthRequest, res: Response) {
   const [
     allOrders, monthOrders, totalCount, pendingCount,
     lowStock, outOfStock, totalProducts, totalCustomers, totalEmployees,
+    allOffline, monthOffline,
   ] = await Promise.all([
     supabase.from('orders').select('total_amount').not('status', 'eq', 'cancelled'),
     supabase
@@ -23,11 +24,24 @@ export async function getDashboardStats(_req: AuthRequest, res: Response) {
     supabase.from('products').select('id', { count: 'exact', head: true }).eq('published', true),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'employee'),
+    supabase.from('offline_sales').select('quantity, unit_price'),
+    supabase.from('offline_sales').select('quantity, unit_price').gte('created_at', monthStart),
   ])
 
+  const onlineRevenue = allOrders.data?.reduce((s, o) => s + Number(o.total_amount), 0) ?? 0
+  const onlineRevenueMonth = monthOrders.data?.reduce((s, o) => s + Number(o.total_amount), 0) ?? 0
+  const offlineRevenue = (allOffline.data ?? []).reduce(
+    (s, o) => s + Number(o.unit_price) * Number(o.quantity), 0,
+  )
+  const offlineRevenueMonth = (monthOffline.data ?? []).reduce(
+    (s, o) => s + Number(o.unit_price) * Number(o.quantity), 0,
+  )
+
   res.json({
-    totalRevenue: allOrders.data?.reduce((s, o) => s + Number(o.total_amount), 0) ?? 0,
-    revenueThisMonth: monthOrders.data?.reduce((s, o) => s + Number(o.total_amount), 0) ?? 0,
+    totalRevenue: onlineRevenue + offlineRevenue,
+    revenueThisMonth: onlineRevenueMonth + offlineRevenueMonth,
+    onlineRevenue,
+    offlineRevenue,
     totalOrders: totalCount.count ?? 0,
     pendingOrders: pendingCount.count ?? 0,
     lowStockVariants: lowStock.count ?? 0,
@@ -69,10 +83,30 @@ export async function getInventory(req: AuthRequest, res: Response) {
 }
 
 // Per-employee offline-sales performance + top performer.
-export async function getEmployeePerformance(_req: AuthRequest, res: Response) {
-  const { data: sales, error } = await supabase
+export async function getEmployeePerformance(req: AuthRequest, res: Response) {
+  const period = req.query.period as string | undefined
+
+  let since: string | undefined
+  if (period === 'today') {
+    const d = new Date(); d.setHours(0, 0, 0, 0)
+    since = d.toISOString()
+  } else if (period === 'week') {
+    const d = new Date(); d.setDate(d.getDate() - 7)
+    since = d.toISOString()
+  } else if (period === 'month') {
+    const d = new Date(); d.setDate(d.getDate() - 30)
+    since = d.toISOString()
+  }
+
+  let query = supabase
     .from('offline_sales')
-    .select('quantity, unit_price, sold_by, seller:profiles!sold_by(id, name)')
+    .select('quantity, unit_price, sold_by, created_at, seller:profiles!sold_by(id, name)')
+
+  if (since) {
+    query = query.gte('created_at', since)
+  }
+
+  const { data: sales, error } = await query
 
   if (error) return res.status(500).json({ error: error.message })
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,12 +8,22 @@ import ScreenHeader from '../../components/ui/ScreenHeader';
 import { getSales, getCategorySales, getEmployeePerformance, getSalesSummary } from '../../lib/api';
 import { formatPrice } from '../../lib/utils';
 
-function SectionCard({ title, subtitle, children }) {
+const EMP_FILTERS = [
+  { key: null, label: 'All' },
+  { key: 'today', label: 'Today' },
+  { key: 'week', label: '7 Days' },
+  { key: 'month', label: '30 Days' },
+];
+
+function SectionCard({ title, subtitle, children, rightElement }) {
   return (
     <View className="mx-4 bg-white rounded-2xl shadow-sm mb-4 overflow-hidden">
-      <View className="px-4 pt-4 pb-3">
-        <Text className="text-base font-semibold text-gray-900">{title}</Text>
-        {subtitle && <Text className="text-xs text-gray-500 mt-0.5">{subtitle}</Text>}
+      <View className="px-4 pt-4 pb-3 flex-row items-start justify-between">
+        <View className="flex-1">
+          <Text className="text-base font-semibold text-gray-900">{title}</Text>
+          {subtitle && <Text className="text-xs text-gray-500 mt-0.5">{subtitle}</Text>}
+        </View>
+        {rightElement && <View className="ml-2">{rightElement}</View>}
       </View>
       <View className="px-4 pb-4">{children}</View>
     </View>
@@ -34,6 +44,7 @@ function RankBadge({ rank }) {
 
 export default function AnalyticsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const [empPeriod, setEmpPeriod] = useState(null);
 
   const { data: salesData, isLoading: salesLoading } = useQuery({
     queryKey: ['sales'],
@@ -48,8 +59,8 @@ export default function AnalyticsScreen({ navigation }) {
   });
 
   const { data: empPerf, isLoading: empLoading } = useQuery({
-    queryKey: ['employee-performance'],
-    queryFn: getEmployeePerformance,
+    queryKey: ['employee-performance', empPeriod],
+    queryFn: () => getEmployeePerformance(empPeriod ? { period: empPeriod } : {}),
     staleTime: 60_000,
   });
 
@@ -59,7 +70,7 @@ export default function AnalyticsScreen({ navigation }) {
     staleTime: 60_000,
   });
 
-  const isLoading = salesLoading && catLoading && empLoading && summaryLoading;
+  const isLoading = salesLoading || catLoading || empLoading || summaryLoading;
 
   const barData = (salesData ?? []).map((day) => ({
     value: day.revenue ?? 0,
@@ -67,11 +78,13 @@ export default function AnalyticsScreen({ navigation }) {
     frontColor: '#be185d',
   }));
 
+  const periodLabel = empPeriod === 'today' ? 'Today' : empPeriod === 'week' ? 'Last 7 days' : empPeriod === 'month' ? 'Last 30 days' : 'All time';
+
   return (
     <View className="flex-1 bg-gray-50">
       <ScreenHeader
         title="Analytics"
-        subtitle="Last 30 days"
+        subtitle="Sales & performance"
         navigation={navigation}
       />
 
@@ -86,6 +99,50 @@ export default function AnalyticsScreen({ navigation }) {
           contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 24 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* Revenue Overview — Online + Offline at Top */}
+          {salesSummary && (
+            <SectionCard title="Revenue Overview" subtitle="Online vs Offline">
+              <View className="mt-2 gap-3">
+                {/* Total Revenue */}
+                <View className="bg-green-50 rounded-xl p-4 flex-row items-center">
+                  <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
+                    <Ionicons name="wallet-outline" size={20} color="#16a34a" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs text-green-600 font-medium">Total Revenue</Text>
+                    <Text className="text-xl font-bold text-gray-900">{formatPrice(salesSummary.totalRevenue)}</Text>
+                  </View>
+                </View>
+
+                <View className="flex-row gap-3">
+                  {/* Online */}
+                  <View className="flex-1 bg-blue-50 rounded-xl p-4">
+                    <View className="flex-row items-center mb-2">
+                      <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center mr-2">
+                        <Ionicons name="globe-outline" size={16} color="#2563eb" />
+                      </View>
+                      <Text className="text-xs text-blue-600 font-medium">Online</Text>
+                    </View>
+                    <Text className="text-lg font-bold text-gray-900">{formatPrice(salesSummary.onlineRevenue)}</Text>
+                    <Text className="text-[10px] text-gray-500 mt-0.5">{salesSummary.onlineCount} orders</Text>
+                  </View>
+
+                  {/* Offline */}
+                  <View className="flex-1 bg-amber-50 rounded-xl p-4">
+                    <View className="flex-row items-center mb-2">
+                      <View className="w-8 h-8 bg-amber-100 rounded-full items-center justify-center mr-2">
+                        <Ionicons name="storefront-outline" size={16} color="#d97706" />
+                      </View>
+                      <Text className="text-xs text-amber-600 font-medium">Offline</Text>
+                    </View>
+                    <Text className="text-lg font-bold text-gray-900">{formatPrice(salesSummary.offlineRevenue)}</Text>
+                    <Text className="text-[10px] text-gray-500 mt-0.5">{salesSummary.offlineCount} sales</Text>
+                  </View>
+                </View>
+              </View>
+            </SectionCard>
+          )}
+
           {/* Sales Trend */}
           <SectionCard title="Daily revenue (30 days)" subtitle="Sales trend">
             {barData.length > 0 ? (
@@ -131,10 +188,32 @@ export default function AnalyticsScreen({ navigation }) {
             </SectionCard>
           )}
 
-          {/* Top Performers */}
-          {(empPerf?.employees?.length ?? 0) > 0 && (
-            <SectionCard title="Revenue by employee" subtitle="Top performers">
-              {empPerf.employees.map((emp, i) => (
+          {/* Employee Performance with Date Filters */}
+          <SectionCard title="Revenue by employee" subtitle={periodLabel}>
+            {/* Date Filter Chips */}
+            <View className="flex-row bg-gray-100 rounded-xl p-1 mb-3">
+              {EMP_FILTERS.map((f) => (
+                <Pressable
+                  key={f.label}
+                  onPress={() => setEmpPeriod(f.key)}
+                  className={`flex-1 py-2 rounded-lg items-center ${empPeriod === f.key ? 'bg-white' : ''}`}
+                  style={empPeriod === f.key ? { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 } : null}
+                >
+                  <Text
+                    className={`text-xs font-semibold ${empPeriod === f.key ? 'text-amber-600' : 'text-gray-500'}`}
+                  >
+                    {f.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {empLoading ? (
+              <View className="py-8 items-center">
+                <ActivityIndicator color="#f59e0b" />
+              </View>
+            ) : (empPerf?.employees?.length ?? 0) > 0 ? (
+              empPerf.employees.map((emp, i) => (
                 <View
                   key={emp.id}
                   className="flex-row items-center py-3 border-b border-gray-50"
@@ -146,42 +225,14 @@ export default function AnalyticsScreen({ navigation }) {
                   </View>
                   <Text className="text-sm font-bold text-gray-900">{formatPrice(emp.revenue)}</Text>
                 </View>
-              ))}
-            </SectionCard>
-          )}
-
-          {/* Sales Summary */}
-          {salesSummary && (
-            <SectionCard title="Sales Summary" subtitle="Online vs Offline">
-              <View className="mt-2 gap-3">
-                <View className="bg-blue-50 rounded-xl p-4 flex-row items-center">
-                  <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
-                    <Ionicons name="globe-outline" size={20} color="#2563eb" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-xs text-blue-600 font-medium">Online</Text>
-                    <Text className="text-lg font-bold text-gray-900">{formatPrice(salesSummary.onlineRevenue)}</Text>
-                  </View>
-                  <View className="items-end">
-                    <Text className="text-xs text-gray-500">{salesSummary.onlineCount} orders</Text>
-                  </View>
-                </View>
-
-                <View className="bg-amber-50 rounded-xl p-4 flex-row items-center">
-                  <View className="w-10 h-10 bg-amber-100 rounded-full items-center justify-center mr-3">
-                    <Ionicons name="storefront-outline" size={20} color="#d97706" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-xs text-amber-600 font-medium">Offline</Text>
-                    <Text className="text-lg font-bold text-gray-900">{formatPrice(salesSummary.offlineRevenue)}</Text>
-                  </View>
-                  <View className="items-end">
-                    <Text className="text-xs text-gray-500">{salesSummary.offlineCount} sales</Text>
-                  </View>
-                </View>
+              ))
+            ) : (
+              <View className="py-8 items-center">
+                <Ionicons name="people-outline" size={28} color="#d1d5db" />
+                <Text className="text-xs text-gray-400 mt-2">No employee sales for this period</Text>
               </View>
-            </SectionCard>
-          )}
+            )}
+          </SectionCard>
         </ScrollView>
       )}
     </View>
