@@ -7,6 +7,7 @@ import ScreenHeader from '../../components/ui/ScreenHeader';
 import { navigationRef } from '../../navigation/navigationRef';
 import { getOfflineSales } from '../../lib/api';
 import { formatPrice, formatDate } from '../../lib/utils';
+import useAuthStore from '../../store/authStore';
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -32,7 +33,7 @@ function filterStart(key) {
   return 0;
 }
 
-function SaleRow({ sale }) {
+function SaleRow({ sale, showSeller }) {
   const amount = Number(sale.unit_price) * Number(sale.quantity);
   const variantLabel = [sale.variant?.color, sale.variant?.size].filter(Boolean).join(' · ');
   return (
@@ -59,6 +60,7 @@ function SaleRow({ sale }) {
         <Text className="text-xs text-gray-600 ml-1.5" numberOfLines={1}>
           {sale.customer_name || 'Walk-in customer'}
           {sale.customer_phone ? ` · ${sale.customer_phone}` : ''}
+          {showSeller && sale.seller?.name ? ` · Sold by: ${sale.seller.name}` : ''}
         </Text>
       </View>
     </View>
@@ -68,6 +70,9 @@ function SaleRow({ sale }) {
 export default function MySalesScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState('all');
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
+
   const handleBack = () => {
     if (navigation?.canGoBack?.()) {
       navigation.goBack();
@@ -77,7 +82,7 @@ export default function MySalesScreen({ navigation }) {
   };
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['offline-sales', 'mine'],
+    queryKey: ['offline-sales', isAdmin ? 'all' : 'mine'],
     queryFn: () => getOfflineSales({ limit: 200 }),
     staleTime: 30_000,
   });
@@ -91,12 +96,12 @@ export default function MySalesScreen({ navigation }) {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <ScreenHeader title="My Sales" onBack={handleBack} />
+      <ScreenHeader title={isAdmin ? "Sales History" : "My Sales"} onBack={handleBack} />
 
       <FlatList
         data={isLoading ? [] : sales}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <SaleRow sale={item} />}
+        renderItem={({ item }) => <SaleRow sale={item} showSeller={isAdmin} />}
         contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingTop: 12 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -106,7 +111,9 @@ export default function MySalesScreen({ navigation }) {
           <View className="px-4 pb-2">
             {/* Earnings summary */}
             <View className="bg-white rounded-2xl p-5 mb-3" style={shadowStyle}>
-              <Text className="text-xs font-semibold text-gray-400 tracking-widest">MY EARNINGS</Text>
+              <Text className="text-xs font-semibold text-gray-400 tracking-widest">
+                {isAdmin ? "TOTAL REVENUE" : "MY EARNINGS"}
+              </Text>
               <Text className="text-3xl font-bold text-gray-900 mt-1">{formatPrice(earnings)}</Text>
               <Text className="text-xs text-gray-500 mt-1">
                 {sales.length} sales · {itemsSold} items sold

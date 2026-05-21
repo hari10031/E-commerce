@@ -36,16 +36,17 @@ export default function ProfileScreen({ navigation }) {
 
   const { data: salesData } = useQuery({
     queryKey: ['my-sales'],
-    queryFn: () => getOfflineSales(),
-    enabled: isEmployee,
+    queryFn: () => getOfflineSales({ limit: 200 }),
+    enabled: isPrivileged,
     staleTime: 60_000,
   });
 
-  const salesList = salesData?.data ?? salesData ?? [];
-  const totalSalesCount = Array.isArray(salesList) ? salesList.length : 0;
-  const totalRevenue = Array.isArray(salesList)
-    ? salesList.reduce((sum, s) => sum + (s.total_amount ?? s.totalAmount ?? 0), 0)
-    : 0;
+  const salesList = salesData?.data ?? [];
+  const totalSalesCount = salesList.length;
+  const totalRevenue = salesList.reduce(
+    (sum, s) => sum + Number(s.unit_price || 0) * Number(s.quantity || 0),
+    0
+  );
 
   const handleSignOut = () => {
     // Clear local auth first so the UI returns to Login immediately — the
@@ -204,11 +205,11 @@ export default function ProfileScreen({ navigation }) {
           </View>
         )}
 
-        {/* My Sales (employee only) */}
-        {isEmployee && (
+        {/* My Sales / Sales History (employee & admin only) */}
+        {isPrivileged && (
           <View className="bg-white rounded-2xl shadow-sm p-4 mb-4">
             <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              My Sales
+              {isAdmin ? 'Sales History' : 'My Sales'}
             </Text>
             <View className="flex-row">
               <View className="flex-1 items-center py-3 border-r border-gray-100">

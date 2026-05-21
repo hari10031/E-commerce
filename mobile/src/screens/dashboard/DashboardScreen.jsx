@@ -76,13 +76,18 @@ function SubCategoryDetailProducts({ subCategoryId }) {
 
         return (
           <View key={p.id} className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 shadow-sm">
-            {primaryImg?.url && (
-              <Image
-                source={{ uri: primaryImg.url }}
-                className="w-full rounded-xl mb-3"
-                style={{ height: 120 }}
-                resizeMode="cover"
-              />
+            {primaryImg?.url ? (
+              <View className="w-full bg-gray-50 rounded-xl mb-3 overflow-hidden items-center justify-center" style={{ height: 240 }}>
+                <Image
+                  source={{ uri: primaryImg.url }}
+                  className="w-full h-full"
+                  resizeMode="contain"
+                />
+              </View>
+            ) : (
+              <View className="w-full bg-gray-50 rounded-xl mb-3 items-center justify-center" style={{ height: 120 }}>
+                <Ionicons name="image-outline" size={32} color="#d1d5db" />
+              </View>
             )}
             <View className="flex-row justify-between items-start mb-2">
               <View className="flex-1 mr-2">
@@ -364,6 +369,13 @@ export default function DashboardScreen({ navigation }) {
                   bgColor="#9f1239"
                   iconColor="#fecdd3"
                   onPress={() => navigateToTab('CollectionsTab')}
+                />
+                <QuickActionCard
+                  icon="cash"
+                  label="Sales History"
+                  bgColor="#0e7490"
+                  iconColor="#cffafe"
+                  onPress={() => navigation.navigate('MySales')}
                 />
                 <QuickActionCard
                   icon="checkmark-circle"
