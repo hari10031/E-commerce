@@ -4,6 +4,7 @@ import fabric1 from "@/assets/fabric-1.jpg";
 import fabric2 from "@/assets/fabric-2.jpg";
 import storefront from "@/assets/storefront.jpg";
 import { slugify } from "./format";
+import { StaticImageData } from "next/image";
 
 export type Product = {
   id: string;
@@ -16,8 +17,8 @@ export type Product = {
   reviews: number;
   colors: string[];
   fabrics: string[];
-  image: string;
-  hoverImage: string;
+  image: StaticImageData | string;
+  hoverImage: StaticImageData | string;
   description: string;
   stock: number;
 };

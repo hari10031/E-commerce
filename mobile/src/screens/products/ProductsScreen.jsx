@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, ScrollView, TextInput,
+  View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, ScrollView, TextInput, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
@@ -15,9 +15,9 @@ const SECTION_BORDER = '#fde8d0';
 const AMBER_500 = '#f59e0b';
 
 const TYPE_CARDS = [
-  { key: 'saree', label: 'Sarees', emoji: '🥻', bgColor: '#fff1f2', textColor: '#9f1239', borderColor: '#fecdd3', icon: 'shirt-outline', iconColor: '#db2777' },
-  { key: 'dress', label: 'Dresses', emoji: '👗', bgColor: '#f5f3ff', textColor: '#5b21b6', borderColor: '#ddd6fe', icon: 'flower-outline', iconColor: '#7c3aed' },
-  { key: 'jewellery', label: 'Gold & Jewellery', emoji: '💎', bgColor: '#fffbeb', textColor: '#92400e', borderColor: '#fde68a', icon: 'diamond-outline', iconColor: '#d97706' },
+  { key: 'saree', label: 'Sarees', image: require('../../assets/saree.jpg'), bgColor: '#fff1f2', textColor: '#9f1239', borderColor: '#fecdd3', icon: 'shirt-outline', iconColor: '#db2777' },
+  { key: 'dress', label: 'Dresses', image: require('../../assets/dress.png'), bgColor: '#f5f3ff', textColor: '#5b21b6', borderColor: '#ddd6fe', icon: 'flower-outline', iconColor: '#7c3aed' },
+  { key: 'jewellery', label: 'Gold & Jewellery', image: require('../../assets/jewellery.jpg'), bgColor: '#fffbeb', textColor: '#92400e', borderColor: '#fde68a', icon: 'diamond-outline', iconColor: '#d97706' },
 ];
 
 function Divider() {
@@ -206,51 +206,38 @@ export default function ProductsScreen({ navigation, route }) {
         Browse our handpicked collections
       </Text>
       <Divider />
-      <View className="flex-row gap-4 mb-4 px-2">
-        {TYPE_CARDS.slice(0, 2).map((tc) => {
+      <View className="px-2">
+        {TYPE_CARDS.map((tc) => {
           const count = childrenOf(tc.key).length;
           return (
             <Pressable
               key={tc.key}
               onPress={() => setSelectedType(tc.key)}
-              className="flex-1 rounded-2xl overflow-hidden"
-              style={{ backgroundColor: tc.bgColor, borderWidth: 1.5, borderColor: tc.borderColor, minHeight: 180 }}
+              className="rounded-2xl overflow-hidden mb-4 shadow-sm"
+              style={{ backgroundColor: tc.bgColor, borderWidth: 1.5, borderColor: tc.borderColor }}
             >
-              <View className="flex-1 items-center justify-center p-4">
-                <Text className="text-5xl mb-3">{tc.emoji}</Text>
-                <Ionicons name={tc.icon} size={24} color={tc.iconColor} />
-                <Text className="text-base font-bold mt-2" style={{ color: tc.textColor }}>{tc.label}</Text>
-                <Text className="text-xs mt-1" style={{ color: tc.textColor + '99' }}>{count} categories</Text>
-              </View>
-              <View className="px-4 py-2.5 items-center" style={{ backgroundColor: tc.textColor + '10' }}>
-                <Text className="text-xs font-semibold" style={{ color: tc.textColor }}>
-                  Explore <Ionicons name="arrow-forward" size={10} color={tc.textColor} />
-                </Text>
+              <View className="flex-row items-center p-3">
+                <View className="w-24 h-24 rounded-xl overflow-hidden bg-white border border-gray-100 flex items-center justify-center p-1">
+                  <Image
+                    source={tc.image}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View className="flex-1 ml-4 justify-center">
+                  <View className="flex-row items-center">
+                    <Ionicons name={tc.icon} size={20} color={tc.iconColor} style={{ marginRight: 6 }} />
+                    <Text className="text-lg font-bold" style={{ color: tc.textColor }}>{tc.label}</Text>
+                  </View>
+                  <Text className="text-xs mt-1 font-medium" style={{ color: tc.textColor + 'cc' }}>{count} categories</Text>
+                </View>
+                <View className="p-2 rounded-full mr-1" style={{ backgroundColor: tc.textColor + '15' }}>
+                  <Ionicons name="chevron-forward" size={18} color={tc.textColor} />
+                </View>
               </View>
             </Pressable>
           );
         })}
-      </View>
-      <View className="items-center px-2">
-        <Pressable
-          onPress={() => setSelectedType('jewellery')}
-          className="rounded-2xl overflow-hidden"
-          style={{ width: '60%', backgroundColor: TYPE_CARDS[2].bgColor, borderWidth: 1.5, borderColor: TYPE_CARDS[2].borderColor, minHeight: 180 }}
-        >
-          <View className="flex-1 items-center justify-center p-4">
-            <Text className="text-5xl mb-3">{TYPE_CARDS[2].emoji}</Text>
-            <Ionicons name={TYPE_CARDS[2].icon} size={24} color={TYPE_CARDS[2].iconColor} />
-            <Text className="text-base font-bold mt-2" style={{ color: TYPE_CARDS[2].textColor }}>{TYPE_CARDS[2].label}</Text>
-            <Text className="text-xs mt-1" style={{ color: TYPE_CARDS[2].textColor + '99' }}>
-              {childrenOf('jewellery').length} categories
-            </Text>
-          </View>
-          <View className="px-4 py-2.5 items-center" style={{ backgroundColor: TYPE_CARDS[2].textColor + '10' }}>
-            <Text className="text-xs font-semibold" style={{ color: TYPE_CARDS[2].textColor }}>
-              Explore <Ionicons name="arrow-forward" size={10} color={TYPE_CARDS[2].textColor} />
-            </Text>
-          </View>
-        </Pressable>
       </View>
       <Divider />
       <Text className="text-center text-xs" style={{ color: '#92400e' }}>

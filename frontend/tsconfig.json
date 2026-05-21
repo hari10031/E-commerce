@@ -27,6 +27,9 @@
     "src/components/shop/hero-slider.tsx",
     "src/components/shop/product-card.tsx",
     "src/components/ui/calendar.tsx",
-    "src/components/ui/chart.tsx"
+    "src/components/ui/chart.tsx",
+    "src/server.ts",
+    "src/start.ts",
+    "vite.config.ts"
   ]
 }

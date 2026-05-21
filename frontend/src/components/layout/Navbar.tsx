@@ -54,11 +54,11 @@ export function Navbar() {
             <Link href="/products?type=saree" className="hover:text-[oklch(0.60_0.22_35)] transition-colors">
               Sarees
             </Link>
-            <Link href="/products?type=banana" className="hover:text-[oklch(0.60_0.22_35)] transition-colors">
-              Banana
+            <Link href="/products?type=dress" className="hover:text-[oklch(0.60_0.22_35)] transition-colors">
+              Dresses
             </Link>
-            <Link href="/products?type=gold" className="hover:text-[oklch(0.60_0.22_35)] transition-colors">
-              Gold
+            <Link href="/products?type=jewellery" className="hover:text-[oklch(0.60_0.22_35)] transition-colors">
+              Jewellery
             </Link>
           </nav>
 
