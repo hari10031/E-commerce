@@ -12,5 +12,6 @@ router.post('/:id/publish', auth_1.authenticate, auth_1.requireApprovedEmployee,
 router.post('/:id/unpublish', auth_1.authenticate, (0, auth_1.requireRole)('admin'), productController_1.unpublishProduct);
 router.delete('/:id', auth_1.authenticate, (0, auth_1.requireRole)('admin'), productController_1.deleteProduct);
 router.post('/:product_id/images', auth_1.authenticate, auth_1.requireApprovedEmployee, productController_1.addProductImage);
+router.delete('/:product_id/images/:image_id', auth_1.authenticate, auth_1.requireApprovedEmployee, productController_1.deleteProductImage);
 exports.default = router;
 //# sourceMappingURL=products.js.map

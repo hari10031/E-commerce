@@ -52,13 +52,22 @@ No test suite is configured in any app. Type-check with `npx tsc --noEmit` in ba
 
 ### Auth and roles
 
-- `src/supabase.ts` exports the **service-role** Supabase client. Never pass it to any client. It bypasses RLS automatically.
+- `src/supabase.ts` exports **two** clients. `supabase` is the **service-role** client — bypasses RLS, never pass it to any browser/app. `supabaseAuth` is the **anon** client — used *only* for `auth.signUp` / `auth.signInWithPassword` in `routes/auth.ts`. Critical: never call sign-in/sign-up on the `supabase` client; doing so swaps its credentials for the user session, so every later RLS-protected read returns empty.
 - `authenticate` middleware (`src/middleware/auth.ts`) validates Supabase JWTs and attaches `req.user` with `{ id, email, role, employeeStatus }`.
 - `requireRole(...roles)` blocks by role. `requireApprovedEmployee` passes admins and approved employees, rejects pending/rejected employees.
 
 ### Route → Controller pattern
 
 Thin route files in `src/routes/` wire HTTP verbs to controller functions in `src/controllers/`. Business logic lives in controllers; services (`src/services/`) hold cross-cutting concerns (storage, notifications, queue).
+
+### AI services
+
+- `services/geminiService.ts` — `generateProductImage()` calls Google Gemini ("nano-banana", model `gemini-2.5-flash-image`, override via `GEMINI_IMAGE_MODEL`) to produce a clean product image, then uploads it to storage. Exposed at `POST /api/ai/generate-image` (multer; accepts an `image` file or an `imageUrl`).
+- `POST /api/ai/generate-content` uses the Anthropic SDK for product title/description copy.
+
+### Offline sales
+
+`offline_sales` (table from migration `003`) records in-store "mark as sold" events. `salesController.ts` + `routes/sales.ts` (`/api/sales`, gated by `requireApprovedEmployee`) handle recording; the stock decrement reuses the `decrement_variant_stock` RPC. Analytics endpoints `/api/analytics/employee-performance`, `/sales-summary` (online vs offline), and `/category-inventory` aggregate across online orders + offline sales.
 
 ### Database
 
@@ -67,7 +76,11 @@ Run `supabase_schema.sql` in the Supabase SQL Editor before first start. Contain
 - `daily_sales_last_30_days()` — pre-aggregated revenue data for the analytics chart
 - `increment_coupon_usage(code)` — atomic coupon counter
 
-Copy `.env.example` → `.env`. Required vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `REDIS_URL`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `ANTHROPIC_API_KEY`.
+`supabase_schema.sql` is the single source of truth — there is no separate migrations folder. It also seeds 3 top-level "type root" categories (slugs `saree`/`dress`/`jewellery`); real categories are nested under them via `parent_id`, and the apps map a product type to its root category by slug.
+
+`product_type` enum values are `saree | dress | jewellery`. Sizes are type-driven: Saree has none (colors only), Dress is S–XXL, Jewellery is gram weights.
+
+Copy `.env.example` → `.env`. Required vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `REDIS_URL`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `ANTHROPIC_API_KEY`, `GOOGLE_GEMINI_API_KEY`.
 
 ## Customer Frontend (`/frontend`)
 
@@ -92,13 +105,13 @@ Next.js 15 App Router, Tailwind v4, Zustand, Recharts.
 
 ## Mobile (`/mobile`)
 
-Expo SDK 51, NativeWind v4 (Tailwind class names in RN), Zustand + `expo-secure-store`, `@tanstack/react-query`.
+Expo SDK 54 (React Native 0.81, React 19), NativeWind v4 (Tailwind class names in RN), Zustand + `expo-secure-store`, `@tanstack/react-query`. Source is **plain JSX** (`.jsx`, no TypeScript); entry is `index.jsx`. Run with `npm start` / `npx expo start`. Charts use `react-native-gifted-charts`.
 
 - **Auth stored securely**: Zustand `authStore` uses `createJSONStorage(() => secureStorage)` where `secureStorage` wraps `expo-secure-store`. JWT never touches `AsyncStorage`.
 - **Employee onboarding flow**: register → `/(auth)/pending` screen → polls `GET /api/auth/me` every 30 seconds until `employee_status === 'approved'`.
-- **Push tokens**: `registerPushToken(token)` in `lib/notifications.ts` runs after login. It requests permission, gets the Expo push token, and PATCHes it to `profiles.fcm_token` via `/api/auth/push-token`.
-- **Role-gated tabs**: the "Employees" tab renders only when `user.role === 'admin'`.
-- **Product wizard**: same 6-step flow as the web wizard. `expo-image-picker` provides the image URI; `uploadImage()` in `lib/api.ts` sends a `FormData` POST to `/api/upload/image`.
+- **Push tokens**: `registerPushToken(token)` in `lib/notifications.jsx` runs after login. It requests permission, gets the Expo push token, and PATCHes it to `profiles.fcm_token` via `/api/auth/push-token`.
+- **Role-gated tabs**: the "Employees" tab renders only when `user.role === 'admin'`. `navigation/MainTabs.jsx` has a raised center "+" FAB tab button that launches `ProductWizard`.
+- **Product wizard**: same 6-step flow as the web wizard. `expo-image-picker` provides the image URI; `uploadImage()` in `lib/api.jsx` sends a `FormData` POST to `/api/upload/image`.
 
 ## Do NOT use
 

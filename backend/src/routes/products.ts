@@ -9,6 +9,7 @@ import {
   unpublishProduct,
   deleteProduct,
   addProductImage,
+  deleteProductImage,
 } from '../controllers/productController'
 
 const router = Router()
@@ -22,5 +23,6 @@ router.post('/:id/publish', authenticate, requireApprovedEmployee, publishProduc
 router.post('/:id/unpublish', authenticate, requireRole('admin'), unpublishProduct)
 router.delete('/:id', authenticate, requireRole('admin'), deleteProduct)
 router.post('/:product_id/images', authenticate, requireApprovedEmployee, addProductImage)
+router.delete('/:product_id/images/:image_id', authenticate, requireApprovedEmployee, deleteProductImage)
 
 export default router

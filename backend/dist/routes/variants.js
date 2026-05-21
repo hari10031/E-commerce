@@ -36,20 +36,51 @@ router.put('/product/:productId/bulk', auth_1.authenticate, auth_1.requireApprov
     const { variants } = req.body;
     if (!Array.isArray(variants))
         return res.status(400).json({ error: 'variants must be an array' });
-    const rows = variants.map((v) => ({
-        product_id: req.params.productId,
-        color: v.color,
-        size: v.size,
-        quantity: v.quantity,
-        sku: v.sku ?? `${req.params.productId.slice(0, 6)}-${v.color}-${v.size}`.toLowerCase(),
-        image_url: v.image_url ?? null,
-    }));
+    const productId = req.params.productId;
+    // Empty string is not nullish — `??` would let `sku: ''` through, so every
+    // row would share the same conflict key. Treat blank as "generate one".
+    const skuFor = (v) => {
+        const provided = (v.sku ?? '').trim();
+        if (provided)
+            return provided;
+        return `${productId.slice(0, 6)}-${v.color}-${v.size || 'na'}`
+            .toLowerCase()
+            .replace(/\s+/g, '-');
+    };
+    // Dedupe by sku — a single ON CONFLICT upsert cannot affect a row twice.
+    const bySku = new Map();
+    for (const v of variants) {
+        const sku = skuFor(v);
+        bySku.set(sku, {
+            product_id: productId,
+            color: v.color,
+            size: v.size,
+            quantity: v.quantity,
+            sku,
+            image_url: v.image_url ?? null,
+        });
+    }
+    const rows = [...bySku.values()];
     const { data, error } = await supabase_1.supabase
         .from('variants')
         .upsert(rows, { onConflict: 'sku' })
         .select();
     if (error)
         return res.status(400).json({ error: error.message });
+    // Replace the variant set: drop rows no longer present so an edited product
+    // does not keep stale variants. Stale stock would otherwise be re-summed on
+    // the next edit and inflate the quantity each time.
+    const keepSkus = new Set(rows.map((r) => r.sku));
+    const { data: existing } = await supabase_1.supabase
+        .from('variants')
+        .select('id, sku')
+        .eq('product_id', productId);
+    const staleIds = (existing ?? [])
+        .filter((v) => !keepSkus.has(v.sku))
+        .map((v) => v.id);
+    if (staleIds.length > 0) {
+        await supabase_1.supabase.from('variants').delete().in('id', staleIds);
+    }
     res.json(data);
 });
 router.patch('/:id', auth_1.authenticate, auth_1.requireApprovedEmployee, async (req, res) => {

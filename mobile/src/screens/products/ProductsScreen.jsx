@@ -1,14 +1,12 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, ScrollView,
+  View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, ScrollView, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/authStore';
-import { getProducts } from '../../lib/api';
-import { MOCK_CATEGORIES } from '../../constants/categories';
-import { MOCK_PRODUCTS } from '../../constants/mockProducts';
+import { getProducts, getCategories, getInventory } from '../../lib/api';
 import ProductCard from '../../components/products/ProductCard';
 
 const WARM_BG = '#fffaf5';
@@ -32,15 +30,7 @@ function Divider() {
   );
 }
 
-function getProductCount(type, catId) {
-  return MOCK_PRODUCTS.filter((p) => {
-    if (p.type !== type) return false;
-    if (catId && p.category?.id !== catId) return false;
-    return true;
-  }).length;
-}
-
-export default function ProductsScreen({ navigation }) {
+export default function ProductsScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const viewMode = useAuthStore((s) => s.viewMode);
@@ -48,20 +38,100 @@ export default function ProductsScreen({ navigation }) {
   const role = viewMode === 'user' ? 'customer' : (user?.role || 'customer');
   const canAdd = role === 'admin' || role === 'employee';
 
-  const [selectedType, setSelectedType] = useState(null);
+  const [selectedType, setSelectedType] = useState(route?.params?.initialType ?? null);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  const categories = selectedType ? (MOCK_CATEGORIES[selectedType] ?? []) : [];
-  const currentTypeCard = TYPE_CARDS.find((t) => t.key === selectedType);
+  // Dashboard "Stock by Category" deep-links here with a pre-selected type.
+  useEffect(() => {
+    const t = route?.params?.initialType;
+    if (t) {
+      setSelectedType(t);
+      setSelectedCategory(null);
+    }
+  }, [route?.params?.initialType]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
+
+  // All categories — type roots + their sub-categories — fetched live.
+  const { data: categories = [], isLoading: catLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
+    staleTime: 120_000,
+  });
+
+  const { data: inventoryData = [], isLoading: invLoading } = useQuery({
+    queryKey: ['inventory', selectedType],
+    queryFn: () => getInventory({ type: selectedType }),
+    enabled: !!selectedType && canAdd,
+    staleTime: 60_000,
+  });
+
+  const roots = categories.filter((c) => !c.parent_id);
+  const rootFor = (type) => roots.find((r) => r.slug === type);
+  const childrenOf = (type) => {
+    const root = rootFor(type);
+    return root ? categories.filter((c) => c.parent_id === root.id) : [];
+  };
+  const subCats = selectedType ? childrenOf(selectedType) : [];
+
+  const categoryStats = useMemo(() => {
+    if (!Array.isArray(inventoryData)) return {};
+    const map = {};
+    for (const row of inventoryData) {
+      const qty = Number(row?.quantity ?? 0);
+      if (qty <= 0) continue;
+      const product = row?.product ?? {};
+      const cat = product?.category ?? {};
+      if (!cat.id) continue;
+      if (!map[cat.id]) {
+        map[cat.id] = {
+          id: cat.id,
+          name: cat.name ?? 'Category',
+          totalStock: 0,
+          productIds: new Set(),
+          colorTotals: {},
+        };
+      }
+      const bucket = map[cat.id];
+      bucket.totalStock += qty;
+      if (product.id) bucket.productIds.add(product.id);
+      const color = row?.color?.toString().trim();
+      if (color) {
+        bucket.colorTotals[color] = (bucket.colorTotals[color] ?? 0) + qty;
+      }
+    }
+    const normalized = {};
+    Object.values(map).forEach((b) => {
+      normalized[b.id] = {
+        id: b.id,
+        name: b.name,
+        totalStock: b.totalStock,
+        productCount: b.productIds.size,
+        colors: Object.entries(b.colorTotals).sort((a, d) => d[1] - a[1]),
+      };
+    });
+    return normalized;
+  }, [inventoryData]);
+
+  const categoryStockReady = canAdd && !invLoading;
+  const visibleSubCats = categoryStockReady
+    ? subCats.filter((cat) => (categoryStats[cat.id]?.totalStock ?? 0) > 0)
+    : subCats;
+
+  const query = searchText.trim();
+  const isSearching = searchOpen && query.length > 0;
 
   const handleBack = () => {
-    if (selectedCategory) {
-      setSelectedCategory(null);
-    } else if (selectedType) {
-      setSelectedType(null);
-    }
+    if (selectedCategory) setSelectedCategory(null);
+    else if (selectedType) setSelectedType(null);
   };
 
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchText('');
+  };
+
+  // ─── Level 3 product list ────────────────────────────────────────
   const {
     data, fetchNextPage, hasNextPage, isFetchingNextPage,
     isLoading, refetch, isRefetching, isError, error,
@@ -76,39 +146,69 @@ export default function ProductsScreen({ navigation }) {
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
     staleTime: 30_000,
-    enabled: !!selectedType && !!selectedCategory,
+    enabled: !!selectedType && !!selectedCategory && !isSearching,
   });
 
-  const apiProducts = data?.pages.flatMap((p) => p.data) ?? [];
-  const products = apiProducts.length > 0 ? apiProducts : MOCK_PRODUCTS.filter((p) => {
-    const typeMatch = p.type === selectedType;
-    const catMatch = !selectedCategory || p.category?.id === selectedCategory;
-    return typeMatch && catMatch;
+  // ─── Search results ──────────────────────────────────────────────
+  const { data: searchData, isLoading: searchLoading } = useQuery({
+    queryKey: ['product-search', query],
+    queryFn: () => getProducts({ search: query, limit: 50 }),
+    enabled: isSearching,
+    staleTime: 30_000,
   });
+
+  const products = data?.pages.flatMap((p) => p.data) ?? [];
+  const searchResults = searchData?.data ?? [];
 
   const renderProductItem = useCallback(({ item }) => (
     <View className="flex-1 p-1.5 max-w-[50%]">
       <ProductCard
         product={item}
         onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+        showStock={canAdd}
       />
     </View>
-  ), [navigation]);
+  ), [navigation, canAdd]);
 
-  // ─── Level 1: Type Selection ─────────────────────────────────────
+  const currentTypeCard = TYPE_CARDS.find((t) => t.key === selectedType);
+  const categoryName = subCats.find((c) => c.id === selectedCategory)?.name || '';
 
+  // ─── Search results view ─────────────────────────────────────────
+  const renderSearchResults = () => (
+    <FlatList
+      data={searchLoading ? [] : searchResults}
+      renderItem={renderProductItem}
+      keyExtractor={(item) => item.id}
+      numColumns={2}
+      contentContainerStyle={{ padding: 6, paddingBottom: insets.bottom + 16, flexGrow: 1 }}
+      columnWrapperStyle={searchResults.length > 0 ? { justifyContent: 'space-between' } : undefined}
+      ListHeaderComponent={searchLoading ? (
+        <View className="py-12 items-center">
+          <ActivityIndicator size="large" color={AMBER_500} />
+        </View>
+      ) : null}
+      ListEmptyComponent={!searchLoading ? (
+        <View className="flex-1 items-center justify-center py-16 px-8">
+          <Ionicons name="search-outline" size={32} color={AMBER_500} />
+          <Text className="text-base font-semibold mt-3 text-center" style={{ color: '#78350f' }}>
+            No products match “{query}”
+          </Text>
+        </View>
+      ) : null}
+      showsVerticalScrollIndicator={false}
+    />
+  );
+
+  // ─── Level 1: type selection ─────────────────────────────────────
   const renderTypeSelection = () => (
     <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 80 }} showsVerticalScrollIndicator={false}>
       <Text className="text-center text-sm mb-2" style={{ color: '#a16207' }}>
         Browse our handpicked collections
       </Text>
-
       <Divider />
-
-      {/* Top row: Sarees + Dresses */}
       <View className="flex-row gap-4 mb-4 px-2">
         {TYPE_CARDS.slice(0, 2).map((tc) => {
-          const count = getProductCount(tc.key);
+          const count = childrenOf(tc.key).length;
           return (
             <Pressable
               key={tc.key}
@@ -120,7 +220,7 @@ export default function ProductsScreen({ navigation }) {
                 <Text className="text-5xl mb-3">{tc.emoji}</Text>
                 <Ionicons name={tc.icon} size={24} color={tc.iconColor} />
                 <Text className="text-base font-bold mt-2" style={{ color: tc.textColor }}>{tc.label}</Text>
-                <Text className="text-xs mt-1" style={{ color: tc.textColor + '99' }}>{count} items</Text>
+                <Text className="text-xs mt-1" style={{ color: tc.textColor + '99' }}>{count} categories</Text>
               </View>
               <View className="px-4 py-2.5 items-center" style={{ backgroundColor: tc.textColor + '10' }}>
                 <Text className="text-xs font-semibold" style={{ color: tc.textColor }}>
@@ -131,23 +231,18 @@ export default function ProductsScreen({ navigation }) {
           );
         })}
       </View>
-
-      {/* Bottom: Gold centered */}
       <View className="items-center px-2">
         <Pressable
           onPress={() => setSelectedType('jewellery')}
           className="rounded-2xl overflow-hidden"
-          style={{
-            width: '60%', backgroundColor: TYPE_CARDS[2].bgColor,
-            borderWidth: 1.5, borderColor: TYPE_CARDS[2].borderColor, minHeight: 180,
-          }}
+          style={{ width: '60%', backgroundColor: TYPE_CARDS[2].bgColor, borderWidth: 1.5, borderColor: TYPE_CARDS[2].borderColor, minHeight: 180 }}
         >
           <View className="flex-1 items-center justify-center p-4">
             <Text className="text-5xl mb-3">{TYPE_CARDS[2].emoji}</Text>
             <Ionicons name={TYPE_CARDS[2].icon} size={24} color={TYPE_CARDS[2].iconColor} />
             <Text className="text-base font-bold mt-2" style={{ color: TYPE_CARDS[2].textColor }}>{TYPE_CARDS[2].label}</Text>
             <Text className="text-xs mt-1" style={{ color: TYPE_CARDS[2].textColor + '99' }}>
-              {getProductCount('jewellery')} items
+              {childrenOf('jewellery').length} categories
             </Text>
           </View>
           <View className="px-4 py-2.5 items-center" style={{ backgroundColor: TYPE_CARDS[2].textColor + '10' }}>
@@ -157,71 +252,101 @@ export default function ProductsScreen({ navigation }) {
           </View>
         </Pressable>
       </View>
-
       <Divider />
-
       <Text className="text-center text-xs" style={{ color: '#92400e' }}>
         Finest Indian textiles & jewellery, curated for you
       </Text>
     </ScrollView>
   );
 
-  // ─── Level 2: Subcategory Selection ──────────────────────────────
-
+  // ─── Level 2: category selection ─────────────────────────────────
   const renderCategorySelection = () => (
     <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 80 }} showsVerticalScrollIndicator={false}>
-      <Text className="text-center text-sm mb-1" style={{ color: '#a16207' }}>
-        Choose a category
-      </Text>
-
+      <Text className="text-center text-sm mb-1" style={{ color: '#a16207' }}>Choose a category</Text>
       <Divider />
 
-      <View className="flex-row flex-wrap justify-between px-1">
-        {categories.map((cat) => {
-          const count = getProductCount(selectedType, cat.id);
-          return (
+      {catLoading ? (
+        <View className="py-12 items-center">
+          <ActivityIndicator size="large" color={AMBER_500} />
+        </View>
+      ) : (
+        <View className="flex-row flex-wrap justify-between px-1">
+          {visibleSubCats.map((cat) => {
+            const stats = categoryStats[cat.id];
+            const colors = stats?.colors ?? [];
+            return (
             <Pressable
               key={cat.id}
               onPress={() => setSelectedCategory(cat.id)}
               className="mb-3 rounded-2xl overflow-hidden"
-              style={{
-                width: '48%', backgroundColor: CARD_BG,
-                borderWidth: 1.5, borderColor: SECTION_BORDER,
-              }}
+              style={{ width: '48%', backgroundColor: CARD_BG, borderWidth: 1.5, borderColor: SECTION_BORDER }}
             >
               <View className="p-4 items-center" style={{ minHeight: 100 }}>
                 <View className="w-10 h-10 rounded-full items-center justify-center mb-2" style={{ backgroundColor: currentTypeCard?.bgColor || '#fef7f0' }}>
                   <Ionicons name={currentTypeCard?.icon || 'layers'} size={18} color={currentTypeCard?.iconColor || '#d97706'} />
                 </View>
                 <Text className="text-sm font-bold text-center" style={{ color: '#78350f' }}>{cat.name}</Text>
-                <Text className="text-xs mt-1" style={{ color: '#a16207' }}>{count} items</Text>
+                {categoryStockReady && (
+                  <>
+                    <Text className="text-[10px] mt-1" style={{ color: '#a16207' }}>
+                      {stats?.productCount ?? 0} {typeLabel}
+                    </Text>
+                    <Text className="text-[10px]" style={{ color: '#a16207' }}>
+                      {stats?.totalStock ?? 0} in stock
+                    </Text>
+                  </>
+                )}
               </View>
+              {categoryStockReady && colors.length > 0 && (
+                <View className="px-3 pb-2">
+                  <View className="flex-row flex-wrap justify-center">
+                    {colors.map(([color, qty]) => (
+                      <View key={color} className="px-1.5 py-0.5 rounded-full bg-amber-50 mr-1 mb-1">
+                        <Text className="text-[9px]" style={{ color: '#b45309' }}>
+                          {color} {qty}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
               <View className="px-3 py-2 items-center" style={{ backgroundColor: '#fef7f0' }}>
                 <Text className="text-[10px] font-semibold" style={{ color: '#b45309' }}>
                   View <Ionicons name="arrow-forward" size={8} color="#b45309" />
                 </Text>
               </View>
             </Pressable>
-          );
-        })}
-      </View>
+          )})}
+        </View>
+      )}
 
-      {categories.length === 0 && (
+      {!catLoading && subCats.length === 0 && (
         <View className="items-center py-12">
           <View className="w-14 h-14 rounded-full items-center justify-center mb-3" style={{ backgroundColor: '#fef3c7' }}>
             <Ionicons name="folder-open-outline" size={28} color="#d97706" />
           </View>
           <Text className="text-sm font-semibold" style={{ color: '#78350f' }}>No categories yet</Text>
-          <Text className="text-xs mt-1" style={{ color: '#a16207' }}>Categories will appear as products are added</Text>
+          <Text className="text-xs mt-1 text-center px-8" style={{ color: '#a16207' }}>
+            {canAdd ? 'Add categories from the Categories screen.' : 'Categories will appear soon.'}
+          </Text>
+        </View>
+      )}
+
+      {categoryStockReady && subCats.length > 0 && visibleSubCats.length === 0 && (
+        <View className="items-center py-12">
+          <View className="w-14 h-14 rounded-full items-center justify-center mb-3" style={{ backgroundColor: '#fef3c7' }}>
+            <Ionicons name="cube-outline" size={28} color="#d97706" />
+          </View>
+          <Text className="text-sm font-semibold" style={{ color: '#78350f' }}>No stock available</Text>
+          <Text className="text-xs mt-1 text-center px-8" style={{ color: '#a16207' }}>
+            All categories are currently out of stock.
+          </Text>
         </View>
       )}
     </ScrollView>
   );
 
-  // ─── Level 3: Product Grid ───────────────────────────────────────
-
-  const categoryName = categories.find((c) => c.id === selectedCategory)?.name || '';
-
+  // ─── Level 3: product grid ───────────────────────────────────────
   const renderProductGrid = () => (
     <>
       {isError && !isLoading && (
@@ -257,7 +382,7 @@ export default function ProductsScreen({ navigation }) {
             </View>
             <Text className="text-base font-semibold text-center" style={{ color: '#78350f' }}>No {categoryName} yet</Text>
             <Text className="text-xs mt-2 text-center" style={{ color: '#a16207' }}>
-              {canAdd ? 'Be the first to add a product here.' : 'Check back soon for new arrivals.'}
+              {canAdd ? 'Tap + to add a product here.' : 'Check back soon for new arrivals.'}
             </Text>
           </View>
         ) : null}
@@ -269,52 +394,101 @@ export default function ProductsScreen({ navigation }) {
     </>
   );
 
-  // ─── Header ──────────────────────────────────────────────────────
-
   const level = selectedCategory ? 3 : selectedType ? 2 : 1;
   const headerTitle = level === 1 ? 'Collections' : level === 2 ? (currentTypeCard?.label || 'Category') : categoryName;
+  const categoryCount = categoryStockReady ? visibleSubCats.length : subCats.length;
+  const typeLabel =
+    selectedType === 'saree'
+      ? 'sarees'
+      : selectedType === 'dress'
+        ? 'dresses'
+        : selectedType === 'jewellery'
+          ? 'jewellery items'
+          : 'items';
 
   return (
     <View className="flex-1" style={{ backgroundColor: WARM_BG, paddingTop: insets.top }}>
       {/* Header */}
       <View className="px-4 pt-3 pb-3" style={{ backgroundColor: CARD_BG, borderBottomWidth: 1, borderBottomColor: SECTION_BORDER }}>
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1">
-            {level > 1 && (
-              <Pressable onPress={handleBack} className="w-9 h-9 rounded-full items-center justify-center mr-2" style={{ backgroundColor: '#fef2f2' }}>
-                <Ionicons name="arrow-back" size={20} color="#b91c1c" />
-              </Pressable>
-            )}
-            <View className="flex-1">
-              <Text className="text-xl font-bold" style={{ color: '#78350f' }}>{headerTitle}</Text>
+        {searchOpen ? (
+          <View className="flex-row items-center">
+            <View className="flex-1 flex-row items-center rounded-xl px-3 py-2" style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER }}>
+              <Ionicons name="search" size={18} color="#92400e" />
+              <TextInput
+                className="flex-1 ml-2 text-base"
+                style={{ color: '#1f2937' }}
+                placeholder="Search all products…"
+                placeholderTextColor="#a16207"
+                value={searchText}
+                onChangeText={setSearchText}
+                autoFocus
+              />
+              {searchText.length > 0 && (
+                <Pressable onPress={() => setSearchText('')}>
+                  <Ionicons name="close-circle" size={18} color="#a16207" />
+                </Pressable>
+              )}
+            </View>
+            <Pressable onPress={closeSearch} className="ml-2 px-2 py-1">
+              <Text className="text-sm font-semibold" style={{ color: '#b91c1c' }}>Cancel</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1">
               {level > 1 && (
-                <Text className="text-xs" style={{ color: '#a16207' }}>
-                  {level === 2 ? `${categories.length} categories` : `${products.length} products`}
-                </Text>
+                <Pressable onPress={handleBack} className="w-9 h-9 rounded-full items-center justify-center mr-2" style={{ backgroundColor: '#fef2f2' }}>
+                  <Ionicons name="arrow-back" size={20} color="#b91c1c" />
+                </Pressable>
+              )}
+              <View className="flex-1">
+                <Text className="text-xl font-bold" style={{ color: '#78350f' }}>{headerTitle}</Text>
+        {level > 1 && (
+          <Text className="text-xs" style={{ color: '#a16207' }}>
+            {level === 2 ? `${categoryCount} categories` : `${products.length} products`}
+          </Text>
+        )}
+              </View>
+            </View>
+            <View className="flex-row items-center">
+              <Pressable
+                onPress={() => setSearchOpen(true)}
+                className="w-9 h-9 rounded-full items-center justify-center"
+                style={{ backgroundColor: '#fef7f0' }}
+              >
+                <Ionicons name="search" size={18} color="#92400e" />
+              </Pressable>
+              {canAdd && level === 3 && (
+                <Pressable
+                  onPress={() => navigation.navigate('ProductWizard', { mode: 'create', type: selectedType })}
+                  className="w-9 h-9 rounded-full items-center justify-center ml-2"
+                  style={{ backgroundColor: AMBER_500 }}
+                >
+                  <Ionicons name="add" size={20} color="#ffffff" />
+                </Pressable>
               )}
             </View>
           </View>
-          <View className="flex-row items-center">
-            <Pressable className="w-9 h-9 rounded-full items-center justify-center" style={{ backgroundColor: '#fef7f0' }}>
-              <Ionicons name="search" size={18} color="#92400e" />
-            </Pressable>
-            {canAdd && level === 3 && (
-              <Pressable
-                onPress={() => navigation.navigate('ProductWizard', { mode: 'create', type: selectedType })}
-                className="w-9 h-9 rounded-full items-center justify-center ml-2"
-                style={{ backgroundColor: AMBER_500 }}
-              >
-                <Ionicons name="add" size={20} color="#ffffff" />
-              </Pressable>
-            )}
-          </View>
-        </View>
+        )}
       </View>
 
-      {/* Content based on level */}
-      {level === 1 && renderTypeSelection()}
-      {level === 2 && renderCategorySelection()}
-      {level === 3 && renderProductGrid()}
+      {/* Content */}
+      {searchOpen && query.length === 0 ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <Ionicons name="search-outline" size={36} color="#d4a017" />
+          <Text className="text-sm mt-3 text-center" style={{ color: '#a16207' }}>
+            Type a product name to search the whole catalogue.
+          </Text>
+        </View>
+      ) : isSearching ? (
+        renderSearchResults()
+      ) : (
+        <>
+          {level === 1 && renderTypeSelection()}
+          {level === 2 && renderCategorySelection()}
+          {level === 3 && renderProductGrid()}
+        </>
+      )}
     </View>
   );
 }

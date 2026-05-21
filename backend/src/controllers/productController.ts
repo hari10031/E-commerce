@@ -5,7 +5,7 @@ import { AuthRequest } from '../middleware/auth'
 const productSelect = `
   *,
   category:categories(id, name, slug),
-  images:product_images(url, color, is_primary, display_order, alt_text),
+  images:product_images(id, url, color, is_primary, display_order, alt_text),
   variants(id, color, size, quantity, sold_count, sku, image_url)
 `
 
@@ -152,4 +152,16 @@ export async function addProductImage(req: AuthRequest, res: Response) {
 
   if (error) return res.status(400).json({ error: error.message })
   res.status(201).json(data)
+}
+
+export async function deleteProductImage(req: AuthRequest, res: Response) {
+  const { product_id, image_id } = req.params
+  const { error } = await supabase
+    .from('product_images')
+    .delete()
+    .eq('id', image_id)
+    .eq('product_id', product_id)
+
+  if (error) return res.status(400).json({ error: error.message })
+  res.json({ success: true })
 }

@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, FlatList, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenHeader from '../../components/ui/ScreenHeader';
-import { getOrder, updateOrderStatus } from '../../lib/api';
-import { formatPrice, formatDateTime, initials, shortId } from '../../lib/utils';
-import { ORDER_STATUS_CONFIG, VALID_ORDER_TRANSITIONS } from '../../constants';
+import UserAdminActions from '../../components/users/UserAdminActions';
+import { getUser, getOrders } from '../../lib/api';
+import { formatPrice, formatDate, initials, shortId } from '../../lib/utils';
+import { ORDER_STATUS_CONFIG } from '../../constants';
 
 const AVATAR_COLORS = ['#ec4899', '#8b5cf6', '#f59e0b', '#14b8a6', '#881337'];
 
@@ -15,276 +16,157 @@ function avatarColor(name) {
   return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 }
 
-const ACTION_LABELS = {
-  placed: { label: 'Confirm Order', icon: 'checkmark-circle-outline' },
-  confirmed: { label: 'Start Processing', icon: 'cog-outline' },
-  processing: { label: 'Mark as Shipped', icon: 'airplane-outline' },
-  shipped: { label: 'Mark as Delivered', icon: 'checkmark-done-outline' },
-};
+function InfoRow({ icon, children }) {
+  if (!children) return null;
+  return (
+    <View className="flex-row items-center py-2 border-t border-gray-100">
+      <Ionicons name={icon} size={16} color="#6b7280" />
+      <Text className="text-sm text-gray-700 ml-2">{children}</Text>
+    </View>
+  );
+}
 
 export default function CustomerDetailScreen({ route, navigation }) {
-  const { orderId } = route.params;
+  const { customerId } = route.params;
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
 
-  const { data: order, isLoading } = useQuery({
-    queryKey: ['order', orderId],
-    queryFn: () => getOrder(orderId),
+  const { data: customer, isLoading: custLoading } = useQuery({
+    queryKey: ['customer', customerId],
+    queryFn: () => getUser(customerId),
     staleTime: 30_000,
   });
 
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }) => updateOrderStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['order', orderId] });
-      queryClient.invalidateQueries({ queryKey: ['customers-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      Alert.alert('Success', 'Order status updated');
-    },
-    onError: (err) => Alert.alert('Error', err.message),
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
+    queryKey: ['customer-orders', customerId],
+    queryFn: () => getOrders({ userId: customerId, limit: 100 }),
+    staleTime: 30_000,
   });
 
-  if (isLoading) {
+  const orders = ordersData?.data ?? [];
+  const totalSpent = orders
+    .filter((o) => o.status !== 'cancelled')
+    .reduce((s, o) => s + Number(o.total_amount), 0);
+
+  const renderOrder = ({ item }) => {
+    const cfg = ORDER_STATUS_CONFIG[item.status] ?? ORDER_STATUS_CONFIG.placed;
+    const productName =
+      item.order_items?.[0]?.product?.title ??
+      `${item.order_items?.length ?? 0} item(s)`;
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#f59e0b" />
-        <Text className="text-sm text-gray-500 mt-3">Loading order…</Text>
+      <Pressable
+        onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
+        className="mx-4 mb-2 bg-white rounded-2xl shadow-sm p-4 flex-row items-center active:bg-gray-50"
+      >
+        <View className="w-10 h-10 rounded-xl bg-amber-50 items-center justify-center mr-3">
+          <Ionicons name="receipt-outline" size={18} color="#f59e0b" />
+        </View>
+        <View className="flex-1 mr-2">
+          <Text className="text-sm font-semibold text-gray-900">#{shortId(item.id)}</Text>
+          <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>{productName}</Text>
+          <Text className="text-xs text-gray-400 mt-0.5">{formatDate(item.created_at)}</Text>
+        </View>
+        <View className="items-end">
+          <Text className="text-sm font-bold text-gray-900 mb-1">
+            {formatPrice(item.total_amount)}
+          </Text>
+          <View className="px-2.5 py-1 rounded-full" style={{ backgroundColor: cfg.bg }}>
+            <Text className="text-xs font-semibold" style={{ color: cfg.text }}>{cfg.label}</Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
+
+  if (custLoading) {
+    return (
+      <View className="flex-1 bg-gray-50">
+        <ScreenHeader title="Customer" navigation={navigation} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#f59e0b" />
+        </View>
       </View>
     );
   }
 
-  if (!order) return null;
-
-  const cfg = ORDER_STATUS_CONFIG[order.status] ?? ORDER_STATUS_CONFIG.placed;
-  const transitions = VALID_ORDER_TRANSITIONS[order.status] ?? [];
-  const nextStatus = transitions.find((s) => s !== 'cancelled');
-  const actionCfg = ACTION_LABELS[order.status];
-  const customerName = order.user?.name ?? order.address?.name ?? 'Customer';
-  const customerEmail = order.user?.email ?? '';
-  const customerPhone = order.user?.phone ?? order.address?.phone ?? '';
-
-  const handleStatusUpdate = () => {
-    if (!nextStatus) return;
-    Alert.alert(
-      'Update Status',
-      `${actionCfg?.label ?? 'Update'} this order?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: () => statusMutation.mutate({ id: orderId, status: nextStatus }),
-        },
-      ],
-    );
-  };
+  const name = customer?.name ?? 'Customer';
 
   return (
     <View className="flex-1 bg-gray-50">
-      <ScreenHeader
-        title={`Order #${shortId(order.id)}`}
-        navigation={navigation}
-      />
+      <ScreenHeader title="Customer" navigation={navigation} />
 
-      <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Customer info */}
-        <View className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-          <View className="flex-row items-center mb-4">
-            <Ionicons name="person-circle-outline" size={20} color="#f59e0b" />
-            <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-2">
-              Customer Information
-            </Text>
-          </View>
-
-          <View className="flex-row items-center mb-4">
-            <View
-              className="w-12 h-12 rounded-full items-center justify-center mr-3"
-              style={{ backgroundColor: avatarColor(customerName) }}
-            >
-              <Text className="text-white font-bold text-lg">
-                {initials(customerName).charAt(0)}
-              </Text>
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-bold text-gray-900">{customerName}</Text>
-              {customerEmail ? (
-                <Text className="text-sm text-gray-500 mt-0.5">{customerEmail}</Text>
-              ) : null}
-            </View>
-          </View>
-
-          {customerPhone ? (
-            <View className="flex-row items-center py-2 border-t border-gray-100">
-              <Ionicons name="call-outline" size={16} color="#6b7280" />
-              <Text className="text-sm text-gray-700 ml-2">{customerPhone}</Text>
-            </View>
-          ) : null}
-
-          {order.address && (
-            <View className="flex-row items-start py-2 border-t border-gray-100">
-              <Ionicons name="location-outline" size={16} color="#6b7280" style={{ marginTop: 2 }} />
-              <View className="ml-2 flex-1">
-                <Text className="text-sm text-gray-700">{order.address.line1}</Text>
-                {order.address.line2 ? (
-                  <Text className="text-sm text-gray-600">{order.address.line2}</Text>
-                ) : null}
-                <Text className="text-sm text-gray-600">
-                  {[order.address.city, order.address.state, order.address.pincode]
-                    .filter(Boolean)
-                    .join(', ')}
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Products ordered */}
-        <View className="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-          <View className="flex-row items-center px-4 pt-4 pb-3">
-            <Ionicons name="bag-outline" size={20} color="#f59e0b" />
-            <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-2">
-              Products Ordered
-            </Text>
-            <View className="ml-auto bg-gray-100 px-2 py-0.5 rounded-full">
-              <Text className="text-xs font-semibold text-gray-600">
-                {order.order_items?.length ?? 0}
-              </Text>
-            </View>
-          </View>
-
-          {(order.order_items ?? []).map((item) => {
-            const title = item.product?.title ?? 'Product';
-            return (
-              <View
-                key={item.id}
-                className="flex-row items-center px-4 py-3 border-t border-gray-50"
-              >
+      <FlatList
+        data={orders}
+        keyExtractor={(item) => item.id}
+        renderItem={renderOrder}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+        ListHeaderComponent={
+          <View className="p-4">
+            {/* Profile card */}
+            <View className="bg-white rounded-2xl shadow-sm p-4">
+              <View className="flex-row items-center">
                 <View
-                  className="w-11 h-11 rounded-xl items-center justify-center mr-3"
-                  style={{ backgroundColor: avatarColor(title) + '22' }}
+                  className="w-14 h-14 rounded-full items-center justify-center mr-3"
+                  style={{ backgroundColor: avatarColor(name) }}
                 >
-                  <Text
-                    className="font-bold text-sm"
-                    style={{ color: avatarColor(title) }}
-                  >
-                    {initials(title).charAt(0)}
-                  </Text>
+                  <Text className="text-white font-bold text-xl">{initials(name).charAt(0)}</Text>
                 </View>
-                <View className="flex-1 mr-2">
-                  <Text className="text-sm font-semibold text-gray-900" numberOfLines={2}>
-                    {title}
-                  </Text>
-                  {item.variant && (
-                    <Text className="text-xs text-gray-500 mt-0.5">
-                      {[item.variant.color, item.variant.size].filter(Boolean).join(' · ')}
+                <View className="flex-1">
+                  <Text className="text-lg font-bold text-gray-900">{name}</Text>
+                  <View className="self-start bg-amber-100 px-2 py-0.5 rounded-full mt-1">
+                    <Text className="text-xs font-semibold text-amber-800 capitalize">
+                      {customer?.role ?? 'customer'}
                     </Text>
-                  )}
-                  <Text className="text-xs text-gray-400 mt-0.5">
-                    Qty: {item.quantity}
-                  </Text>
+                  </View>
                 </View>
-                <Text className="text-sm font-bold text-gray-900">
-                  {formatPrice(item.unit_price * item.quantity)}
-                </Text>
               </View>
-            );
-          })}
-        </View>
-
-        {/* Payment */}
-        <View className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-          <View className="flex-row items-center mb-4">
-            <Ionicons name="card-outline" size={20} color="#f59e0b" />
-            <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-2">
-              Payment Details
-            </Text>
-          </View>
-
-          <View className="flex-row items-center justify-between py-2">
-            <Text className="text-sm text-gray-600">Total Amount</Text>
-            <Text className="text-base font-bold text-gray-900">
-              {formatPrice(order.total_amount)}
-            </Text>
-          </View>
-
-          {order.payment_method && (
-            <View className="flex-row items-center justify-between py-2 border-t border-gray-100">
-              <Text className="text-sm text-gray-600">Payment Method</Text>
-              <Text className="text-sm font-medium text-gray-800 capitalize">
-                {order.payment_method}
-              </Text>
+              <InfoRow icon="mail-outline">{customer?.email}</InfoRow>
+              <InfoRow icon="call-outline">{customer?.phone}</InfoRow>
+              <InfoRow icon="calendar-outline">
+                {customer?.created_at ? `Joined ${formatDate(customer.created_at)}` : null}
+              </InfoRow>
             </View>
-          )}
 
-          <View className="flex-row items-center justify-between py-2 border-t border-gray-100">
-            <Text className="text-sm text-gray-600">Order Date</Text>
-            <Text className="text-sm font-medium text-gray-800">
-              {formatDateTime(order.created_at)}
-            </Text>
-          </View>
-
-          {order.coupon_applied && (
-            <View className="flex-row items-center justify-between py-2 border-t border-gray-100">
-              <Text className="text-sm text-gray-600">Coupon</Text>
-              <Text className="text-sm font-medium text-amber-700">
-                {order.coupon_applied}
-                {order.discount_amount > 0 ? ` (−${formatPrice(order.discount_amount)})` : ''}
-              </Text>
+            {/* Stats */}
+            <View className="flex-row mt-3 gap-3">
+              <View className="flex-1 bg-white rounded-2xl shadow-sm p-4 items-center">
+                <Text className="text-xl font-bold text-gray-900">{orders.length}</Text>
+                <Text className="text-xs text-gray-500 mt-1">Total Orders</Text>
+              </View>
+              <View className="flex-1 bg-white rounded-2xl shadow-sm p-4 items-center">
+                <Text className="text-xl font-bold text-gray-900">{formatPrice(totalSpent)}</Text>
+                <Text className="text-xs text-gray-500 mt-1">Total Spent</Text>
+              </View>
             </View>
-          )}
-        </View>
 
-        {/* Status */}
-        <View className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-          <View className="flex-row items-center mb-3">
-            <Ionicons name="flag-outline" size={20} color="#f59e0b" />
-            <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-2">
-              Current Status
+            <Text className="text-xs font-semibold text-gray-500 uppercase tracking-widest mt-5 mb-2">
+              Order History
             </Text>
-          </View>
-          <View className="flex-row items-center">
-            <View
-              className="w-3 h-3 rounded-full mr-2"
-              style={{ backgroundColor: cfg.dot }}
-            />
-            <View
-              className="px-3 py-1.5 rounded-full"
-              style={{ backgroundColor: cfg.bg }}
-            >
-              <Text className="text-sm font-bold" style={{ color: cfg.text }}>
-                {cfg.label}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Action button */}
-      {nextStatus && actionCfg && (
-        <View
-          style={{ paddingBottom: insets.bottom + 8 }}
-          className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3"
-        >
-          <Pressable
-            onPress={handleStatusUpdate}
-            disabled={statusMutation.isPending}
-            className="bg-amber-500 rounded-xl py-4 flex-row items-center justify-center active:bg-amber-600"
-          >
-            {statusMutation.isPending ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Ionicons name={actionCfg.icon} size={18} color="#fff" />
-                <Text className="text-white font-bold text-sm ml-2">
-                  {actionCfg.label}
-                </Text>
-              </>
+            {ordersLoading && (
+              <View className="py-6 items-center">
+                <ActivityIndicator color="#f59e0b" />
+              </View>
             )}
-          </Pressable>
-        </View>
-      )}
+          </View>
+        }
+        ListEmptyComponent={
+          !ordersLoading ? (
+            <View className="items-center py-8 px-8">
+              <Ionicons name="receipt-outline" size={32} color="#d1d5db" />
+              <Text className="text-sm text-gray-400 mt-2 text-center">
+                This customer has not placed any orders yet.
+              </Text>
+            </View>
+          ) : null
+        }
+        ListFooterComponent={
+          <UserAdminActions
+            userId={customerId}
+            userName={name}
+            active={customer?.active}
+            onDeleted={() => navigation.goBack()}
+          />
+        }
+      />
     </View>
   );
 }

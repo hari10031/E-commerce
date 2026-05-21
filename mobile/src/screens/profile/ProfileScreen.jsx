@@ -47,9 +47,11 @@ export default function ProfileScreen({ navigation }) {
     ? salesList.reduce((sum, s) => sum + (s.total_amount ?? s.totalAmount ?? 0), 0)
     : 0;
 
-  const handleSignOut = async () => {
-    try { await logout(); } catch (_) {}
+  const handleSignOut = () => {
+    // Clear local auth first so the UI returns to Login immediately — the
+    // server logout call must never block or undo sign-out.
     clearAuth();
+    logout().catch(() => { });
   };
 
   const handleLogout = () => {
@@ -106,9 +108,8 @@ export default function ProfileScreen({ navigation }) {
           <View className="mb-4">
             <Text className="text-sm font-medium text-gray-700 mb-1.5">Full Name</Text>
             <TextInput
-              className={`border rounded-xl px-4 py-3.5 text-base text-gray-900 ${
-                editing ? 'bg-white border-amber-300' : 'bg-gray-50 border-gray-200'
-              }`}
+              className={`border rounded-xl px-4 py-3.5 text-base text-gray-900 ${editing ? 'bg-white border-amber-300' : 'bg-gray-50 border-gray-200'
+                }`}
               value={name}
               onChangeText={setName}
               editable={editing}
@@ -128,9 +129,8 @@ export default function ProfileScreen({ navigation }) {
           <View>
             <Text className="text-sm font-medium text-gray-700 mb-1.5">Phone</Text>
             <TextInput
-              className={`border rounded-xl px-4 py-3.5 text-base text-gray-900 ${
-                editing ? 'bg-white border-amber-300' : 'bg-gray-50 border-gray-200'
-              }`}
+              className={`border rounded-xl px-4 py-3.5 text-base text-gray-900 ${editing ? 'bg-white border-amber-300' : 'bg-gray-50 border-gray-200'
+                }`}
               value={phone}
               onChangeText={setPhone}
               editable={editing}
@@ -222,6 +222,12 @@ export default function ProfileScreen({ navigation }) {
                 <Text className="text-xs text-gray-500 mt-1">Revenue</Text>
               </View>
             </View>
+            <Pressable
+              onPress={() => navigation.navigate('DashboardTab', { screen: 'MySales' })}
+              className="mt-3 py-2 rounded-xl items-center active:bg-amber-50"
+            >
+              <Text className="text-xs font-semibold text-amber-700">View detailed sales →</Text>
+            </Pressable>
           </View>
         )}
 

@@ -8,11 +8,12 @@ exports.publishProduct = publishProduct;
 exports.unpublishProduct = unpublishProduct;
 exports.deleteProduct = deleteProduct;
 exports.addProductImage = addProductImage;
+exports.deleteProductImage = deleteProductImage;
 const supabase_1 = require("../supabase");
 const productSelect = `
   *,
   category:categories(id, name, slug),
-  images:product_images(url, color, is_primary, display_order, alt_text),
+  images:product_images(id, url, color, is_primary, display_order, alt_text),
   variants(id, color, size, quantity, sold_count, sku, image_url)
 `;
 async function getAllProducts(req, res) {
@@ -152,5 +153,16 @@ async function addProductImage(req, res) {
     if (error)
         return res.status(400).json({ error: error.message });
     res.status(201).json(data);
+}
+async function deleteProductImage(req, res) {
+    const { product_id, image_id } = req.params;
+    const { error } = await supabase_1.supabase
+        .from('product_images')
+        .delete()
+        .eq('id', image_id)
+        .eq('product_id', product_id);
+    if (error)
+        return res.status(400).json({ error: error.message });
+    res.json({ success: true });
 }
 //# sourceMappingURL=productController.js.map

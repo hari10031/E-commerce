@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenHeader from '../../components/ui/ScreenHeader';
+import UserAdminActions from '../../components/users/UserAdminActions';
 import { getEmployeePerformance, getOfflineSales } from '../../lib/api';
 import { formatPrice, formatDate, initials } from '../../lib/utils';
 
@@ -148,6 +149,13 @@ export default function EmployeeDetailScreen({ route, navigation }) {
               <Text className="text-sm text-gray-400 mt-3">No sales recorded yet</Text>
             </View>
           )}
+
+          <UserAdminActions
+            userId={employee?._id || employee?.id}
+            userName={employee?.name || 'this employee'}
+            active={employee?.active}
+            onDeleted={() => navigation.goBack()}
+          />
         </ScrollView>
       )}
     </View>

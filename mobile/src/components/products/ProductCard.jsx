@@ -10,12 +10,25 @@ const PLACEHOLDER_STYLES = {
   jewellery: { bg: '#fef3c7', text: '#92400e', emoji: '💎' },
 };
 
-export default function ProductCard({ product, onPress }) {
+export default function ProductCard({ product, onPress, showStock = false }) {
   const primaryImage = product.images?.find((i) => i.is_primary) || product.images?.[0];
   const typeConfig = PRODUCT_TYPES.find((t) => t.value === product.type);
 
   const finalPrice = discountedPrice(product.base_price, product.discount_pct);
   const hasDiscount = product.discount_pct > 0;
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const inStockVariants = showStock
+    ? variants.filter((v) => Number(v.quantity) > 0)
+    : [];
+  const totalStock = inStockVariants.reduce((sum, v) => sum + Number(v.quantity), 0);
+  const colorTotals = inStockVariants.reduce((map, v) => {
+    if (!v.color) return map;
+    const key = v.color.toString().trim();
+    if (!key) return map;
+    map[key] = (map[key] ?? 0) + Number(v.quantity);
+    return map;
+  }, {});
+  const colorEntries = Object.entries(colorTotals).sort((a, b) => b[1] - a[1]);
 
   const isPlaceholder = !primaryImage?.url || primaryImage?.placeholder;
   const placeholderStyle = PLACEHOLDER_STYLES[product.type] || PLACEHOLDER_STYLES.saree;
@@ -25,8 +38,8 @@ export default function ProductCard({ product, onPress }) {
       onPress={onPress}
       className="bg-white rounded-2xl shadow-sm overflow-hidden active:opacity-90"
     >
-      {/* Image */}
-      <View className="h-44 bg-gray-100">
+      {/* Image — 3:4 portrait, full image shown (no crop) */}
+      <View className="bg-white" style={{ aspectRatio: 3 / 4 }}>
         {isPlaceholder ? (
           <View
             className="flex-1 items-center justify-center px-3"
@@ -45,7 +58,7 @@ export default function ProductCard({ product, onPress }) {
           <Image
             source={{ uri: primaryImage.url }}
             className="w-full h-full"
-            resizeMode="cover"
+            resizeMode="contain"
           />
         ) : (
           <View className="flex-1 items-center justify-center">
@@ -99,6 +112,29 @@ export default function ProductCard({ product, onPress }) {
             </>
           )}
         </View>
+
+        {showStock && variants.length > 0 && (
+          <View className="mt-2">
+            {totalStock > 0 ? (
+              <>
+                <Text className="text-[10px] text-gray-500">In stock: {totalStock}</Text>
+                {colorEntries.length > 0 && (
+                  <View className="flex-row flex-wrap mt-1">
+                    {colorEntries.map(([color, qty]) => (
+                      <View key={color} className="px-1.5 py-0.5 rounded-full bg-gray-100 mr-1 mb-1">
+                        <Text className="text-[9px] text-gray-600">
+                          {color} {qty}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : (
+              <Text className="text-[10px] text-red-500">Out of stock</Text>
+            )}
+          </View>
+        )}
       </View>
     </Pressable>
   );

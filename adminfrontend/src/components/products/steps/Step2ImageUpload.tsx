@@ -45,7 +45,10 @@ export function Step2ImageUpload({ data, onChange, productType }: Step2Props) {
       toast.error('Select an image and enter a color name');
       return;
     }
-    if (!token) return;
+    if (!token) {
+      toast.error('Session expired', 'Please log in again.');
+      return;
+    }
     setUploading(true);
     try {
       const formData = new FormData();
@@ -70,7 +73,10 @@ export function Step2ImageUpload({ data, onChange, productType }: Step2Props) {
   // Send the uploaded photo to Gemini ("nano banana") and replace it with the
   // generated clean studio image.
   const generateImage = async (index: number) => {
-    if (!token) return;
+    if (!token) {
+      toast.error('Session expired', 'Please log in again.');
+      return;
+    }
     const pair = data[index];
     setGeneratingFor(pair.color);
     try {
@@ -103,7 +109,9 @@ export function Step2ImageUpload({ data, onChange, productType }: Step2Props) {
             onClick={() => fileRef.current?.click()}
           >
             {pendingPreview ? (
-              <Image src={pendingPreview} alt="preview" width={96} height={96} className="object-cover w-full h-full" />
+              // Local blob preview — next/image cannot render blob: URLs.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={pendingPreview} alt="preview" className="object-cover w-full h-full" />
             ) : (
               <Upload className="w-6 h-6 text-gray-400" />
             )}

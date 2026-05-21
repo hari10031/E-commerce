@@ -28,19 +28,25 @@ const useAuthStore = create(
   persist(
     (set) => ({
       token: null,
+      refreshToken: null,
       user: null,
       _hasHydrated: false,
       viewMode: 'admin',
 
-      setAuth: (token, user) => set({ token, user }),
-      clearAuth: () => set({ token: null, user: null, viewMode: 'admin' }),
+      setAuth: (token, user, refreshToken) =>
+        set((s) => ({ token, user, refreshToken: refreshToken ?? s.refreshToken })),
+      clearAuth: () => set({ token: null, refreshToken: null, user: null, viewMode: 'admin' }),
       setHydrated: () => set({ _hasHydrated: true }),
       setViewMode: (mode) => set({ viewMode: mode }),
     }),
     {
       name: 'nb-auth',
       storage: createJSONStorage(() => storage),
-      partialize: (state) => ({ token: state.token, user: state.user }),
+      partialize: (state) => ({
+        token: state.token,
+        refreshToken: state.refreshToken,
+        user: state.user,
+      }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();
       },

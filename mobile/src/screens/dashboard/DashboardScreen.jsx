@@ -1,15 +1,125 @@
-import React from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import useAuthStore from '../../store/authStore';
-import { getDashboard, getOfflineSales } from '../../lib/api';
+import { getDashboard, getOfflineSales, getCategoryInventory, getProducts } from '../../lib/api';
 import { formatPrice } from '../../lib/utils';
+
+const COLOR_MAP = {
+  red: '#dc2626',
+  blue: '#2563eb',
+  green: '#16a34a',
+  pink: '#db2777',
+  gold: '#d97706',
+  yellow: '#eab308',
+  orange: '#ea580c',
+  black: '#1f2937',
+  white: '#ffffff',
+  grey: '#4b5563',
+  gray: '#4b5563',
+  purple: '#9333ea',
+  violet: '#7c3aed',
+  magenta: '#d946ef',
+  teal: '#0d9488',
+  silver: '#cbd5e1',
+  cream: '#fef08a',
+  beige: '#f5f5dc',
+  peach: '#ffdab9',
+  maroon: '#800000',
+  navy: '#000080',
+  turquoise: '#40e0d0',
+};
+
+const getColorHex = (name) => {
+  if (!name) return '#9ca3af';
+  const clean = name.toLowerCase().trim();
+  return COLOR_MAP[clean] || '#6b7280';
+};
+
+function SubCategoryDetailProducts({ subCategoryId }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['products-subcategory', subCategoryId],
+    queryFn: () => getProducts({ category: subCategoryId, published: 'all', limit: 100 }),
+    staleTime: 30_000,
+  });
+
+  const products = data?.data ?? [];
+
+  if (isLoading) {
+    return (
+      <View className="py-12 items-center justify-center">
+        <ActivityIndicator size="large" color="#f59e0b" />
+        <Text className="text-xs text-gray-500 mt-2">Loading detailed stock...</Text>
+      </View>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <View className="py-12 items-center justify-center">
+        <Ionicons name="alert-circle-outline" size={32} color="#9ca3af" />
+        <Text className="text-sm text-gray-500 mt-2">No products in this category.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
+      {products.map((p) => {
+        const variants = p.variants ?? [];
+        const totalQty = variants.reduce((s, v) => s + (v.quantity || 0), 0);
+
+        return (
+          <View key={p.id} className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 shadow-sm">
+            <View className="flex-row justify-between items-start mb-2">
+              <View className="flex-1 mr-2">
+                <Text className="text-sm font-semibold text-gray-900">{p.title}</Text>
+                <Text className="text-xs text-gray-500 mt-0.5">{p.category?.name || 'Category'}</Text>
+              </View>
+              <View className="items-end">
+                <Text className="text-xs font-semibold text-amber-600">{formatPrice(p.base_price)}</Text>
+                <Text className="text-[10px] text-gray-400 mt-0.5">{totalQty} in stock</Text>
+              </View>
+            </View>
+
+            {variants.length > 0 ? (
+              <View className="bg-gray-50/50 rounded-xl p-3 mt-2 border border-gray-50">
+                <Text className="text-[10px] font-semibold text-gray-400 tracking-wider mb-2 uppercase">Stock breakdown</Text>
+                {variants.map((v, idx) => (
+                  <View key={v.id ?? idx} className="flex-row items-center justify-between py-1 border-b border-gray-100/50 last:border-b-0">
+                    <View className="flex-row items-center">
+                      <View className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: getColorHex(v.color) }} />
+                      <Text className="text-xs text-gray-700 font-medium">
+                        {[v.color, v.size].filter(Boolean).join(' · ')}
+                      </Text>
+                    </View>
+                    <Text className={`text-xs font-semibold ${v.quantity > 0 ? 'text-gray-800' : 'text-red-500'}`}>
+                      {v.quantity > 0 ? `${v.quantity} left` : 'Out of stock'}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text className="text-xs text-red-500 mt-1">No variants configured.</Text>
+            )}
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const MAIN_CATS = [
+  { type: 'saree', label: 'Sarees', icon: 'shirt', color: '#db2777' },
+  { type: 'dress', label: 'Dresses', icon: 'flower', color: '#7c3aed' },
+  { type: 'jewellery', label: 'Jewellery', icon: 'diamond', color: '#d97706' },
+];
 
 function getFormattedDate() {
   const d = new Date();
@@ -40,6 +150,14 @@ function MetricCard({ label, value }) {
   );
 }
 
+function Pill({ label, warn }) {
+  return (
+    <View className={`px-2 py-0.5 rounded-full ${warn ? 'bg-red-50' : 'bg-gray-100'}`}>
+      <Text className={`text-[10px] font-medium ${warn ? 'text-red-600' : 'text-gray-600'}`}>{label}</Text>
+    </View>
+  );
+}
+
 function SaleRow({ customerName, productName, price }) {
   return (
     <View className="flex-row items-center py-3 border-b border-gray-50 px-4">
@@ -59,28 +177,58 @@ export default function DashboardScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const viewMode = useAuthStore((s) => s.viewMode);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState(null);
 
   const role = viewMode === 'user' ? 'customer' : (user?.role || 'customer');
   const isAdmin = role === 'admin';
   const isEmployee = role === 'employee';
   const isCustomer = role === 'customer';
 
-  const { data: stats, isLoading: dashLoading } = useQuery({
+  const { data: stats, isLoading: dashLoading, refetch: refetchDash, isRefetching } = useQuery({
     queryKey: ['dashboard'],
     queryFn: getDashboard,
     staleTime: 60_000,
     enabled: isAdmin || isEmployee,
   });
 
-  const { data: salesData, isLoading: salesLoading } = useQuery({
+  const { data: salesData, isLoading: salesLoading, refetch: refetchSales } = useQuery({
     queryKey: ['offline-sales'],
     queryFn: () => getOfflineSales({ limit: 5 }),
     staleTime: 60_000,
     enabled: isAdmin || isEmployee,
   });
 
+  const { data: catInv, isLoading: catInvLoading, refetch: refetchCat } = useQuery({
+    queryKey: ['category-inventory'],
+    queryFn: getCategoryInventory,
+    staleTime: 60_000,
+    enabled: isAdmin || isEmployee,
+  });
+
   const recentSales = salesData?.data ?? salesData ?? [];
   const isLoading = (isAdmin || isEmployee) && dashLoading;
+
+  const onRefresh = () => {
+    refetchDash();
+    refetchSales();
+    refetchCat();
+  };
+
+  // Roll the per-category inventory up into the 3 main product types.
+  const mainCategories = MAIN_CATS.map((m) => {
+    const items = (catInv ?? []).filter((c) => c.type === m.type);
+    const inStock = items.filter((c) => Number(c.itemsLeft) > 0);
+    return {
+      ...m,
+      subCount: inStock.length,
+      productCount: inStock.reduce((s, c) => s + (c.productCount || 0), 0),
+      variantCount: inStock.reduce((s, c) => s + (c.variantCount || 0), 0),
+      itemsLeft: inStock.reduce((s, c) => s + (c.itemsLeft || 0), 0),
+      lowStock: inStock.reduce((s, c) => s + (c.lowStock || 0), 0),
+      subcategories: inStock,
+    };
+  });
 
   const navigateToTab = (tabName, screen, params) => {
     if (screen) {
@@ -93,15 +241,23 @@ export default function DashboardScreen({ navigation }) {
   return (
     <ScrollView
       className="flex-1 bg-amber-50/30"
-      contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 24 }}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={!!isRefetching}
+          onRefresh={onRefresh}
+          tintColor="#f59e0b"
+          colors={['#f59e0b']}
+        />
+      }
     >
       {/* Gradient Header */}
       <LinearGradient
         colors={['#f59e0b', '#d97706']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ paddingTop: insets.top + 16, paddingBottom: 32, paddingHorizontal: 20, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}
+        style={{ paddingTop: 16, paddingBottom: 32, paddingHorizontal: 20, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}
       >
         <Text className="text-amber-100 text-sm font-medium">{getFormattedDate()}</Text>
         <Text className="text-white text-2xl font-bold mt-1">
@@ -125,9 +281,6 @@ export default function DashboardScreen({ navigation }) {
                   <Text className="text-3xl font-bold text-gray-900">
                     {formatPrice(stats?.totalRevenue ?? 0)}
                   </Text>
-                  <View className="ml-3 bg-green-100 px-2 py-0.5 rounded-full mb-1">
-                    <Text className="text-xs font-bold text-green-700">+12.4%</Text>
-                  </View>
                 </View>
                 <Text className="text-xs text-gray-500 mt-2">
                   {stats?.totalOrders ?? 0} completed • {stats?.pendingOrders ?? 0} pending
@@ -232,6 +385,13 @@ export default function DashboardScreen({ navigation }) {
                   onPress={() => navigateToTab('CollectionsTab')}
                 />
                 <QuickActionCard
+                  icon="cash"
+                  label="My Sales"
+                  bgColor="#0e7490"
+                  iconColor="#cffafe"
+                  onPress={() => navigation.navigate('MySales')}
+                />
+                <QuickActionCard
                   icon="add-circle"
                   label="Add Product"
                   bgColor="#0d9488"
@@ -257,11 +417,60 @@ export default function DashboardScreen({ navigation }) {
           <View className="mb-4">
             <Text className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Inventory</Text>
             <View className="flex-row">
-              <MetricCard label="Total" value={stats.totalProducts ?? 0} />
-              <MetricCard label="Available" value={(stats.totalProducts ?? 0) - (stats.lowStockVariants ?? 0)} />
+              <MetricCard label="Products" value={stats.totalProducts ?? 0} />
               <MetricCard label="Low Stock" value={stats.lowStockVariants ?? 0} />
-              <MetricCard label="Team" value={stats.totalEmployees ?? '—'} />
+              <MetricCard label="Out of Stock" value={stats.outOfStockVariants ?? 0} />
+              <MetricCard label="Team" value={stats.totalEmployees ?? 0} />
             </View>
+          </View>
+        )}
+
+        {/* Stock by Category — 3 main types; tap to drill into sub-categories */}
+        {(isAdmin || isEmployee) && (
+          <View className="mb-4">
+            <Text className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
+              Stock by Category
+            </Text>
+            {catInvLoading ? (
+              <View className="bg-white rounded-2xl p-6 items-center shadow-sm">
+                <ActivityIndicator color="#f59e0b" />
+              </View>
+            ) : (
+              <View className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                {mainCategories.map((m, idx) => (
+                  <Pressable
+                    key={m.type}
+                    onPress={() => setSelectedCategory(m)}
+                    className={`px-4 py-3.5 active:bg-gray-50 ${idx > 0 ? 'border-t border-gray-50' : ''}`}
+                  >
+                    <View className="flex-row items-center">
+                      <View
+                        className="w-10 h-10 rounded-full items-center justify-center mr-3"
+                        style={{ backgroundColor: `${m.color}1A` }}
+                      >
+                        <Ionicons name={m.icon} size={18} color={m.color} />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-gray-900">{m.label}</Text>
+                        <Text className="text-[11px] text-gray-400 mt-0.5">
+                          {m.subCount} categories · {m.productCount} products
+                        </Text>
+                      </View>
+                      <View className="items-end mr-2">
+                        <Text className="text-base font-bold text-gray-900">{m.itemsLeft}</Text>
+                        <Text className="text-[10px] text-gray-400">in stock</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color="#d1d5db" />
+                    </View>
+                    {m.lowStock > 0 && (
+                      <View className="flex-row mt-2">
+                        <Pill label={`${m.lowStock} low stock`} warn />
+                      </View>
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -293,6 +502,119 @@ export default function DashboardScreen({ navigation }) {
           </View>
         )}
       </View>
+
+      {/* Category Detail Modal */}
+      <Modal
+        visible={!!selectedCategory}
+        animationType="slide"
+        onRequestClose={() => {
+          setSelectedSubCategory(null);
+          setSelectedCategory(null);
+        }}
+      >
+        <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
+          {/* Modal Header */}
+          <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-100">
+            <View className="flex-row items-center">
+              <Pressable
+                onPress={() => {
+                  if (selectedSubCategory) {
+                    setSelectedSubCategory(null);
+                  } else {
+                    setSelectedCategory(null);
+                  }
+                }}
+                className="mr-3 w-9 h-9 items-center justify-center rounded-full bg-gray-100 active:bg-gray-200"
+              >
+                <Ionicons name="arrow-back" size={20} color="#374151" />
+              </Pressable>
+              <View>
+                <Text className="text-lg font-bold text-gray-900">
+                  {selectedSubCategory ? selectedSubCategory.name : (selectedCategory?.label || 'Category Detail')}
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  {selectedSubCategory ? 'Product Stock Detail' : 'Select a subcategory'}
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => {
+                setSelectedSubCategory(null);
+                setSelectedCategory(null);
+              }}
+              className="w-9 h-9 items-center justify-center rounded-full bg-gray-100 active:bg-gray-200"
+            >
+              <Ionicons name="close" size={20} color="#374151" />
+            </Pressable>
+          </View>
+
+          {/* Modal Body */}
+          {selectedCategory && !selectedSubCategory && (
+            <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
+              {/* Summary Card */}
+              <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-100 shadow-sm flex-row items-center justify-between">
+                <View>
+                  <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total stock</Text>
+                  <Text className="text-3xl font-bold text-gray-900 mt-1">{selectedCategory.itemsLeft}</Text>
+                </View>
+                <View className="w-12 h-12 rounded-full items-center justify-center" style={{ backgroundColor: `${selectedCategory.color}1A` }}>
+                  <Ionicons name={selectedCategory.icon} size={24} color={selectedCategory.color} />
+                </View>
+              </View>
+
+              <Text className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 ml-1">Subcategories</Text>
+
+              {selectedCategory.subcategories?.length > 0 ? (
+                selectedCategory.subcategories.map((sub) => (
+                  <Pressable
+                    key={sub.id}
+                    onPress={() => setSelectedSubCategory(sub)}
+                    className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 shadow-sm active:bg-gray-50/50"
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1 mr-4">
+                        <Text className="text-base font-semibold text-gray-900">{sub.name}</Text>
+                        <Text className="text-xs text-gray-500 mt-1">
+                          {sub.productCount} products · {sub.variantCount} variants
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center">
+                        <View className="items-end mr-3">
+                          <Text className="text-base font-bold text-gray-900">{sub.itemsLeft}</Text>
+                          <Text className="text-[10px] text-gray-400">in stock</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
+                      </View>
+                    </View>
+
+                    {/* Stock per Color */}
+                    {sub.colors?.length > 0 && (
+                      <View className="mt-3 pt-3 border-t border-gray-100 flex-row flex-wrap">
+                        {sub.colors.map(({ color, qty }) => (
+                          <View key={color} className="flex-row items-center mr-3 mb-1.5 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
+                            <View className="w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: getColorHex(color) }} />
+                            <Text className="text-[10px] font-semibold text-gray-600">{color}: {qty}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </Pressable>
+                ))
+              ) : (
+                <View className="bg-white rounded-2xl p-6 items-center border border-gray-100 shadow-sm">
+                  <Text className="text-sm text-gray-500">No subcategories with stock found.</Text>
+                </View>
+              )}
+            </ScrollView>
+          )}
+
+          {selectedCategory && selectedSubCategory && (
+            <View className="flex-1 py-2">
+              <SubCategoryDetailProducts subCategoryId={selectedSubCategory.id} />
+            </View>
+          )}
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

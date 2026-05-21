@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express'
+import sharp from 'sharp'
 import Anthropic from '@anthropic-ai/sdk'
 import multer from 'multer'
 import { authenticate, requireApprovedEmployee } from '../middleware/auth'
@@ -58,21 +59,60 @@ router.post(
     let sourceBuffer: Buffer
     let mimeType: string
 
-    if (req.file) {
-      sourceBuffer = req.file.buffer
-      mimeType = req.file.mimetype
-    } else if (req.body.imageUrl) {
-      const resp = await fetch(req.body.imageUrl)
-      if (!resp.ok) return res.status(400).json({ error: 'Could not fetch the source image' })
-      sourceBuffer = Buffer.from(await resp.arrayBuffer())
-      mimeType = resp.headers.get('content-type') || 'image/jpeg'
-    } else {
-      return res.status(400).json({ error: 'Provide an image file or imageUrl' })
+    const imageUrls: string[] = Array.isArray(req.body.imageUrls)
+      ? req.body.imageUrls.filter((url: string) => typeof url === 'string' && url.trim().length > 0)
+      : []
+
+    if (!req.file && !req.body.imageUrl && imageUrls.length === 0) {
+      return res.status(400).json({ error: 'Provide an image file, imageUrl, or imageUrls' })
     }
 
     const { productType, color, category } = req.body
 
     try {
+      if (imageUrls.length > 0) {
+        const urls = imageUrls.slice(0, 4)
+        const buffers = await Promise.all(
+          urls.map(async (url) => {
+            const resp = await fetch(url)
+            if (!resp.ok) throw new Error('Could not fetch the source image')
+            return Buffer.from(await resp.arrayBuffer())
+          })
+        )
+        const cols = urls.length > 1 ? 2 : 1
+        const rows = Math.ceil(urls.length / cols)
+        const cellWidth = 600
+        const cellHeight = 800
+        const base = sharp({
+          create: {
+            width: cols * cellWidth,
+            height: rows * cellHeight,
+            channels: 3,
+            background: '#ffffff',
+          },
+        })
+        const composites = await Promise.all(
+          buffers.map(async (buffer, idx) => ({
+            input: await sharp(buffer)
+              .resize(cellWidth, cellHeight, { fit: 'cover' })
+              .jpeg({ quality: 90 })
+              .toBuffer(),
+            left: (idx % cols) * cellWidth,
+            top: Math.floor(idx / cols) * cellHeight,
+          }))
+        )
+        sourceBuffer = await base.composite(composites).jpeg({ quality: 90 }).toBuffer()
+        mimeType = 'image/jpeg'
+      } else if (req.file) {
+        sourceBuffer = req.file.buffer
+        mimeType = req.file.mimetype
+      } else {
+        const resp = await fetch(req.body.imageUrl)
+        if (!resp.ok) return res.status(400).json({ error: 'Could not fetch the source image' })
+        sourceBuffer = Buffer.from(await resp.arrayBuffer())
+        mimeType = resp.headers.get('content-type') || 'image/jpeg'
+      }
+
       const generated = await generateProductImage({
         imageBase64: sourceBuffer.toString('base64'),
         mimeType,

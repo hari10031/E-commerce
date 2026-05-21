@@ -9,7 +9,7 @@ async function getEmployees(req, res) {
     const { status, page = '1', limit = '20' } = req.query;
     let query = supabase_1.supabase
         .from('profiles')
-        .select('id, name, email:id, phone, employee_status, created_at, updated_at', { count: 'exact' })
+        .select('id, name, phone, employee_status, created_at, updated_at', { count: 'exact' })
         .eq('role', 'employee')
         .order('created_at', { ascending: false })
         .range((+page - 1) * +limit, +page * +limit - 1);
@@ -18,7 +18,15 @@ async function getEmployees(req, res) {
     const { data, error, count } = await query;
     if (error)
         return res.status(500).json({ error: error.message });
-    res.json({ data, count, page: +page, limit: +limit });
+    // Email + ban status live in auth.users, not profiles — merge them in.
+    const isBanned = (u) => !!u?.banned_until && new Date(u.banned_until).getTime() > Date.now();
+    const { data: authList } = await supabase_1.supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const authMap = new Map((authList?.users ?? []).map((u) => [u.id, u]));
+    const withEmail = (data ?? []).map((e) => {
+        const au = authMap.get(e.id);
+        return { ...e, email: au?.email ?? null, active: !isBanned(au) };
+    });
+    res.json({ data: withEmail, count, page: +page, limit: +limit });
 }
 async function approveOrRejectEmployee(req, res) {
     const { action } = req.body;

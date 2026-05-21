@@ -16,6 +16,7 @@ const razorpay = new Razorpay({
 
 const orderSelect = `
   *,
+  user:profiles!user_id(id, name, phone),
   address:addresses(*),
   order_items(
     id, quantity, unit_price,
@@ -134,7 +135,7 @@ export async function verifyPayment(req: AuthRequest, res: Response) {
 }
 
 export async function getOrders(req: AuthRequest, res: Response) {
-  const { status, page = '1', limit = '20' } = req.query
+  const { status, userId, page = '1', limit = '20' } = req.query
 
   let query = supabase
     .from('orders')
@@ -142,9 +143,11 @@ export async function getOrders(req: AuthRequest, res: Response) {
     .order('created_at', { ascending: false })
     .range((+page - 1) * +limit, +page * +limit - 1)
 
-  // Customers see only their orders
+  // Customers see only their orders; staff may scope to one customer via userId.
   if (req.user!.role === 'customer') {
     query = query.eq('user_id', req.user!.id)
+  } else if (userId) {
+    query = query.eq('user_id', userId as string)
   }
 
   if (status) query = query.eq('status', status as string)

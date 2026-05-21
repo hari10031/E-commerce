@@ -7,6 +7,8 @@ const supabase_1 = require("../supabase");
 async function recordOfflineSale(req, res) {
     const { variant_id } = req.body;
     const qty = parseInt(req.body.quantity, 10);
+    const customer_name = req.body.customer_name?.toString().trim() || null;
+    const customer_phone = req.body.customer_phone?.toString().trim() || null;
     if (!variant_id || !qty || qty <= 0) {
         return res.status(400).json({ error: 'variant_id and a positive quantity are required' });
     }
@@ -32,6 +34,8 @@ async function recordOfflineSale(req, res) {
         sold_by: req.user.id,
         quantity: qty,
         unit_price,
+        customer_name,
+        customer_phone,
     })
         .select()
         .single();
@@ -43,7 +47,8 @@ async function recordOfflineSale(req, res) {
 }
 // List offline sales. Employees see only their own; admins see all.
 async function getOfflineSales(req, res) {
-    const { page = '1', limit = '20' } = req.query;
+    const { page = '1', limit = '20', soldBy } = req.query;
+    const soldByValue = typeof soldBy === 'string' ? soldBy : Array.isArray(soldBy) ? soldBy[0] : undefined;
     let query = supabase_1.supabase
         .from('offline_sales')
         .select(`*,
@@ -54,6 +59,9 @@ async function getOfflineSales(req, res) {
         .range((+page - 1) * +limit, +page * +limit - 1);
     if (req.user.role === 'employee') {
         query = query.eq('sold_by', req.user.id);
+    }
+    else if (soldByValue) {
+        query = query.eq('sold_by', soldByValue);
     }
     const { data, error, count } = await query;
     if (error)

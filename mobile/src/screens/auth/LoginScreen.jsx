@@ -30,7 +30,20 @@ export default function LoginScreen({ navigation }) {
   const onSubmit = async ({ email, password }) => {
     try {
       const data = await login(email, password);
-      setAuth(data.token, data.user);
+      const u = data.user ?? {};
+
+      // Employees must be approved before they can enter the app.
+      if (u.role === 'employee' && u.employee_status !== 'approved') {
+        Alert.alert(
+          u.employee_status === 'rejected' ? 'Account rejected' : 'Approval pending',
+          u.employee_status === 'rejected'
+            ? 'Your employee application was rejected. Please contact an admin.'
+            : 'Your account is waiting for admin approval. Please try again once it is approved.'
+        );
+        return;
+      }
+
+      setAuth(data.token, data.user, data.refreshToken);
       await registerPushToken();
     } catch (err) {
       Alert.alert('Login Failed', err.message);

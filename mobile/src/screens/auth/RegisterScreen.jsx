@@ -9,7 +9,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { register as apiRegister } from '../../lib/api';
-import useAuthStore from '../../store/authStore';
 
 const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -34,24 +33,22 @@ function Field({ label, children, error }) {
 
 export default function RegisterScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const setAuth = useAuthStore((s) => s.setAuth);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+  const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: { name: '', email: '', phone: '', password: '', confirmPassword: '' },
   });
 
   const onSubmit = async ({ name, email, phone, password }) => {
     try {
-      const data = await apiRegister({ name, email, password, phone: phone || undefined, role: 'employee' });
-      setAuth(data.session.access_token, {
-        id: data.user.id,
-        email: data.user.email,
-        name,
-        role: 'employee',
-        employee_status: 'pending',
-      });
+      await apiRegister({ name, email, password, phone: phone || undefined, role: 'employee' });
+      reset();
+      Alert.alert(
+        'Registration submitted',
+        'Your employee account was created. An admin must approve it before you can sign in. Please log in once approved.',
+        [{ text: 'Go to Login', onPress: () => navigation.navigate('Login') }]
+      );
     } catch (err) {
       Alert.alert('Registration Failed', err.message);
     }

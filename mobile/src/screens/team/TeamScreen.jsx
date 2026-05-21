@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenHeader from '../../components/ui/ScreenHeader';
-import { getEmployees, approveEmployee } from '../../lib/api';
+import { getEmployees, getUsers, approveEmployee } from '../../lib/api';
 import { initials } from '../../lib/utils';
 
 const TABS = [
@@ -45,8 +45,10 @@ function EmployeeCard({ employee, isPending, onApprove, onReject, onPress }) {
         </View>
       ) : (
         <View className="flex-row items-center">
-          <View className="bg-green-50 px-2.5 py-1 rounded-full">
-            <Text className="text-xs font-semibold text-green-700">Active</Text>
+          <View className={`px-2.5 py-1 rounded-full ${employee.role === 'admin' ? 'bg-violet-100' : 'bg-green-50'}`}>
+            <Text className={`text-xs font-semibold ${employee.role === 'admin' ? 'text-violet-700' : 'text-green-700'}`}>
+              {employee.role === 'admin' ? 'Admin' : 'Active'}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color="#d1d5db" className="ml-2" />
         </View>
@@ -60,17 +62,28 @@ export default function TeamScreen({ navigation }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('active');
 
-  const status = activeTab === 'active' ? 'approved' : 'pending';
-
-  const { data: employees, isLoading, refetch } = useQuery({
-    queryKey: ['employees', status],
-    queryFn: () => getEmployees({ status }),
+  const { data: employeeList = [], isLoading, refetch } = useQuery({
+    queryKey: ['team', activeTab],
+    queryFn: async () => {
+      // getEmployees / getUsers return { data: [...] } — read .data, not .employees.
+      if (activeTab === 'pending') {
+        const res = await getEmployees({ status: 'pending' });
+        return res?.data ?? [];
+      }
+      // Active tab = approved employees + every admin.
+      const [emp, admins] = await Promise.all([
+        getEmployees({ status: 'approved' }),
+        getUsers({ role: 'admin' }),
+      ]);
+      return [...(admins?.data ?? []), ...(emp?.data ?? [])];
+    },
     staleTime: 30_000,
   });
 
   const approveMutation = useMutation({
     mutationFn: ({ id, action }) => approveEmployee(id, action),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
     onError: (err) => {
@@ -92,7 +105,6 @@ export default function TeamScreen({ navigation }) {
     ]);
   };
 
-  const employeeList = Array.isArray(employees) ? employees : employees?.employees ?? [];
   const count = employeeList.length;
 
   return (

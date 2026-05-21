@@ -5,20 +5,25 @@ import { AuthRequest } from '../middleware/auth'
 export async function getDashboardStats(_req: AuthRequest, res: Response) {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
-  const [allOrders, monthOrders, totalCount, pendingCount, lowStock, totalProducts, totalCustomers] =
-    await Promise.all([
-      supabase.from('orders').select('total_amount').not('status', 'eq', 'cancelled'),
-      supabase
-        .from('orders')
-        .select('total_amount')
-        .gte('created_at', monthStart)
-        .not('status', 'eq', 'cancelled'),
-      supabase.from('orders').select('id', { count: 'exact', head: true }),
-      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'placed'),
-      supabase.from('variants').select('id', { count: 'exact', head: true }).lt('quantity', 5),
-      supabase.from('products').select('id', { count: 'exact', head: true }).eq('published', true),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
-    ])
+  const [
+    allOrders, monthOrders, totalCount, pendingCount,
+    lowStock, outOfStock, totalProducts, totalCustomers, totalEmployees,
+  ] = await Promise.all([
+    supabase.from('orders').select('total_amount').not('status', 'eq', 'cancelled'),
+    supabase
+      .from('orders')
+      .select('total_amount')
+      .gte('created_at', monthStart)
+      .not('status', 'eq', 'cancelled'),
+    supabase.from('orders').select('id', { count: 'exact', head: true }),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'placed'),
+    // Low stock = 1-4 left; out of stock = 0 left (separate so neither goes negative).
+    supabase.from('variants').select('id', { count: 'exact', head: true }).gt('quantity', 0).lt('quantity', 5),
+    supabase.from('variants').select('id', { count: 'exact', head: true }).eq('quantity', 0),
+    supabase.from('products').select('id', { count: 'exact', head: true }).eq('published', true),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'employee'),
+  ])
 
   res.json({
     totalRevenue: allOrders.data?.reduce((s, o) => s + Number(o.total_amount), 0) ?? 0,
@@ -26,8 +31,10 @@ export async function getDashboardStats(_req: AuthRequest, res: Response) {
     totalOrders: totalCount.count ?? 0,
     pendingOrders: pendingCount.count ?? 0,
     lowStockVariants: lowStock.count ?? 0,
+    outOfStockVariants: outOfStock.count ?? 0,
     totalProducts: totalProducts.count ?? 0,
     totalCustomers: totalCustomers.count ?? 0,
+    totalEmployees: totalEmployees.count ?? 0,
   })
 }
 
@@ -108,25 +115,76 @@ export async function getSalesSummary(_req: AuthRequest, res: Response) {
   })
 }
 
-// Stock left per category — sums variant quantities grouped by product category.
+// Per-category inventory depth — for each category: how many products, how many
+// distinct colors, total stock left, variant count and low-stock variant count.
 export async function getCategoryInventory(_req: AuthRequest, res: Response) {
   const { data, error } = await supabase
     .from('variants')
-    .select('quantity, product:products(category:categories(id, name))')
+    .select('quantity, color, product:products(id, type, category:categories(id, name, parent_id))')
 
   if (error) return res.status(500).json({ error: error.message })
 
-  const map: Record<string, { id: string; name: string; itemsLeft: number; variantCount: number }> = {}
+  type Bucket = {
+    id: string
+    name: string
+    parentId: string | null
+    itemsLeft: number
+    variantCount: number
+    lowStock: number
+    products: Set<string>
+    colors: Record<string, number>
+    types: Set<string>
+  }
+  const map: Record<string, Bucket> = {}
+
   for (const v of data ?? []) {
-    const cat = (v.product as unknown as { category?: { id: string; name: string } } | null)?.category
+    const product = v.product as unknown as
+      | { id?: string; type?: string; category?: { id: string; name: string; parent_id: string | null } }
+      | null
+    const cat = product?.category
     const key = cat?.id ?? 'uncategorized'
-    const name = cat?.name ?? 'Uncategorized'
-    if (!map[key]) map[key] = { id: key, name, itemsLeft: 0, variantCount: 0 }
-    map[key].itemsLeft += Number(v.quantity)
-    map[key].variantCount += 1
+    if (!map[key]) {
+      map[key] = {
+        id: key,
+        name: cat?.name ?? 'Uncategorized',
+        parentId: cat?.parent_id ?? null,
+        itemsLeft: 0,
+        variantCount: 0,
+        lowStock: 0,
+        products: new Set(),
+        colors: {},
+        types: new Set(),
+      }
+    }
+    const b = map[key]
+    const qty = Number(v.quantity)
+    b.itemsLeft += qty
+    b.variantCount += 1
+    if (qty < 5) b.lowStock += 1
+    if (product?.id) b.products.add(product.id)
+    if (v.color) {
+      const col = v.color as string
+      b.colors[col] = (b.colors[col] || 0) + qty
+    }
+    if (product?.type) b.types.add(product.type)
   }
 
-  res.json(Object.values(map).sort((a, b) => b.itemsLeft - a.itemsLeft))
+  const result = Object.values(map)
+    .map((b) => ({
+      id: b.id,
+      name: b.name,
+      parentId: b.parentId,
+      type: [...b.types][0] ?? null,
+      productCount: b.products.size,
+      colorCount: Object.keys(b.colors).length,
+      colors: Object.entries(b.colors).map(([color, qty]) => ({ color, qty })),
+      variantCount: b.variantCount,
+      itemsLeft: b.itemsLeft,
+      lowStock: b.lowStock,
+    }))
+    .sort((a, b) => b.itemsLeft - a.itemsLeft)
+
+  res.json(result)
 }
 
 export async function getCategorySales(_req: AuthRequest, res: Response) {

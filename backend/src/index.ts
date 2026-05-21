@@ -27,6 +27,7 @@ import analyticsRoutes from './routes/analytics'
 import couponRoutes from './routes/coupons'
 import notificationRoutes from './routes/notifications'
 import salesRoutes from './routes/sales'
+import userRoutes from './routes/users'
 
 const app = express()
 
@@ -69,6 +70,7 @@ app.use('/api/analytics', analyticsRoutes)
 app.use('/api/coupons', couponRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/sales', salesRoutes)
+app.use('/api/users', userRoutes)
 
 app.use(notFound)
 app.use(errorHandler)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, FlatList, Pressable, Modal, TextInput,
   ActivityIndicator, Alert, RefreshControl, Image, ScrollView,
@@ -17,11 +17,14 @@ function CategoryModal({ visible, onClose, onSave, isSaving, parents }) {
   const [slug, setSlug] = useState('');
   const [parentId, setParentId] = useState('');
 
-  const reset = () => {
-    setName('');
-    setSlug('');
-    setParentId('');
-  };
+  // Fresh fields every time the sheet opens.
+  useEffect(() => {
+    if (visible) {
+      setName('');
+      setSlug('');
+      setParentId('');
+    }
+  }, [visible]);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -33,7 +36,6 @@ function CategoryModal({ visible, onClose, onSave, isSaving, parents }) {
       slug: slug.trim() || name.trim().toLowerCase().replace(/\s+/g, '-'),
       parent_id: parentId || undefined,
     });
-    reset();
   };
 
   return (

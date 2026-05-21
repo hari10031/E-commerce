@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, Image, Pressable, Alert, ActivityIndicator, Modal,
-  FlatList, Dimensions,
+  FlatList, Dimensions, Platform, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -39,9 +39,15 @@ export default function ProductDetailScreen({ route, navigation }) {
   const user = useAuthStore((s) => s.user);
   const viewMode = useAuthStore((s) => s.viewMode);
   const galleryRef = useRef(null);
+  const lastTapRef = useRef(0);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [sellVariant, setSellVariant] = useState(null);
   const [sellQty, setSellQty] = useState(1);
+  const [sellCustomer, setSellCustomer] = useState({ name: '', phone: '' });
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [zoomUrl, setZoomUrl] = useState(null);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, actions, dismissible }
 
   const isAdmin = user?.role === 'admin';
   const isStaff = user?.role === 'admin' || user?.role === 'employee';
@@ -52,6 +58,22 @@ export default function ProductDetailScreen({ route, navigation }) {
     queryFn: () => getProduct(productId),
   });
 
+  const openConfirm = (title, message, actions, dismissible = true) => {
+    if (Platform.OS !== 'web') {
+      Alert.alert(
+        title,
+        message,
+        actions.map((item) => ({
+          text: item.label,
+          style: item.style,
+          onPress: item.onPress,
+        }))
+      );
+      return;
+    }
+    setConfirmDialog({ title, message, actions, dismissible });
+  };
+
   const publishMutation = useMutation({
     mutationFn: () => publishProduct(productId),
     onSuccess: () => {
@@ -59,7 +81,7 @@ export default function ProductDetailScreen({ route, navigation }) {
       qc.invalidateQueries({ queryKey: ['product', productId] });
       qc.invalidateQueries({ queryKey: ['products'] });
     },
-    onError: (err) => Alert.alert('Error', err.message),
+    onError: (err) => openConfirm('Error', err.message, [{ label: 'OK' }]),
   });
 
   const unpublishMutation = useMutation({
@@ -69,7 +91,7 @@ export default function ProductDetailScreen({ route, navigation }) {
       qc.invalidateQueries({ queryKey: ['product', productId] });
       qc.invalidateQueries({ queryKey: ['products'] });
     },
-    onError: (err) => Alert.alert('Error', err.message),
+    onError: (err) => openConfirm('Error', err.message, [{ label: 'OK' }]),
   });
 
   const deleteMutation = useMutation({
@@ -79,35 +101,42 @@ export default function ProductDetailScreen({ route, navigation }) {
       qc.invalidateQueries({ queryKey: ['products'] });
       navigation.goBack();
     },
-    onError: (err) => Alert.alert('Error', err.message),
+    onError: (err) => openConfirm('Error', err.message, [{ label: 'OK' }]),
   });
 
   const sellMutation = useMutation({
-    mutationFn: ({ variantId, quantity }) => recordSale({ variant_id: variantId, quantity }),
+    mutationFn: ({ variantId, quantity, customerName, customerPhone }) =>
+      recordSale({
+        variant_id: variantId,
+        quantity,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+      }),
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ['product', productId] });
       qc.invalidateQueries({ queryKey: ['products'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       setSellVariant(null);
-      Alert.alert('Sale recorded', 'Stock has been updated.');
+      openConfirm('Sale recorded', 'Stock has been updated.', [{ label: 'OK' }]);
     },
-    onError: (err) => Alert.alert('Error', err.message),
+    onError: (err) => openConfirm('Error', err.message, [{ label: 'OK' }]),
   });
 
   const openSell = (variant) => {
     setSellVariant(variant);
     setSellQty(1);
+    setSellCustomer({ name: '', phone: '' });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const confirmDelete = () => {
-    Alert.alert(
+    openConfirm(
       'Delete Product',
       `Are you sure you want to delete "${product?.title}"? This cannot be undone.`,
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate() },
+        { label: 'Cancel', style: 'cancel' },
+        { label: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate() },
       ]
     );
   };
@@ -120,6 +149,53 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
+  const productTitle = product?.title ?? '';
+  const renderGalleryItem = useCallback(({ item }) => {
+    if (!item.url) {
+      return (
+        <View
+          style={{ width: SCREEN_WIDTH, height: IMAGE_HEIGHT }}
+          className="items-center justify-center bg-amber-50"
+        >
+          <Ionicons name="image-outline" size={48} color="#fbbf24" />
+          <Text className="text-amber-600 font-medium mt-2 text-sm">
+            {productTitle}
+          </Text>
+        </View>
+      );
+    }
+    return (
+      <Pressable
+        onPress={() => openZoom(item.url)}
+        style={{ width: SCREEN_WIDTH, height: IMAGE_HEIGHT, backgroundColor: '#ffffff' }}
+        className="items-center justify-center"
+      >
+        <Image
+          source={{ uri: item.url }}
+          style={{ width: SCREEN_WIDTH, height: IMAGE_HEIGHT }}
+          resizeMode="contain"
+        />
+      </Pressable>
+    );
+  }, [productTitle]);
+
+  const openZoom = (url) => {
+    setZoomScale(1);
+    setZoomUrl(url);
+  };
+  const closeZoom = () => {
+    setZoomUrl(null);
+    setZoomScale(1);
+  };
+  // Double-tap toggles between fit (1x) and 2.5x.
+  const handleZoomTap = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      setZoomScale((s) => (s > 1 ? 1 : 2.5));
+    }
+    lastTapRef.current = now;
+  };
+
   if (isLoading) return <LoadingSpinner message="Loading product…" />;
   if (!product) return null;
 
@@ -131,33 +207,34 @@ export default function ProductDetailScreen({ route, navigation }) {
   const uniqueColors = [...new Set(variants.map((v) => v.color).filter(Boolean))];
   const uniqueSizes = [...new Set(variants.map((v) => v.size).filter(Boolean))];
 
-  const renderGalleryItem = useCallback(({ item }) => {
-    if (!item.url) {
-      return (
-        <View
-          style={{ width: SCREEN_WIDTH, height: IMAGE_HEIGHT }}
-          className="items-center justify-center bg-amber-50"
-        >
-          <Ionicons name="image-outline" size={48} color="#fbbf24" />
-          <Text className="text-amber-600 font-medium mt-2 text-sm">
-            {product.title}
-          </Text>
-        </View>
-      );
-    }
-    return (
-      <Image
-        source={{ uri: item.url }}
-        style={{ width: SCREEN_WIDTH, height: IMAGE_HEIGHT }}
-        resizeMode="cover"
-      />
-    );
-  }, [product.title]);
+  // Per-colour image groups — the colour selector swaps the gallery.
+  // display_order: AI-generated images use 0-9, originals 10-19 → generated show first.
+  const sortByOrder = (a, b) => (Number(a.display_order) || 0) - (Number(b.display_order) || 0);
+  const imageColors = [...new Set(images.map((i) => i.color).filter(Boolean))];
+  const activeColor = selectedColor && imageColors.includes(selectedColor)
+    ? selectedColor
+    : imageColors[0] ?? null;
+  const colorImages = (activeColor ? images.filter((i) => i.color === activeColor) : images)
+    .slice()
+    .sort(sortByOrder);
 
-  const galleryData = images.length > 0 ? images : [{ id: 'placeholder', url: null }];
+  const selectColor = (color) => {
+    setSelectedColor(color);
+    setActiveImageIdx(0);
+    galleryRef.current?.scrollToOffset({ offset: 0, animated: false });
+  };
+
+  const galleryData = colorImages.length > 0 ? colorImages : [{ id: 'placeholder', url: null }];
+  const confirmTitle = confirmDialog?.title || '';
+  const confirmMessage = confirmDialog?.message || '';
+  const confirmActions = confirmDialog?.actions || [];
+  const runConfirmAction = (action) => {
+    setConfirmDialog(null);
+    if (action) action();
+  };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
@@ -184,7 +261,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           {/* Back button */}
           <Pressable
             onPress={() => navigation.goBack()}
-            style={{ top: insets.top + 8 }}
+            style={{ top: 8 }}
             className="absolute left-4 w-10 h-10 bg-white/90 rounded-full items-center justify-center shadow-sm"
           >
             <Ionicons name="arrow-back" size={20} color="#1f2937" />
@@ -198,7 +275,7 @@ export default function ProductDetailScreen({ route, navigation }) {
                 type: product.type,
                 productId,
               })}
-              style={{ top: insets.top + 8 }}
+              style={{ top: 8 }}
               className="absolute right-4 w-10 h-10 bg-white/90 rounded-full items-center justify-center shadow-sm"
             >
               <Ionicons name="pencil" size={18} color="#1f2937" />
@@ -270,20 +347,38 @@ export default function ProductDetailScreen({ route, navigation }) {
             </View>
           )}
 
-          {/* Available Colors */}
-          {uniqueColors.length > 0 && (
+          {/* Available Colors — tap to switch the gallery */}
+          {(imageColors.length > 0 ? imageColors : uniqueColors).length > 0 && (
             <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-              <Text className="text-sm font-semibold text-gray-700 mb-3">Available Colors</Text>
+              <Text className="text-sm font-semibold text-gray-700 mb-3">
+                {imageColors.length > 0 ? 'Colors — tap to view' : 'Available Colors'}
+              </Text>
               <View className="flex-row flex-wrap gap-3">
-                {uniqueColors.map((color) => (
-                  <View key={color} className="items-center">
-                    <View
-                      className="w-8 h-8 rounded-full border border-gray-200"
-                      style={{ backgroundColor: getColorHex(color) }}
-                    />
-                    <Text className="text-xs text-gray-500 mt-1 capitalize">{color}</Text>
-                  </View>
-                ))}
+                {(imageColors.length > 0 ? imageColors : uniqueColors).map((color) => {
+                  const selectable = imageColors.includes(color);
+                  const isActive = color === activeColor;
+                  return (
+                    <Pressable
+                      key={color}
+                      disabled={!selectable}
+                      onPress={() => selectColor(color)}
+                      className="items-center"
+                    >
+                      <View
+                        className="w-9 h-9 rounded-full border-2"
+                        style={{
+                          backgroundColor: getColorHex(color),
+                          borderColor: isActive ? '#f59e0b' : '#e5e7eb',
+                        }}
+                      />
+                      <Text
+                        className={`text-xs mt-1 capitalize ${isActive ? 'text-amber-700 font-semibold' : 'text-gray-500'}`}
+                      >
+                        {color}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -340,14 +435,12 @@ export default function ProductDetailScreen({ route, navigation }) {
                     <Pressable
                       onPress={() => openSell(v)}
                       disabled={v.quantity === 0}
-                      className={`px-3 py-1.5 rounded-lg ${
-                        v.quantity === 0 ? 'bg-gray-100' : 'bg-amber-500 active:bg-amber-600'
-                      }`}
+                      className={`px-3 py-1.5 rounded-lg ${v.quantity === 0 ? 'bg-gray-100' : 'bg-amber-500 active:bg-amber-600'
+                        }`}
                     >
                       <Text
-                        className={`text-xs font-bold ${
-                          v.quantity === 0 ? 'text-gray-400' : 'text-white'
-                        }`}
+                        className={`text-xs font-bold ${v.quantity === 0 ? 'text-gray-400' : 'text-white'
+                          }`}
                       >
                         Sell
                       </Text>
@@ -445,6 +538,39 @@ export default function ProductDetailScreen({ route, navigation }) {
         )}
       </View>
 
+      <Modal
+        visible={!!confirmDialog}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (confirmDialog?.dismissible) setConfirmDialog(null);
+        }}
+      >
+        <Pressable
+          className="flex-1 items-center justify-center px-6"
+          onPress={() => {
+            if (confirmDialog?.dismissible) setConfirmDialog(null);
+          }}
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+        >
+          <Pressable className="w-full rounded-2xl p-4" style={{ backgroundColor: '#ffffff' }} onPress={() => { }}>
+            <Text className="text-base font-bold mb-1" style={{ color: '#111827' }}>{confirmTitle}</Text>
+            <Text className="text-sm mb-3" style={{ color: '#6b7280' }}>{confirmMessage}</Text>
+            {confirmActions.map((item) => (
+              <Pressable
+                key={item.label}
+                onPress={() => runConfirmAction(item.onPress)}
+                className="py-2.5"
+              >
+                <Text className="text-sm font-semibold" style={{ color: item.style === 'destructive' ? '#dc2626' : '#111827' }}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Sell modal */}
       <Modal
         visible={!!sellVariant}
@@ -478,6 +604,27 @@ export default function ProductDetailScreen({ route, navigation }) {
               </View>
             )}
 
+            {/* Walk-in customer */}
+            <Text className="text-sm font-medium text-gray-700 mb-2">Customer name</Text>
+            <TextInput
+              className="rounded-xl px-3 py-3 text-sm mb-3"
+              style={{ backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', color: '#1f2937' }}
+              placeholder="e.g. Priya Sharma"
+              placeholderTextColor="#9ca3af"
+              value={sellCustomer.name}
+              onChangeText={(v) => setSellCustomer((c) => ({ ...c, name: v }))}
+            />
+            <Text className="text-sm font-medium text-gray-700 mb-2">Customer phone</Text>
+            <TextInput
+              className="rounded-xl px-3 py-3 text-sm mb-4"
+              style={{ backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', color: '#1f2937' }}
+              placeholder="10-digit mobile number"
+              placeholderTextColor="#9ca3af"
+              keyboardType="phone-pad"
+              value={sellCustomer.phone}
+              onChangeText={(v) => setSellCustomer((c) => ({ ...c, phone: v }))}
+            />
+
             <Text className="text-sm font-medium text-gray-700 mb-2">Quantity sold</Text>
             <View className="flex-row items-center justify-center mb-5">
               <Pressable
@@ -509,7 +656,12 @@ export default function ProductDetailScreen({ route, navigation }) {
               </Pressable>
               <Pressable
                 onPress={() =>
-                  sellMutation.mutate({ variantId: sellVariant.id, quantity: sellQty })
+                  sellMutation.mutate({
+                    variantId: sellVariant.id,
+                    quantity: sellQty,
+                    customerName: sellCustomer.name,
+                    customerPhone: sellCustomer.phone,
+                  })
                 }
                 disabled={sellMutation.isPending}
                 className="flex-1 bg-amber-500 rounded-xl py-3.5 items-center active:bg-amber-600"
@@ -523,6 +675,80 @@ export default function ProductDetailScreen({ route, navigation }) {
             </View>
           </Pressable>
         </Pressable>
+      </Modal>
+
+      {/* Full-screen image zoom — works on iOS, Android and web */}
+      <Modal
+        visible={!!zoomUrl}
+        transparent
+        animationType="fade"
+        onRequestClose={closeZoom}
+      >
+        <View className="flex-1" style={{ backgroundColor: '#000' }}>
+          {/* Vertical pan ScrollView; nested horizontal for side pan when zoomed.
+              maximumZoomScale also enables native pinch on iOS. */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            maximumZoomScale={4}
+            minimumZoomScale={1}
+            bouncesZoom
+            centerContent
+            showsVerticalScrollIndicator={false}
+          >
+            <ScrollView
+              horizontal
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+              showsHorizontalScrollIndicator={false}
+            >
+              {zoomUrl ? (
+                <Pressable onPress={handleZoomTap}>
+                  <Image
+                    source={{ uri: zoomUrl }}
+                    style={{
+                      width: SCREEN_WIDTH * zoomScale,
+                      height: SCREEN_WIDTH * 1.3 * zoomScale,
+                    }}
+                    resizeMode="contain"
+                  />
+                </Pressable>
+              ) : null}
+            </ScrollView>
+          </ScrollView>
+
+          <Pressable
+            onPress={closeZoom}
+            style={{ position: 'absolute', top: insets.top + 8, right: 16 }}
+            className="w-10 h-10 bg-white/20 rounded-full items-center justify-center"
+          >
+            <Ionicons name="close" size={22} color="#fff" />
+          </Pressable>
+
+          {/* Zoom controls */}
+          <View
+            style={{ position: 'absolute', bottom: insets.bottom + 20, left: 0, right: 0 }}
+            className="items-center"
+          >
+            <Text className="text-white/50 text-xs mb-2">Double-tap image or use − / + to zoom</Text>
+            <View className="flex-row justify-center items-center">
+              <Pressable
+                onPress={() => setZoomScale((s) => Math.max(1, Math.round((s - 0.5) * 10) / 10))}
+                className="w-12 h-12 bg-white/20 rounded-full items-center justify-center"
+              >
+                <Ionicons name="remove" size={24} color="#fff" />
+              </Pressable>
+              <View className="bg-white/20 rounded-full px-4 py-2 mx-3">
+                <Text className="text-white text-sm font-semibold">{Math.round(zoomScale * 100)}%</Text>
+              </View>
+              <Pressable
+                onPress={() => setZoomScale((s) => Math.min(4, Math.round((s + 0.5) * 10) / 10))}
+                className="w-12 h-12 bg-white/20 rounded-full items-center justify-center"
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </Pressable>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );

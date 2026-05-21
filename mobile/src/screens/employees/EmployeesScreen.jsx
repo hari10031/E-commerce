@@ -43,7 +43,9 @@ export default function EmployeesScreen({ navigation }) {
           ? Haptics.NotificationFeedbackType.Success
           : Haptics.NotificationFeedbackType.Warning
       );
-      qc.invalidateQueries({ queryKey: ['employees'] });
+      // refetchType 'all' forces the inactive tab (Pending/Active) to refresh too,
+      // so an approved employee leaves Pending and shows under Active immediately.
+      qc.invalidateQueries({ queryKey: ['employees'], refetchType: 'all' });
     },
     onError: (err) => Alert.alert('Error', err.message),
   });
@@ -66,7 +68,19 @@ export default function EmployeesScreen({ navigation }) {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <ScreenHeader title="Employees" navigation={navigation} />
+      <ScreenHeader
+        title="Employees"
+        navigation={navigation}
+        rightElement={
+          <Pressable
+            onPress={() => navigation.navigate('CreateUser', { role: 'employee', lockRole: true })}
+            className="flex-row items-center px-3 h-9 rounded-full bg-amber-500 active:bg-amber-600"
+          >
+            <Ionicons name="person-add" size={15} color="#fff" />
+            <Text className="text-white text-xs font-semibold ml-1.5">New</Text>
+          </Pressable>
+        }
+      />
 
       {/* Tabs */}
       <View className="flex-row bg-white border-b border-gray-100 px-4">

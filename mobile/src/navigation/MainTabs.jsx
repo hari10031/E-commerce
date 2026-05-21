@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { View, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import TypeSelectorModal from '../components/products/TypeSelectorModal';
+import { navigationRef } from './navigationRef';
 
 import useAuthStore from '../store/authStore';
 
@@ -24,6 +25,8 @@ import CustomersScreen from '../screens/customers/CustomersScreen';
 import CustomerDetailScreen from '../screens/customers/CustomerDetailScreen';
 import TeamScreen from '../screens/team/TeamScreen';
 import EmployeeDetailScreen from '../screens/team/EmployeeDetailScreen';
+import CreateUserScreen from '../screens/users/CreateUserScreen';
+import MySalesScreen from '../screens/sales/MySalesScreen';
 
 const Tab = createBottomTabNavigator();
 const DashStack = createNativeStackNavigator();
@@ -42,6 +45,7 @@ function DashboardStack() {
   return (
     <DashStack.Navigator screenOptions={STACK_OPTS}>
       <DashStack.Screen name="Dashboard" component={DashboardScreen} />
+      <DashStack.Screen name="MySales" component={MySalesScreen} />
     </DashStack.Navigator>
   );
 }
@@ -76,6 +80,7 @@ function MoreStack() {
       <MoreStk.Screen name="Profile" component={ProfileScreen} />
       <MoreStk.Screen name="Team" component={TeamScreen} />
       <MoreStk.Screen name="EmployeeDetail" component={EmployeeDetailScreen} />
+      <MoreStk.Screen name="CreateUser" component={CreateUserScreen} />
     </MoreStk.Navigator>
   );
 }
@@ -85,6 +90,8 @@ function CustomersStack() {
     <CustStack.Navigator screenOptions={STACK_OPTS}>
       <CustStack.Screen name="Customers" component={CustomersScreen} />
       <CustStack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
+      <CustStack.Screen name="OrderDetail" component={OrderDetailScreen} />
+      <CustStack.Screen name="CreateUser" component={CreateUserScreen} />
     </CustStack.Navigator>
   );
 }
@@ -102,11 +109,13 @@ function CreatePlaceholder() {
 }
 
 function CreateTabButton({ onPress }) {
+  const insets = useSafeAreaInsets();
+  const lift = 16 + insets.bottom;
   return (
     <Pressable onPress={onPress} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
       <View
         style={{
-          top: -16,
+          top: -lift,
           width: 58,
           height: 58,
           borderRadius: 29,
@@ -137,14 +146,26 @@ const TAB_STYLE = {
 
 const TAB_LABEL_STYLE = { fontSize: 11, fontWeight: '600' };
 
+// Grow the tab bar by the device's bottom inset so it never sits under the
+// Android system nav bar / iOS home indicator.
+function useTabBarStyle() {
+  const insets = useSafeAreaInsets();
+  return {
+    ...TAB_STYLE,
+    height: 60 + insets.bottom,
+    paddingBottom: insets.bottom + 4,
+  };
+}
+
 function AdminTabs({ onCreatePress }) {
+  const tabBarStyle = useTabBarStyle();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: AMBER,
         tabBarInactiveTintColor: GRAY,
-        tabBarStyle: TAB_STYLE,
+        tabBarStyle,
         tabBarLabelStyle: TAB_LABEL_STYLE,
         tabBarIcon: ({ color, size }) => {
           const icons = {
@@ -182,13 +203,14 @@ function AdminTabs({ onCreatePress }) {
 }
 
 function EmployeeTabs({ onCreatePress }) {
+  const tabBarStyle = useTabBarStyle();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: AMBER,
         tabBarInactiveTintColor: GRAY,
-        tabBarStyle: TAB_STYLE,
+        tabBarStyle,
         tabBarLabelStyle: TAB_LABEL_STYLE,
         tabBarIcon: ({ color, size }) => {
           const icons = {
@@ -224,13 +246,14 @@ function EmployeeTabs({ onCreatePress }) {
 }
 
 function CustomerTabs() {
+  const tabBarStyle = useTabBarStyle();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: AMBER,
         tabBarInactiveTintColor: GRAY,
-        tabBarStyle: TAB_STYLE,
+        tabBarStyle,
         tabBarLabelStyle: TAB_LABEL_STYLE,
         tabBarIcon: ({ color, size }) => {
           const icons = {
@@ -254,7 +277,6 @@ function CustomerTabs() {
 export default function MainTabs() {
   const { user, viewMode } = useAuthStore();
   const [showTypeModal, setShowTypeModal] = useState(false);
-  const navigation = useNavigation();
 
   const handleCreatePress = useCallback(() => {
     setShowTypeModal(true);
@@ -262,11 +284,13 @@ export default function MainTabs() {
 
   const handleTypeSelect = useCallback((type) => {
     setShowTypeModal(false);
-    navigation.navigate('CollectionsTab', {
-      screen: 'ProductWizard',
-      params: { mode: 'create', type },
-    });
-  }, [navigation]);
+    if (navigationRef.isReady()) {
+      navigationRef.navigate('CollectionsTab', {
+        screen: 'ProductWizard',
+        params: { mode: 'create', type },
+      });
+    }
+  }, []);
 
   if (viewMode === 'user') {
     return <CustomerTabs />;

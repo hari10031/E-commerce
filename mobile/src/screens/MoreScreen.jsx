@@ -100,6 +100,11 @@ export default function MoreScreen({ navigation }) {
             onPress={() => navigation.navigate('Employees')}
           />
           <MenuItem
+            icon="person-circle"
+            label="Add User"
+            onPress={() => navigation.navigate('CreateUser', { role: 'admin', lockRole: false })}
+          />
+          <MenuItem
             icon="pricetag"
             label="Coupons"
             onPress={() => navigation.navigate('Coupons')}

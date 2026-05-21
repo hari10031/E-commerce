@@ -1,7 +1,38 @@
+import { Platform } from 'react-native';
 import useAuthStore from '../store/authStore';
 import { API_URL } from '../constants';
 
-async function apiFetch(path, options = {}) {
+// Single in-flight refresh shared by all concurrent 401s.
+let refreshPromise = null;
+
+async function refreshSession() {
+  if (refreshPromise) return refreshPromise;
+  const refreshToken = useAuthStore.getState().refreshToken;
+  if (!refreshToken) return null;
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data?.token) return null;
+      useAuthStore.getState().setAuth(data.token, useAuthStore.getState().user, data.refreshToken);
+      return data.token;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+async function apiFetch(path, options = {}, _retry = false) {
   const token = useAuthStore.getState().token;
 
   const headers = {
@@ -15,7 +46,20 @@ async function apiFetch(path, options = {}) {
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401) {
+  // A 401 from login/register/refresh means bad credentials — not an expired
+  // session — so let the real error message through instead of forcing logout.
+  const isAuthEndpoint =
+    path.startsWith('/auth/login') ||
+    path.startsWith('/auth/register') ||
+    path.startsWith('/auth/refresh');
+
+  if (res.status === 401 && !isAuthEndpoint) {
+    // Try once to refresh the expired access token, then replay the request.
+    // FormData bodies are streams that cannot be re-sent, so skip the retry.
+    if (!_retry && !(options.body instanceof FormData)) {
+      const newToken = await refreshSession();
+      if (newToken) return apiFetch(path, options, true);
+    }
     useAuthStore.getState().clearAuth();
     throw new Error('Session expired. Please log in again.');
   }
@@ -60,7 +104,7 @@ export const updatePushToken = (fcmToken) =>
   });
 
 export const logout = () =>
-  apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
+  apiFetch('/auth/logout', { method: 'POST' }).catch(() => { });
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
@@ -99,6 +143,9 @@ export const addProductImage = (productId, payload) =>
     method: 'POST',
     body: JSON.stringify(payload),
   });
+
+export const deleteProductImage = (productId, imageId) =>
+  apiFetch(`/products/${productId}/images/${imageId}`, { method: 'DELETE' });
 
 // ─── Variants ────────────────────────────────────────────────────────────────
 
@@ -174,6 +221,37 @@ export const approveEmployee = (id, action) =>
 export const deleteEmployee = (id) =>
   apiFetch(`/employees/${id}`, { method: 'DELETE' });
 
+// ─── Users (admin) ────────────────────────────────────────────────────────────
+
+export const getUsers = (params = {}) => {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => v != null && qs.set(k, v));
+  const query = qs.toString();
+  return apiFetch(`/users${query ? `?${query}` : ''}`);
+};
+
+export const getCustomers = (params = {}) => getUsers({ ...params, role: 'customer' });
+
+export const getUser = (id) => apiFetch(`/users/${id}`);
+
+export const createUser = (payload) =>
+  apiFetch('/users', { method: 'POST', body: JSON.stringify(payload) });
+
+export const deleteUser = (id) =>
+  apiFetch(`/users/${id}`, { method: 'DELETE' });
+
+export const resetUserPassword = (id, password) =>
+  apiFetch(`/users/${id}/password`, {
+    method: 'PATCH',
+    body: JSON.stringify({ password }),
+  });
+
+export const setUserActive = (id, active) =>
+  apiFetch(`/users/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ active }),
+  });
+
 // ─── Coupons ──────────────────────────────────────────────────────────────────
 
 export const getCoupons = () => apiFetch('/coupons');
@@ -194,7 +272,12 @@ export const updateCoupon = (id, payload) =>
 
 export const getDashboard = () => apiFetch('/analytics/dashboard');
 export const getSales = () => apiFetch('/analytics/sales');
-export const getInventory = () => apiFetch('/analytics/inventory');
+export const getInventory = (params = {}) => {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => v != null && qs.set(k, v));
+  const query = qs.toString();
+  return apiFetch(`/analytics/inventory${query ? `?${query}` : ''}`);
+};
 export const getCategorySales = () => apiFetch('/analytics/category-sales');
 export const getEmployeePerformance = () => apiFetch('/analytics/employee-performance');
 export const getSalesSummary = () => apiFetch('/analytics/sales-summary');
@@ -202,13 +285,21 @@ export const getCategoryInventory = () => apiFetch('/analytics/category-inventor
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
-export const uploadImage = async (uri, bucket = 'product-images') => {
-  const filename = uri.split('/').pop();
-  const ext = filename.split('.').pop().toLowerCase();
-  const type = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
-
+export const uploadImage = async (source, bucket = 'product-images') => {
   const formData = new FormData();
-  formData.append('file', { uri, name: filename, type });
+
+  if (Platform.OS === 'web' && source && typeof source === 'object' && source.file) {
+    const file = source.file;
+    const filename = source.name || file.name || `upload-${Date.now()}.jpg`;
+    formData.append('file', file, filename);
+  } else {
+    const uri = typeof source === 'string' ? source : source?.uri;
+    const filename = uri.split('/').pop();
+    const ext = filename.split('.').pop().toLowerCase();
+    const type = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+    formData.append('file', { uri, name: filename, type });
+  }
+
   formData.append('bucket', bucket);
 
   return apiFetch('/upload/image', { method: 'POST', body: formData });
@@ -224,7 +315,7 @@ export const generateContent = (payload) =>
 
 // Gemini "nano banana" image generation. Pass a local `uri` (sends the file)
 // or an `imageUrl` (server fetches it). Returns { url } of the generated image.
-export const generateProductImage = ({ uri, imageUrl, productType, color, category }) => {
+export const generateProductImage = ({ uri, imageUrl, imageUrls, productType, color, category }) => {
   if (uri) {
     const filename = uri.split('/').pop();
     const ext = filename.split('.').pop().toLowerCase();
@@ -238,7 +329,7 @@ export const generateProductImage = ({ uri, imageUrl, productType, color, catego
   }
   return apiFetch('/ai/generate-image', {
     method: 'POST',
-    body: JSON.stringify({ imageUrl, productType, color, category }),
+    body: JSON.stringify({ imageUrl, imageUrls, productType, color, category }),
   });
 };
 

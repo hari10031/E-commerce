@@ -72,7 +72,31 @@ router.post(
 
     res.json({
       token: data.session.access_token,
+      refreshToken: data.session.refresh_token,
       user: { ...profile, email: data.user.email },
+    })
+  }
+)
+
+// Exchange a refresh token for a fresh access token. Supabase access tokens
+// expire after ~1h; without this the app would 401 and log the user out.
+router.post(
+  '/refresh',
+  authLimiter,
+  [body('refreshToken').notEmpty()],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
+
+    const { refreshToken } = req.body
+    const { data, error } = await supabaseAuth.auth.refreshSession({ refresh_token: refreshToken })
+    if (error || !data.session) {
+      return res.status(401).json({ error: error?.message ?? 'Could not refresh session' })
+    }
+
+    res.json({
+      token: data.session.access_token,
+      refreshToken: data.session.refresh_token,
     })
   }
 )

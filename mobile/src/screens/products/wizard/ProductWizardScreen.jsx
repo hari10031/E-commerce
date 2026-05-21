@@ -1,21 +1,23 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView, Image, Alert,
-  ActivityIndicator, Switch, Platform,
+  ActivityIndicator, Switch, Modal, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 
 import {
   createProduct, updateProduct, publishProduct,
-  addProductImage, bulkUpdateVariants, uploadImage,
+  addProductImage, deleteProductImage, bulkUpdateVariants, uploadImage,
   generateContent, generateProductImage,
+  getCategories, createCategory, getProduct,
 } from '../../../lib/api';
-import { MOCK_CATEGORIES, GOLD_PURITIES, GOLD_COLORS, STONE_TYPES } from '../../../constants/categories';
-import { COLORS, PRODUCT_SIZES, PRODUCT_TYPES } from '../../../constants';
+import LoadingSpinner from '../../../components/ui/LoadingSpinner';
+import { GOLD_PURITIES, STONE_TYPES } from '../../../constants/categories';
+import { PRODUCT_SIZES, PRODUCT_TYPES } from '../../../constants';
 import { formatPrice, discountedPrice } from '../../../lib/utils';
 
 const WARM_BG = '#fffaf5';
@@ -24,18 +26,31 @@ const SECTION_BORDER = '#fde8d0';
 const ACCENT = '#b91c1c';
 const AMBER_500 = '#f59e0b';
 
+// Photo angles captured for EACH colour of a product.
 const PHOTO_BLOCKS = {
-  saree: ['Full Saree', 'Pallu', 'Border', 'Blouse Piece', 'Fabric Closeup', 'Draping Style', 'Zari Work', 'Tag/Label'],
-  dress: ['Complete Outfit', 'Top/Kurta', 'Bottom/Pants', 'Dupatta/Chunni', 'Embroidery Detail', 'Fabric Closeup', 'Back View', 'Tag/Label'],
-  jewellery: ['Full Piece', 'Front Detail', 'Back/Clasp', 'Stone Setting', 'Weight Tag', 'Hallmark', 'Packaging', 'Scale Reference'],
+  saree: ['Saree image', 'Texture', 'Border', 'Pallu'],
+  dress: ['Complete Outfit', 'Fabric Closeup', 'Embroidery Detail', 'Back View'],
+  jewellery: ['Full Piece', 'Front Detail', 'Stone Setting', 'Hallmark'],
 };
 
 const COLOR_MAP = {
-  Red: '#ef4444', Blue: '#3b82f6', Green: '#22c55e', Yellow: '#eab308',
-  Purple: '#a855f7', Pink: '#ec4899', Orange: '#f97316', Black: '#1f2937',
-  White: '#f9fafb', Navy: '#1e3a5f', Maroon: '#7f1d1d', Teal: '#14b8a6',
-  Gold: '#d4a017', Silver: '#9ca3af', Brown: '#92400e', Cream: '#fef3c7', Ivory: '#fffff0',
+  red: '#ef4444', blue: '#3b82f6', green: '#22c55e', yellow: '#eab308',
+  purple: '#a855f7', pink: '#ec4899', orange: '#f97316', black: '#1f2937',
+  white: '#f9fafb', navy: '#1e3a5f', maroon: '#7f1d1d', teal: '#14b8a6',
+  gold: '#d4a017', silver: '#9ca3af', brown: '#92400e', cream: '#fef3c7',
+  ivory: '#fffff0', 'rose gold': '#e6b9a6', beige: '#d4c5a9',
 };
+
+function colorHex(name) {
+  if (!name) return '#d1d5db';
+  return COLOR_MAP[name.toLowerCase().trim()] || '#d1d5db';
+}
+
+function revokeBlobUri(uri) {
+  if (Platform.OS === 'web' && uri?.startsWith('blob:')) {
+    URL.revokeObjectURL(uri);
+  }
+}
 
 function SectionCard({ icon, iconColor, title, subtitle, children }) {
   return (
@@ -54,22 +69,14 @@ function SectionCard({ icon, iconColor, title, subtitle, children }) {
   );
 }
 
-function Chip({ label, selected, onPress, colorDot }) {
+function Chip({ label, selected, onPress }) {
   return (
     <Pressable
       onPress={onPress}
       className="flex-row items-center px-3 py-2 rounded-full border mr-2 mb-2"
-      style={{
-        backgroundColor: selected ? '#fef3c7' : '#ffffff',
-        borderColor: selected ? '#f59e0b' : '#e5e7eb',
-      }}
+      style={{ backgroundColor: selected ? '#fef3c7' : '#ffffff', borderColor: selected ? '#f59e0b' : '#e5e7eb' }}
     >
-      {colorDot && (
-        <View className="w-3 h-3 rounded-full mr-1.5" style={{ backgroundColor: colorDot, borderWidth: 1, borderColor: '#e5e7eb' }} />
-      )}
-      <Text className="text-xs font-semibold" style={{ color: selected ? '#92400e' : '#6b7280' }}>
-        {label}
-      </Text>
+      <Text className="text-xs font-semibold" style={{ color: selected ? '#92400e' : '#6b7280' }}>{label}</Text>
       {selected && <Ionicons name="checkmark-circle" size={14} color="#d97706" style={{ marginLeft: 4 }} />}
     </Pressable>
   );
@@ -94,194 +101,435 @@ export default function ProductWizardScreen({ route, navigation }) {
     type,
     categoryId: '',
     categoryName: '',
-    images: [],
-    variants: [],
-    extras: {},
+    colors: [],          // ['Green', 'Blue', ...]
+    images: [],          // [{ color, label, uri, uploadedUrl, generatedUrl, existing }]
+    stock: {},           // saree: {color:n}  dress/jewellery: {color:{sub:n}}
     content: { title: '', description: '' },
     pricing: { basePrice: 0, discountPct: 0, couponCode: '', couponDiscount: 0, tags: '' },
   });
 
   const [isSaving, setIsSaving] = useState(false);
-  const [uploading, setUploading] = useState(null);
+  const [uploading, setUploading] = useState(null); // `${color}::${label}`
+  const [aiColor, setAiColor] = useState(null);     // colour currently AI-processing
+  const [aiSlot, setAiSlot] = useState(null);       // `${color}::${label}` slot AI-processing
+  const [pickerSlot, setPickerSlot] = useState(null); // { color, label } for the picker sheet
+  const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, actions, dismissible }
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [customCategories, setCustomCategories] = useState([]);
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
   const [hasCoupon, setHasCoupon] = useState(false);
   const [tagInput, setTagInput] = useState('');
+  const [newColorName, setNewColorName] = useState('');
+  const [editLoaded, setEditLoaded] = useState(false);
 
-  // Variant state
-  const [selectedColors, setSelectedColors] = useState([]);
+  // Product-wide variant options
   const [selectedSizes, setSelectedSizes] = useState([]);
-  const [goldPurity, setGoldPurity] = useState('22K');
-  const [goldColor, setGoldColor] = useState('Gold');
-  const [stoneType, setStoneType] = useState('None');
   const [selectedWeights, setSelectedWeights] = useState([]);
+  const [goldPurity, setGoldPurity] = useState('22K');
+  const [stoneType, setStoneType] = useState('None');
 
   const update = useCallback((partial) => setWizardData((prev) => ({ ...prev, ...partial })), []);
 
-  const photoBlocks = PHOTO_BLOCKS[wizardData.type] || PHOTO_BLOCKS.saree;
-  const allCategories = [...(MOCK_CATEGORIES[wizardData.type] || []), ...customCategories];
+  const openConfirm = (title, message, actions, dismissible = true) => {
+    if (Platform.OS !== 'web') {
+      Alert.alert(
+        title,
+        message,
+        actions.map((item) => ({
+          text: item.label,
+          style: item.style,
+          onPress: item.onPress,
+        }))
+      );
+      return;
+    }
+    setConfirmDialog({ title, message, actions, dismissible });
+  };
 
-  // ─── Photo Picker ──────────────────────────────────────────────────────────
+  const t = wizardData.type;
+  const photoBlocks = PHOTO_BLOCKS[t] || PHOTO_BLOCKS.saree;
 
-  const pickImage = async (label, source) => {
+  const { data: editProduct, isLoading: isLoadingEdit } = useQuery({
+    queryKey: ['product', productId],
+    queryFn: () => getProduct(productId),
+    enabled: mode === 'edit' && !!productId,
+  });
+
+  useEffect(() => {
+    if (mode !== 'edit' || !editProduct || editLoaded) return;
+
+    const editType = editProduct.type || type;
+    const imageBlocks = PHOTO_BLOCKS[editType] || PHOTO_BLOCKS.saree;
+    const variants = editProduct.variants ?? [];
+    const images = editProduct.images ?? [];
+
+    const colorSet = new Set([
+      ...variants.map((v) => v.color).filter(Boolean),
+      ...images.map((i) => i.color).filter(Boolean),
+    ]);
+    const colors = [...colorSet];
+
+    const stock = {};
+    if (editType === 'saree') {
+      for (const v of variants) {
+        if (!v.color) continue;
+        stock[v.color] = (stock[v.color] || 0) + (Number(v.quantity) || 0);
+      }
+      setSelectedSizes([]);
+      setSelectedWeights([]);
+    } else {
+      for (const v of variants) {
+        if (!v.color || !v.size) continue;
+        stock[v.color] = { ...(stock[v.color] || {}), [v.size]: Number(v.quantity) || 0 };
+      }
+      const sizes = [...new Set(variants.map((v) => v.size).filter(Boolean))];
+      if (editType === 'dress') setSelectedSizes(sizes);
+      if (editType === 'jewellery') setSelectedWeights(sizes);
+    }
+
+    // display_order scheme: AI-generated images 0-9, uploaded originals 10-19.
+    // Regroup both back into one entry per colour+angle slot.
+    const hasNewScheme = images.some((i) => (Number(i.display_order) || 0) >= 10);
+    const slotMap = {};
+    for (const img of images) {
+      const order = Number(img.display_order) || 0;
+      const labelIdx = order % 10;
+      const isGen = hasNewScheme && order < 10;
+      const color = img.color || colors[0] || 'Default';
+      const label = imageBlocks[labelIdx] || img.alt_text || `Photo ${labelIdx + 1}`;
+      const key = `${color}::${label}`;
+      if (!slotMap[key]) {
+        slotMap[key] = { color, label, uri: null, uploadedUrl: null, generatedUrl: null, existing: true };
+      }
+      if (isGen) slotMap[key].generatedUrl = img.url;
+      else slotMap[key].uploadedUrl = img.url;
+    }
+    const mappedImages = Object.values(slotMap);
+
+    setWizardData({
+      type: editType,
+      categoryId: editProduct.category?.id || editProduct.category_id || '',
+      categoryName: editProduct.category?.name || '',
+      colors: colors.length > 0 ? colors : [...new Set(mappedImages.map((i) => i.color).filter(Boolean))],
+      images: mappedImages,
+      stock,
+      content: { title: editProduct.title || '', description: editProduct.description || '' },
+      pricing: {
+        basePrice: Number(editProduct.base_price) || 0,
+        discountPct: Number(editProduct.discount_pct) || 0,
+        couponCode: editProduct.coupon_code || '',
+        couponDiscount: Number(editProduct.coupon_disc) || 0,
+        tags: '',
+      },
+    });
+
+    setHasCoupon(!!(editProduct.coupon_code || editProduct.coupon_disc));
+    setTagInput('');
+    setEditLoaded(true);
+  }, [mode, editProduct, editLoaded, type]);
+
+  // Categories — 3 type roots (slug === type); real categories are their children.
+  const { data: allCats = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
+    staleTime: 120_000,
+  });
+  const typeRoot = allCats.find((c) => !c.parent_id && c.slug === t);
+  const categoryOptions = typeRoot ? allCats.filter((c) => c.parent_id === typeRoot.id) : [];
+  const filteredCategories = categoryOptions.filter((c) =>
+    c.name.toLowerCase().includes(categorySearch.trim().toLowerCase())
+  );
+
+  if (mode === 'edit' && isLoadingEdit && !editLoaded) {
+    return <LoadingSpinner message="Loading product…" />;
+  }
+
+  // ─── Colours ───────────────────────────────────────────────────────────────
+
+  const addColor = () => {
+    const name = newColorName.trim();
+    if (!name) return;
+    if (wizardData.colors.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      Alert.alert('Already added', `"${name}" is already in the colour list.`);
+      return;
+    }
+    update({ colors: [...wizardData.colors, name] });
+    setNewColorName('');
+  };
+
+  const removeColor = (color) => {
+    const { [color]: _drop, ...restStock } = wizardData.stock;
+    wizardData.images
+      .filter((i) => i.color === color)
+      .forEach((img) => revokeBlobUri(img.uri));
+    update({
+      colors: wizardData.colors.filter((c) => c !== color),
+      images: wizardData.images.filter((i) => i.color !== color),
+      stock: restStock,
+    });
+  };
+
+  // ─── Photo Picker (per colour + angle) ─────────────────────────────────────
+
+  const imageFor = (color, label) =>
+    wizardData.images.find((i) => i.color === color && i.label === label);
+
+  const pickImage = async (color, label, source) => {
     try {
       if (source === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission Required', 'Camera access is needed to take photos. Please enable it in Settings.');
+          Alert.alert('Permission Required', 'Camera access is needed to take photos.');
           return;
         }
       } else {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission Required', 'Photo library access is needed. Please enable it in Settings.');
+          Alert.alert('Permission Required', 'Photo library access is needed.');
           return;
         }
       }
 
-      const options = { mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.85, allowsEditing: true, aspect: [1, 1] };
+      // expo-image-picker v17 (SDK 54): mediaTypes is a string array now.
+      const options = { mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [3, 4] };
       const result = source === 'camera'
         ? await ImagePicker.launchCameraAsync(options)
         : await ImagePicker.launchImageLibraryAsync(options);
 
       if (result.canceled) return;
+      const asset = result.assets[0];
+      const existing = imageFor(color, label);
+      if (existing?.uri) revokeBlobUri(existing.uri);
 
-      const uri = result.assets[0].uri;
-      setUploading(label);
+      const previewUri = Platform.OS === 'web' && asset.file
+        ? URL.createObjectURL(asset.file)
+        : asset.uri;
+      const uploadSource = Platform.OS === 'web' && asset.file
+        ? { file: asset.file, name: asset.file.name, uri: asset.uri }
+        : asset.uri;
+      setUploading(`${color}::${label}`);
 
-      const { url } = await uploadImage(uri);
-      const isPrimary = wizardData.images.length === 0;
+      const { url } = await uploadImage(uploadSource);
       const newImages = [
-        ...wizardData.images.filter((img) => img.label !== label),
-        { label, uri, uploadedUrl: url, isPrimary },
+        ...wizardData.images.filter((i) => !(i.color === color && i.label === label)),
+        { color, label, uri: previewUri, uploadedUrl: url, generatedUrl: null, existing: false },
       ];
       update({ images: newImages });
     } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to pick image. Please try again.');
+      Alert.alert('Error', err.message || 'Failed to pick image.');
     } finally {
       setUploading(null);
     }
   };
 
-  const showPhotoPicker = (label) => {
-    const existing = wizardData.images.find((img) => img.label === label);
-    const buttons = [
-      { text: 'Take Photo', onPress: () => pickImage(label, 'camera') },
-      { text: 'Choose from Gallery', onPress: () => pickImage(label, 'gallery') },
+  const generateAiImage = async (color, label) => {
+    const img = imageFor(color, label);
+    if (!img?.uploadedUrl) {
+      Alert.alert('No photo', 'Add a photo to this slot first.');
+      return;
+    }
+    setAiSlot(`${color}::${label}`);
+    try {
+      const { url } = await generateProductImage({
+        imageUrl: img.uploadedUrl,
+        productType: t,
+        color,
+        category: wizardData.categoryName,
+      });
+      const newImages = wizardData.images.map((i) =>
+        i.color === color && i.label === label
+          ? { ...i, generatedUrl: url }
+          : i
+      );
+      update({ images: newImages });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err) {
+      Alert.alert('AI generation failed', err.message);
+    } finally {
+      setAiSlot(null);
+    }
+  };
+
+  // Generate ONE AI studio image using all uploaded photos for one colour.
+  const generateAiForColor = async (color) => {
+    const pending = wizardData.images.filter(
+      (i) => i.color === color && i.uploadedUrl
+    );
+    if (pending.length === 0) {
+      Alert.alert('Nothing to generate', 'Upload photos for this colour first.');
+      return;
+    }
+    const ordered = [
+      ...photoBlocks.map((label) => pending.find((i) => i.label === label)).filter(Boolean),
+      ...pending.filter((i) => !photoBlocks.includes(i.label)),
     ];
-    if (existing) {
-      buttons.push({
-        text: 'Remove Photo', style: 'destructive',
-        onPress: () => {
-          const newImages = wizardData.images.filter((img) => img.label !== label);
-          if (newImages.length > 0 && !newImages.some((i) => i.isPrimary)) newImages[0].isPrimary = true;
-          update({ images: newImages });
-        },
+    const targetLabel = (photoBlocks.find((label) => pending.some((i) => i.label === label)) || pending[0].label);
+    setAiColor(color);
+    try {
+      const { url } = await generateProductImage({
+        imageUrls: ordered.map((i) => i.uploadedUrl),
+        productType: t,
+        color,
+        category: wizardData.categoryName,
+      });
+      setWizardData((prev) => ({
+        ...prev,
+        images: prev.images.map((i) =>
+          i.color === color && i.label === targetLabel
+            ? { ...i, generatedUrl: url }
+            : i
+        ),
+      }));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err) {
+      Alert.alert('AI generation failed', err.message);
+    } finally {
+      setAiColor(null);
+    }
+  };
+
+  const removePhoto = (color, label) => {
+    const existing = imageFor(color, label);
+    if (existing?.uri) revokeBlobUri(existing.uri);
+    update({
+      images: wizardData.images.filter((i) => !(i.color === color && i.label === label)),
+    });
+  };
+
+  const removeGeneratedImage = (color, label) => {
+    update({
+      images: wizardData.images.map((i) =>
+        i.color === color && i.label === label ? { ...i, generatedUrl: null } : i
+      ),
+    });
+  };
+
+  const buildPickerActions = (color, label) => {
+    const existing = imageFor(color, label);
+    const actions = [
+      { label: 'Take Photo', action: () => pickImage(color, label, 'camera') },
+      { label: 'Choose from Gallery', action: () => pickImage(color, label, 'gallery') },
+    ];
+    if (existing?.uploadedUrl) {
+      actions.push({
+        label: existing.generatedUrl ? '✨ Regenerate AI Image' : '✨ Generate AI Image',
+        action: () => generateAiImage(color, label),
       });
     }
+    if (existing?.generatedUrl) {
+      actions.push({ label: 'Remove AI Image', destructive: true, action: () => removeGeneratedImage(color, label) });
+    }
+    if (existing) {
+      actions.push({ label: 'Remove Photo', destructive: true, action: () => removePhoto(color, label) });
+    }
+    return actions;
+  };
+
+  const showPhotoPicker = (color, label) => {
+    if (Platform.OS === 'web') {
+      setPickerSlot({ color, label });
+      return;
+    }
+    const buttons = buildPickerActions(color, label).map((item) => ({
+      text: item.label,
+      style: item.destructive ? 'destructive' : undefined,
+      onPress: item.action,
+    }));
     buttons.push({ text: 'Cancel', style: 'cancel' });
-    Alert.alert(label, 'Choose an option', buttons);
+    Alert.alert(`${color} — ${label}`, 'Choose an option', buttons);
   };
 
   // ─── AI Content ────────────────────────────────────────────────────────────
 
   const handleGenerateContent = async () => {
-    if (!wizardData.type) return;
+    const resolvedCategoryName = wizardData.categoryName
+      || categoryOptions.find((c) => c.id === wizardData.categoryId)?.name
+      || '';
+    if (!resolvedCategoryName) {
+      openConfirm('Category needed', 'Select a category before generating copy.', [{ label: 'OK' }]);
+      return;
+    }
+    if (wizardData.colors.length === 0) {
+      openConfirm('Add a colour', 'Add at least one colour before generating copy.', [{ label: 'OK' }]);
+      return;
+    }
     setIsGeneratingContent(true);
     try {
-      const colors = [...new Set(wizardData.images.map((i) => i.label))];
       const result = await generateContent({
-        productType: wizardData.type, category: wizardData.categoryName, colors, sizes: [],
+        productType: t,
+        category: resolvedCategoryName,
+        colors: wizardData.colors,
+        sizes: t === 'dress' ? selectedSizes : t === 'jewellery' ? selectedWeights : [],
       });
+      if (!result?.title || !result?.description) {
+        openConfirm('AI Error', 'AI did not return title and description.', [{ label: 'OK' }]);
+        return;
+      }
       update({ content: { title: result.title, description: result.description } });
     } catch (err) {
-      Alert.alert('AI Error', err.message);
+      openConfirm('AI Error', err.message || 'Failed to generate content.', [{ label: 'OK' }]);
     } finally {
       setIsGeneratingContent(false);
     }
   };
 
-  // ─── AI Image ──────────────────────────────────────────────────────────────
+  // ─── Category creation ─────────────────────────────────────────────────────
 
-  const primaryImage = wizardData.images.find((img) => img.uploadedUrl);
-
-  const handleGenerateImage = async () => {
-    if (!primaryImage?.uploadedUrl) {
-      Alert.alert('No image', 'Upload at least one product photo first.');
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    if (!typeRoot) {
+      Alert.alert('Setup needed', `No "${t}" root category exists. Run the schema seed in Supabase, then retry.`);
       return;
     }
-    setIsGeneratingImage(true);
-    setGeneratedImageUrl(null);
+    setCreatingCategory(true);
     try {
-      const result = await generateProductImage({
-        imageUrl: primaryImage.uploadedUrl,
-        productType: wizardData.type,
-        color: primaryImage.label || '',
-        category: wizardData.categoryName,
-      });
-      setGeneratedImageUrl(result.url);
+      const fd = new FormData();
+      fd.append('name', name);
+      fd.append('parent_id', typeRoot.id);
+      const cat = await createCategory(fd);
+      await qc.invalidateQueries({ queryKey: ['categories'] });
+      update({ categoryId: cat.id, categoryName: cat.name });
+      setNewCategoryName('');
+      setShowNewCategory(false);
+      setCategorySearch('');
     } catch (err) {
-      Alert.alert('Generation Failed', err.message);
+      Alert.alert('Error', err.message);
     } finally {
-      setIsGeneratingImage(false);
+      setCreatingCategory(false);
     }
   };
 
-  const applyGeneratedImage = () => {
-    if (!generatedImageUrl) return;
-    const updatedImages = wizardData.images.map((img) =>
-      img.uploadedUrl === primaryImage.uploadedUrl
-        ? { ...img, uploadedUrl: generatedImageUrl, aiGenerated: true }
-        : img
-    );
-    update({ images: updatedImages });
-    setGeneratedImageUrl(null);
-    Alert.alert('Applied', 'AI-generated image set as your primary photo.');
+  // ─── Stock helpers ─────────────────────────────────────────────────────────
+
+  const setSareeQty = (color, val) => {
+    update({ stock: { ...wizardData.stock, [color]: Math.max(0, parseInt(val) || 0) } });
+  };
+  const setSubQty = (color, sub, val) => {
+    const colorStock = { ...(wizardData.stock[color] || {}), [sub]: Math.max(0, parseInt(val) || 0) };
+    update({ stock: { ...wizardData.stock, [color]: colorStock } });
   };
 
-  // ─── Variants Builder ──────────────────────────────────────────────────────
-
-  const buildVariants = useCallback(() => {
-    const t = wizardData.type;
+  const buildVariants = () => {
     if (t === 'saree') {
-      return selectedColors.map((color) => {
-        const found = wizardData.variants.find((v) => v.color === color && v.size === '');
-        return found || { color, size: '', quantity: 0, sku: '' };
-      });
+      return wizardData.colors.map((c) => ({
+        color: c, size: '', quantity: Number(wizardData.stock[c]) || 0, sku: '',
+      }));
     }
     if (t === 'dress') {
-      const variants = [];
-      for (const color of selectedColors) {
-        for (const size of selectedSizes) {
-          const found = wizardData.variants.find((v) => v.color === color && v.size === size);
-          variants.push(found || { color, size, quantity: 0, sku: '' });
-        }
-      }
-      return variants;
+      return wizardData.colors.flatMap((c) =>
+        selectedSizes.map((s) => ({
+          color: c, size: s, quantity: Number(wizardData.stock[c]?.[s]) || 0, sku: '',
+        }))
+      );
     }
-    // jewellery
-    return selectedWeights.map((w) => {
-      const found = wizardData.variants.find((v) => v.size === w);
-      return found || { color: goldColor, size: w, quantity: 0, sku: '' };
-    });
-  }, [wizardData.type, selectedColors, selectedSizes, selectedWeights, goldColor, wizardData.variants]);
-
-  const syncVariants = useCallback(() => {
-    const variants = buildVariants();
-    const extras = wizardData.type === 'jewellery' ? { purity: goldPurity, goldColor, stoneType } : {};
-    update({ variants, extras });
-  }, [buildVariants, goldPurity, goldColor, stoneType, update, wizardData.type]);
-
-  const setVariantQty = (color, size, val) => {
-    const qty = Math.max(0, parseInt(val) || 0);
-    const variants = wizardData.variants.map((v) =>
-      v.color === color && v.size === size ? { ...v, quantity: qty } : v
+    return wizardData.colors.flatMap((c) =>
+      selectedWeights.map((w) => ({
+        color: c, size: w, quantity: Number(wizardData.stock[c]?.[w]) || 0, sku: '',
+      }))
     );
-    update({ variants });
   };
 
   // ─── Save ──────────────────────────────────────────────────────────────────
@@ -301,7 +549,7 @@ export default function ProductWizardScreen({ route, navigation }) {
       const payload = {
         title: wizardData.content.title,
         description: wizardData.content.description,
-        type: wizardData.type,
+        type: t,
         category_id: wizardData.categoryId || undefined,
         base_price: Number(wizardData.pricing.basePrice),
         discount_pct: Number(wizardData.pricing.discountPct) || 0,
@@ -309,35 +557,64 @@ export default function ProductWizardScreen({ route, navigation }) {
         coupon_disc: wizardData.pricing.couponDiscount || undefined,
       };
 
-      let product;
-      if (mode === 'edit' && productId) {
-        product = await updateProduct(productId, payload);
-      } else {
-        product = await createProduct(payload);
-      }
+      const product = mode === 'edit' && productId
+        ? await updateProduct(productId, payload)
+        : await createProduct(payload);
 
-      for (const img of wizardData.images) {
-        if (img.uploadedUrl) {
-          await addProductImage(product.id, {
-            url: img.uploadedUrl, color: img.label, is_primary: img.isPrimary, alt_text: wizardData.content.title,
-          });
+      // Images — AI-generated first (display_order 0-9), uploaded originals
+      // next (10-19), so the product gallery leads with the generated shot.
+      if (mode === 'edit' && productId && Array.isArray(editProduct?.images)) {
+        for (const old of editProduct.images) {
+          if (old?.id) await deleteProductImage(product.id, old.id).catch(() => {});
         }
       }
 
-      if (wizardData.variants.length > 0) {
-        await bulkUpdateVariants(product.id, wizardData.variants.map((v) => ({
-          color: v.color, size: v.size, quantity: Number(v.quantity), sku: v.sku,
-        })));
+      let primarySet = false;
+      for (const color of wizardData.colors) {
+        // Generated images first.
+        for (let idx = 0; idx < photoBlocks.length; idx++) {
+          const img = imageFor(color, photoBlocks[idx]);
+          if (!img?.generatedUrl) continue;
+          await addProductImage(product.id, {
+            url: img.generatedUrl,
+            color,
+            alt_text: photoBlocks[idx],
+            is_primary: !primarySet,
+            display_order: idx,
+          });
+          primarySet = true;
+        }
+        // Uploaded originals next.
+        for (let idx = 0; idx < photoBlocks.length; idx++) {
+          const img = imageFor(color, photoBlocks[idx]);
+          if (!img?.uploadedUrl) continue;
+          await addProductImage(product.id, {
+            url: img.uploadedUrl,
+            color,
+            alt_text: photoBlocks[idx],
+            is_primary: !primarySet,
+            display_order: 10 + idx,
+          });
+          primarySet = true;
+        }
+      }
+
+      const variants = buildVariants();
+      if (variants.length > 0) {
+        await bulkUpdateVariants(product.id, variants);
       }
 
       if (publish) await publishProduct(product.id);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ['products'] });
-      Alert.alert(
+      qc.invalidateQueries({ queryKey: ['product', product.id] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      openConfirm(
         publish ? 'Published!' : 'Saved!',
         publish ? 'Product is now live on the store.' : 'Product saved as draft.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ label: 'OK', onPress: () => navigation.goBack() }],
+        false
       );
     } catch (err) {
       Alert.alert('Error', err.message);
@@ -346,10 +623,148 @@ export default function ProductWizardScreen({ route, navigation }) {
     }
   };
 
-  const typeConfig = PRODUCT_TYPES.find((t) => t.value === wizardData.type);
+  const typeConfig = PRODUCT_TYPES.find((x) => x.value === t);
   const finalPrice = discountedPrice(Number(wizardData.pricing.basePrice) || 0, Number(wizardData.pricing.discountPct) || 0);
   const savings = (Number(wizardData.pricing.basePrice) || 0) - finalPrice;
-  const parsedTags = tagInput.split(',').map((t) => t.trim()).filter(Boolean);
+  const parsedTags = tagInput.split(',').map((x) => x.trim()).filter(Boolean);
+  const totalPhotos = wizardData.images.filter((i) => i.uploadedUrl).length;
+  const pickerActions = pickerSlot ? buildPickerActions(pickerSlot.color, pickerSlot.label) : [];
+  const pickerTitle = pickerSlot ? `${pickerSlot.color} — ${pickerSlot.label}` : '';
+  const runPickerAction = (action) => {
+    setPickerSlot(null);
+    action();
+  };
+  const confirmTitle = confirmDialog?.title || '';
+  const confirmMessage = confirmDialog?.message || '';
+  const confirmActions = confirmDialog?.actions || [];
+  const runConfirmAction = (action) => {
+    setConfirmDialog(null);
+    if (action) action();
+  };
+
+  // ─── Per-colour photo grid ─────────────────────────────────────────────────
+
+  const renderColorPhotos = (color) => (
+    <View className="flex-row flex-wrap justify-between">
+      {photoBlocks.map((label) => {
+        const img = imageFor(color, label);
+        const isUp = uploading === `${color}::${label}`;
+        const uploadedUri = img
+          ? (Platform.OS === 'web' ? (img.uploadedUrl || img.uri) : (img.uri || img.uploadedUrl))
+          : null;
+        return (
+          <View key={label} style={{ width: '48%' }} className="mb-2">
+            {/* Uploaded photo */}
+            <Pressable
+              onPress={() => !isUp && showPhotoPicker(color, label)}
+              className="rounded-xl overflow-hidden"
+              style={{ aspectRatio: 1, borderWidth: 1, borderColor: img ? '#f59e0b' : '#e5e7eb' }}
+            >
+              {uploadedUri ? (
+                <View className="flex-1 relative">
+                  <Image source={{ uri: uploadedUri }} className="w-full h-full" resizeMode="cover" />
+                  <View className="absolute bottom-0 left-0 right-0 px-2 py-1" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+                    <Text className="text-white text-[10px] font-medium" numberOfLines={1}>{label}</Text>
+                  </View>
+                  {isUp && (
+                    <View
+                      className="items-center justify-center"
+                      style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
+                    >
+                      <ActivityIndicator size="small" color="#fff" />
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#fef7f0' }}>
+                  {isUp ? (
+                    <ActivityIndicator size="small" color={AMBER_500} />
+                  ) : (
+                    <>
+                      <Text className="text-[11px] font-medium text-center px-2 mb-1" style={{ color: '#92400e' }}>{label}</Text>
+                      <Ionicons name="camera" size={16} color="#d97706" />
+                    </>
+                  )}
+                </View>
+              )}
+            </Pressable>
+
+            {/* AI image — shown BELOW the uploaded photo, never replaces it.
+                While generating, a spinner placeholder appears here. */}
+            {(img?.generatedUrl || aiSlot === `${color}::${label}`) && (
+              <Pressable
+                onPress={() => img?.generatedUrl && showPhotoPicker(color, label)}
+                className="rounded-xl overflow-hidden mt-1.5"
+                style={{ aspectRatio: 1, borderWidth: 1.5, borderColor: '#7c3aed' }}
+              >
+                {img?.generatedUrl ? (
+                  <View className="flex-1 relative">
+                    <Image source={{ uri: img.generatedUrl }} className="w-full h-full" resizeMode="cover" />
+                    <View className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#7c3aed' }}>
+                      <Text className="text-white text-[9px] font-bold">✨ AI</Text>
+                    </View>
+                    <View className="absolute bottom-0 left-0 right-0 px-2 py-1" style={{ backgroundColor: 'rgba(124,58,237,0.85)' }}>
+                      <Text className="text-white text-[10px] font-medium" numberOfLines={1}>AI · {label}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#f5f3ff' }}>
+                    <ActivityIndicator size="small" color="#7c3aed" />
+                    <Text className="text-[10px] font-semibold mt-1.5" style={{ color: '#6d28d9' }}>Generating…</Text>
+                  </View>
+                )}
+              </Pressable>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+
+  // ─── Per-colour stock ──────────────────────────────────────────────────────
+
+  const renderColorStock = (color) => {
+    if (t === 'saree') {
+      return (
+        <View className="flex-row items-center justify-between mt-2">
+          <Text className="text-xs font-medium" style={{ color: '#78350f' }}>Pieces in stock</Text>
+          <TextInput
+            className="w-20 text-center rounded-lg py-1.5 text-sm font-semibold"
+            style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', color: '#1f2937' }}
+            value={(wizardData.stock[color] ?? 0).toString()}
+            onChangeText={(v) => setSareeQty(color, v)}
+            keyboardType="number-pad"
+            selectTextOnFocus
+          />
+        </View>
+      );
+    }
+    const subs = t === 'dress' ? selectedSizes : selectedWeights;
+    if (subs.length === 0) {
+      return (
+        <Text className="text-[11px] mt-2" style={{ color: '#a16207' }}>
+          Select {t === 'dress' ? 'sizes' : 'weights'} above to set stock.
+        </Text>
+      );
+    }
+    return (
+      <View className="flex-row flex-wrap gap-2 mt-2">
+        {subs.map((sub) => (
+          <View key={sub} className="items-center" style={{ width: 64 }}>
+            <Text className="text-[10px] mb-1" style={{ color: '#78350f' }}>{sub}</Text>
+            <TextInput
+              className="w-full text-center rounded-lg py-1.5 text-xs font-semibold"
+              style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', color: '#1f2937' }}
+              value={(wizardData.stock[color]?.[sub] ?? 0).toString()}
+              onChangeText={(v) => setSubQty(color, sub, v)}
+              keyboardType="number-pad"
+              selectTextOnFocus
+            />
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <View className="flex-1" style={{ backgroundColor: WARM_BG, paddingTop: insets.top }}>
@@ -367,9 +782,9 @@ export default function ProductWizardScreen({ route, navigation }) {
           </Text>
         </View>
         <Pressable
-          onPress={() => Alert.alert('Discard?', 'You will lose unsaved changes.', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+          onPress={() => openConfirm('Discard?', 'You will lose unsaved changes.', [
+            { label: 'Cancel', style: 'cancel' },
+            { label: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
           ])}
           className="px-3 py-1.5 rounded-lg"
         >
@@ -379,103 +794,130 @@ export default function ProductWizardScreen({ route, navigation }) {
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 100 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-        {/* ─── 1. Reference Images ──────────────────────────────────────── */}
-        <SectionCard icon="camera" iconColor="#db2777" title="Reference Images" subtitle={`${wizardData.images.length}/${photoBlocks.length} photos`}>
-          <View className="flex-row flex-wrap justify-between">
-            {photoBlocks.map((label) => {
-              const img = wizardData.images.find((i) => i.label === label);
-              const isUp = uploading === label;
-              return (
-                <Pressable
-                  key={label}
-                  onPress={() => !isUp && showPhotoPicker(label)}
-                  className="mb-3 rounded-2xl overflow-hidden"
-                  style={{ width: '48%', aspectRatio: 1, borderWidth: 1, borderColor: img ? '#f59e0b' : '#e5e7eb' }}
-                >
-                  {img ? (
-                    <View className="flex-1 relative">
-                      <Image source={{ uri: img.uri || img.uploadedUrl }} className="w-full h-full" resizeMode="cover" />
-                      <View className="absolute bottom-0 left-0 right-0 px-3 py-1.5" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-                        <Text className="text-white text-xs font-medium" numberOfLines={1}>{label}</Text>
-                      </View>
-                      {img.isPrimary && (
-                        <View className="absolute top-2 left-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: AMBER_500 }}>
-                          <Text className="text-white text-[10px] font-bold">PRIMARY</Text>
-                        </View>
-                      )}
-                    </View>
-                  ) : (
-                    <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#fef7f0', borderStyle: 'dashed' }}>
-                      {isUp ? (
-                        <ActivityIndicator size="small" color={AMBER_500} />
-                      ) : (
-                        <>
-                          <Text className="text-xs font-medium text-center px-2 mb-1.5" style={{ color: '#92400e' }}>{label}</Text>
-                          <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: '#fde8d0' }}>
-                            <Ionicons name="camera" size={16} color="#d97706" />
-                          </View>
-                          <Text className="text-[10px] mt-1" style={{ color: '#b45309' }}>Tap to add</Text>
-                        </>
-                      )}
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        </SectionCard>
-
-        {/* ─── 2. AI Image Generation ───────────────────────────────────── */}
-        <SectionCard icon="sparkles" iconColor="#7c3aed" title="Generate AI Image" subtitle="Create a professional studio photo">
-          {primaryImage?.uploadedUrl ? (
-            <View className="rounded-xl overflow-hidden mb-3" style={{ borderWidth: 1, borderColor: '#e5e7eb' }}>
-              <Image source={{ uri: primaryImage.uploadedUrl }} className="w-full" style={{ height: 180 }} resizeMode="cover" />
+        {/* ─── Sizes / Weights (product-wide) ───────────────────────────── */}
+        {t === 'dress' && (
+          <SectionCard icon="resize" iconColor="#0d9488" title="Sizes" subtitle="Pick the sizes this dress comes in">
+            <View className="flex-row flex-wrap">
+              {PRODUCT_SIZES.dress.map((s) => (
+                <Chip
+                  key={s} label={s}
+                  selected={selectedSizes.includes(s)}
+                  onPress={() => setSelectedSizes((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])}
+                />
+              ))}
             </View>
-          ) : (
-            <View className="rounded-xl p-6 items-center mb-3" style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderStyle: 'dashed', borderColor: '#fde8d0' }}>
-              <Ionicons name="image-outline" size={32} color="#d4a017" />
-              <Text className="text-xs mt-2" style={{ color: '#92400e' }}>Upload a photo first to generate AI image</Text>
+          </SectionCard>
+        )}
+        {t === 'jewellery' && (
+          <SectionCard icon="diamond" iconColor="#d97706" title="Weight, Purity & Stone" subtitle="Product-wide jewellery options">
+            <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Weight</Text>
+            <View className="flex-row flex-wrap mb-3">
+              {PRODUCT_SIZES.jewellery.map((w) => (
+                <Chip
+                  key={w} label={w}
+                  selected={selectedWeights.includes(w)}
+                  onPress={() => setSelectedWeights((prev) => prev.includes(w) ? prev.filter((x) => x !== w) : [...prev, w])}
+                />
+              ))}
+            </View>
+            <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Purity</Text>
+            <View className="flex-row flex-wrap mb-3">
+              {GOLD_PURITIES.map((p) => (
+                <Chip key={p} label={p} selected={goldPurity === p} onPress={() => setGoldPurity(p)} />
+              ))}
+            </View>
+            <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Stone</Text>
+            <View className="flex-row flex-wrap">
+              {STONE_TYPES.map((st) => (
+                <Chip key={st} label={st} selected={stoneType === st} onPress={() => setStoneType(st)} />
+              ))}
+            </View>
+          </SectionCard>
+        )}
+
+        {/* ─── Colours & Photos ─────────────────────────────────────────── */}
+        <SectionCard
+          icon="color-palette"
+          iconColor="#db2777"
+          title="Colours & Photos"
+          subtitle={`${wizardData.colors.length} colours · ${totalPhotos} photos`}
+        >
+          <Text className="text-xs mb-3" style={{ color: '#a16207' }}>
+            Add every colour this design comes in. For each colour upload its photos, then tap a
+            photo → ✨ Generate AI Image for a clean studio shot.
+          </Text>
+
+          {/* Add colour */}
+          <View className="flex-row items-center gap-2 mb-3">
+            <TextInput
+              className="flex-1 rounded-xl px-3 py-2.5 text-sm"
+              style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER, color: '#1f2937' }}
+              placeholder="Colour name (e.g. Green)"
+              placeholderTextColor="#a16207"
+              value={newColorName}
+              onChangeText={setNewColorName}
+              onSubmitEditing={addColor}
+              returnKeyType="done"
+            />
+            <Pressable onPress={addColor} className="px-4 py-2.5 rounded-xl flex-row items-center" style={{ backgroundColor: AMBER_500 }}>
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text className="text-white text-sm font-semibold ml-1">Colour</Text>
+            </Pressable>
+          </View>
+
+          {wizardData.colors.length === 0 && (
+            <View className="rounded-xl p-5 items-center" style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderStyle: 'dashed', borderColor: '#fde8d0' }}>
+              <Ionicons name="color-palette-outline" size={28} color="#d4a017" />
+              <Text className="text-xs mt-2 text-center" style={{ color: '#92400e' }}>
+                No colours yet. Add one above to start uploading photos.
+              </Text>
             </View>
           )}
 
-          {generatedImageUrl && (
-            <View className="rounded-xl overflow-hidden mb-3" style={{ borderWidth: 2, borderColor: '#16a34a' }}>
-              <Image source={{ uri: generatedImageUrl }} className="w-full" style={{ height: 180 }} resizeMode="cover" />
-              <View className="flex-row gap-2 p-2" style={{ backgroundColor: '#f0fdf4' }}>
-                <Pressable onPress={applyGeneratedImage} className="flex-1 py-2.5 rounded-lg items-center" style={{ backgroundColor: '#16a34a' }}>
-                  <Text className="text-white text-xs font-bold">Use This</Text>
-                </Pressable>
-                <Pressable onPress={handleGenerateImage} className="flex-1 py-2.5 rounded-lg items-center" style={{ backgroundColor: '#f3f4f6' }}>
-                  <Text className="text-xs font-semibold" style={{ color: '#374151' }}>Try Again</Text>
+          {wizardData.colors.map((color) => (
+            <View key={color} className="rounded-xl mb-3 p-3" style={{ backgroundColor: '#fffdf9', borderWidth: 1, borderColor: SECTION_BORDER }}>
+              <View className="flex-row items-center mb-2">
+                <View className="w-5 h-5 rounded-full mr-2" style={{ backgroundColor: colorHex(color), borderWidth: 1, borderColor: '#e5e7eb' }} />
+                <Text className="flex-1 text-sm font-bold" style={{ color: '#78350f' }}>{color}</Text>
+                <Pressable onPress={() => removeColor(color)} hitSlop={8} className="px-2 py-1">
+                  <Ionicons name="trash-outline" size={16} color="#dc2626" />
                 </Pressable>
               </View>
-            </View>
-          )}
+              {renderColorPhotos(color)}
 
-          <Pressable
-            onPress={handleGenerateImage}
-            disabled={!primaryImage?.uploadedUrl || isGeneratingImage}
-            className="flex-row items-center justify-center py-3.5 rounded-xl"
-            style={{ backgroundColor: primaryImage?.uploadedUrl ? '#fef3c7' : '#f9fafb', borderWidth: 1, borderColor: primaryImage?.uploadedUrl ? '#f59e0b' : '#e5e7eb' }}
-          >
-            {isGeneratingImage ? (
-              <ActivityIndicator size="small" color="#d97706" />
-            ) : (
-              <>
-                <Ionicons name="sparkles" size={16} color={primaryImage?.uploadedUrl ? '#d97706' : '#9ca3af'} />
-                <Text className="text-sm font-semibold ml-2" style={{ color: primaryImage?.uploadedUrl ? '#92400e' : '#9ca3af' }}>
-                  Generate AI Image
-                </Text>
-              </>
-            )}
-          </Pressable>
+              {/* Per-colour AI generation */}
+              <Pressable
+                onPress={() => generateAiForColor(color)}
+                disabled={aiColor === color}
+                className="flex-row items-center justify-center py-2.5 rounded-xl mt-2"
+                style={{ backgroundColor: '#f5f3ff', borderWidth: 1, borderColor: '#ddd6fe', opacity: aiColor === color ? 0.7 : 1 }}
+              >
+                {aiColor === color ? (
+                  <>
+                    <ActivityIndicator size="small" color="#7c3aed" />
+                    <Text className="text-xs font-semibold ml-2" style={{ color: '#6d28d9' }}>
+                      Generating {color} images…
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="sparkles" size={14} color="#7c3aed" />
+                    <Text className="text-xs font-semibold ml-2" style={{ color: '#6d28d9' }}>
+                      ✨ Generate AI Image — {color}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+
+              {renderColorStock(color)}
+            </View>
+          ))}
         </SectionCard>
 
         <Divider />
 
-        {/* ─── 3. Details ───────────────────────────────────────────────── */}
+        {/* ─── Details ──────────────────────────────────────────────────── */}
         <SectionCard icon="gift" iconColor="#b91c1c" title="Details" subtitle="Product information">
-          {/* Name */}
           <View className="mb-4">
             <View className="flex-row items-center justify-between mb-1.5">
               <Text className="text-sm font-medium" style={{ color: '#78350f' }}>Name *</Text>
@@ -484,15 +926,14 @@ export default function ProductWizardScreen({ route, navigation }) {
             <TextInput
               className="rounded-xl px-4 py-3 text-base"
               style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER, color: '#1f2937' }}
-              placeholder="Saree/Dress name"
+              placeholder="Product name"
               placeholderTextColor="#a16207"
               value={wizardData.content.title}
-              onChangeText={(t) => update({ content: { ...wizardData.content, title: t } })}
+              onChangeText={(v) => update({ content: { ...wizardData.content, title: v } })}
               maxLength={80}
             />
           </View>
 
-          {/* Description */}
           <View className="mb-4">
             <Text className="text-sm font-medium mb-1.5" style={{ color: '#78350f' }}>Description</Text>
             <TextInput
@@ -501,13 +942,12 @@ export default function ProductWizardScreen({ route, navigation }) {
               placeholder="Describe the item"
               placeholderTextColor="#a16207"
               value={wizardData.content.description}
-              onChangeText={(t) => update({ content: { ...wizardData.content, description: t } })}
+              onChangeText={(v) => update({ content: { ...wizardData.content, description: v } })}
               multiline
               textAlignVertical="top"
             />
           </View>
 
-          {/* AI Content button */}
           <Pressable
             onPress={handleGenerateContent}
             disabled={isGeneratingContent}
@@ -526,8 +966,26 @@ export default function ProductWizardScreen({ route, navigation }) {
 
           {/* Category */}
           <Text className="text-sm font-medium mb-2" style={{ color: '#78350f' }}>Category</Text>
+          {categoryOptions.length > 6 && (
+            <View className="flex-row items-center rounded-xl px-3 py-2 mb-2" style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER }}>
+              <Ionicons name="search" size={14} color="#a16207" />
+              <TextInput
+                className="flex-1 ml-2 text-sm"
+                style={{ color: '#1f2937' }}
+                placeholder="Search categories"
+                placeholderTextColor="#a16207"
+                value={categorySearch}
+                onChangeText={setCategorySearch}
+              />
+              {categorySearch.length > 0 && (
+                <Pressable onPress={() => setCategorySearch('')}>
+                  <Ionicons name="close-circle" size={14} color="#a16207" />
+                </Pressable>
+              )}
+            </View>
+          )}
           <View className="flex-row flex-wrap">
-            {allCategories.map((cat) => {
+            {filteredCategories.map((cat) => {
               const active = wizardData.categoryId === cat.id;
               return (
                 <Pressable
@@ -549,38 +1007,35 @@ export default function ProductWizardScreen({ route, navigation }) {
               <Text className="text-xs font-semibold ml-1" style={{ color: '#a16207' }}>New</Text>
             </Pressable>
           </View>
-
+          {categoryOptions.length === 0 && (
+            <Text className="text-xs mb-1" style={{ color: '#a16207' }}>
+              No {t} categories yet — tap “New” to create the first one.
+            </Text>
+          )}
           {showNewCategory && (
             <View className="flex-row items-center gap-2 mt-2">
               <TextInput
                 className="flex-1 rounded-xl px-3 py-2.5 text-sm"
                 style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER, color: '#1f2937' }}
-                placeholder="Category name"
+                placeholder="New category name"
                 placeholderTextColor="#a16207"
                 value={newCategoryName}
                 onChangeText={setNewCategoryName}
                 autoFocus
               />
               <Pressable
-                onPress={() => {
-                  const name = newCategoryName.trim();
-                  if (!name) return;
-                  const newCat = { id: `custom-${Date.now()}`, name, slug: name.toLowerCase().replace(/\s+/g, '-') };
-                  setCustomCategories((prev) => [...prev, newCat]);
-                  update({ categoryId: newCat.id, categoryName: newCat.name });
-                  setNewCategoryName('');
-                  setShowNewCategory(false);
-                }}
+                onPress={handleCreateCategory}
+                disabled={creatingCategory}
                 className="px-4 py-2.5 rounded-xl"
-                style={{ backgroundColor: AMBER_500 }}
+                style={{ backgroundColor: AMBER_500, opacity: creatingCategory ? 0.6 : 1 }}
               >
-                <Text className="text-white text-sm font-semibold">Add</Text>
+                {creatingCategory ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-white text-sm font-semibold">Add</Text>}
               </Pressable>
             </View>
           )}
         </SectionCard>
 
-        {/* ─── 4. Pricing ───────────────────────────────────────────────── */}
+        {/* ─── Pricing ──────────────────────────────────────────────────── */}
         <SectionCard icon="pricetag" iconColor="#d97706" title="Pricing" subtitle="Set price and discount">
           <View className="flex-row gap-3 mb-4">
             <View className="flex-1">
@@ -596,7 +1051,7 @@ export default function ProductWizardScreen({ route, navigation }) {
                   placeholderTextColor="#a16207"
                   keyboardType="number-pad"
                   value={wizardData.pricing.basePrice ? wizardData.pricing.basePrice.toString() : ''}
-                  onChangeText={(t) => update({ pricing: { ...wizardData.pricing, basePrice: parseInt(t) || 0 } })}
+                  onChangeText={(v) => update({ pricing: { ...wizardData.pricing, basePrice: parseInt(v) || 0 } })}
                 />
               </View>
             </View>
@@ -609,7 +1064,7 @@ export default function ProductWizardScreen({ route, navigation }) {
                 placeholderTextColor="#a16207"
                 keyboardType="number-pad"
                 value={wizardData.pricing.discountPct ? wizardData.pricing.discountPct.toString() : ''}
-                onChangeText={(t) => update({ pricing: { ...wizardData.pricing, discountPct: Math.min(90, parseInt(t) || 0) } })}
+                onChangeText={(v) => update({ pricing: { ...wizardData.pricing, discountPct: Math.min(90, parseInt(v) || 0) } })}
               />
             </View>
           </View>
@@ -633,7 +1088,6 @@ export default function ProductWizardScreen({ route, navigation }) {
             </View>
           )}
 
-          {/* Coupon */}
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-xs font-semibold" style={{ color: '#78350f' }}>Coupon code</Text>
             <Switch
@@ -654,7 +1108,7 @@ export default function ProductWizardScreen({ route, navigation }) {
                 placeholder="SUMMER20"
                 placeholderTextColor="#a16207"
                 value={wizardData.pricing.couponCode}
-                onChangeText={(t) => update({ pricing: { ...wizardData.pricing, couponCode: t.toUpperCase() } })}
+                onChangeText={(v) => update({ pricing: { ...wizardData.pricing, couponCode: v.toUpperCase() } })}
                 autoCapitalize="characters"
               />
               <TextInput
@@ -664,12 +1118,11 @@ export default function ProductWizardScreen({ route, navigation }) {
                 placeholderTextColor="#a16207"
                 keyboardType="number-pad"
                 value={wizardData.pricing.couponDiscount ? wizardData.pricing.couponDiscount.toString() : ''}
-                onChangeText={(t) => update({ pricing: { ...wizardData.pricing, couponDiscount: parseInt(t) || 0 } })}
+                onChangeText={(v) => update({ pricing: { ...wizardData.pricing, couponDiscount: parseInt(v) || 0 } })}
               />
             </View>
           )}
 
-          {/* Tags */}
           <Text className="text-xs font-medium mb-1.5" style={{ color: '#78350f' }}>Tags</Text>
           <TextInput
             className="rounded-xl px-3 py-2.5 text-sm mb-2"
@@ -677,199 +1130,85 @@ export default function ProductWizardScreen({ route, navigation }) {
             placeholder="wedding, festive, silk"
             placeholderTextColor="#a16207"
             value={tagInput}
-            onChangeText={(t) => { setTagInput(t); update({ pricing: { ...wizardData.pricing, tags: t } }); }}
+            onChangeText={(v) => { setTagInput(v); update({ pricing: { ...wizardData.pricing, tags: v } }); }}
           />
           {parsedTags.length > 0 && (
             <View className="flex-row flex-wrap gap-1.5">
               {parsedTags.map((tag) => (
-                <View key={tag} className="flex-row items-center px-2.5 py-1 rounded-full" style={{ backgroundColor: '#eef2ff', borderWidth: 1, borderColor: '#c7d2fe' }}>
+                <View key={tag} className="px-2.5 py-1 rounded-full" style={{ backgroundColor: '#eef2ff', borderWidth: 1, borderColor: '#c7d2fe' }}>
                   <Text className="text-[10px] font-medium" style={{ color: '#4338ca' }}>{tag}</Text>
-                  <Pressable
-                    onPress={() => {
-                      const updated = parsedTags.filter((t) => t !== tag).join(', ');
-                      setTagInput(updated);
-                      update({ pricing: { ...wizardData.pricing, tags: updated } });
-                    }}
-                    hitSlop={6}
-                    className="ml-1"
-                  >
-                    <Ionicons name="close-circle" size={12} color="#6366f1" />
-                  </Pressable>
                 </View>
               ))}
             </View>
           )}
         </SectionCard>
-
-        <Divider />
-
-        {/* ─── 5. Variants (type-specific) ──────────────────────────────── */}
-        <SectionCard
-          icon="layers"
-          iconColor="#14b8a6"
-          title={wizardData.type === 'saree' ? 'Colors & Pieces' : wizardData.type === 'dress' ? 'Sizes, Colors & Pieces' : 'Weight, Purity & Pieces'}
-          subtitle="Stock configuration"
-        >
-          {wizardData.type === 'saree' && (
-            <>
-              <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Colors</Text>
-              <View className="flex-row flex-wrap mb-3">
-                {COLORS.map((c) => (
-                  <Chip
-                    key={c} label={c} colorDot={COLOR_MAP[c]}
-                    selected={selectedColors.includes(c)}
-                    onPress={() => {
-                      setSelectedColors((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]);
-                      setTimeout(syncVariants, 0);
-                    }}
-                  />
-                ))}
-              </View>
-              {selectedColors.length > 0 && (
-                <View className="rounded-xl p-3" style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER }}>
-                  {selectedColors.map((color) => {
-                    const v = wizardData.variants.find((vr) => vr.color === color);
-                    return (
-                      <View key={color} className="flex-row items-center justify-between py-2">
-                        <View className="flex-row items-center">
-                          <View className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: COLOR_MAP[color] || '#ccc', borderWidth: 1, borderColor: '#e5e7eb' }} />
-                          <Text className="text-sm" style={{ color: '#78350f' }}>{color}</Text>
-                        </View>
-                        <TextInput
-                          className="w-20 text-center rounded-lg py-1.5 text-sm font-semibold"
-                          style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', color: '#1f2937' }}
-                          value={(v?.quantity ?? 0).toString()}
-                          onChangeText={(t) => setVariantQty(color, '', t)}
-                          keyboardType="number-pad"
-                          selectTextOnFocus
-                        />
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </>
-          )}
-
-          {wizardData.type === 'dress' && (
-            <>
-              <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Sizes</Text>
-              <View className="flex-row flex-wrap mb-3">
-                {PRODUCT_SIZES.dress.map((s) => (
-                  <Chip
-                    key={s} label={s}
-                    selected={selectedSizes.includes(s)}
-                    onPress={() => {
-                      setSelectedSizes((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
-                      setTimeout(syncVariants, 0);
-                    }}
-                  />
-                ))}
-              </View>
-              <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Colors</Text>
-              <View className="flex-row flex-wrap mb-3">
-                {COLORS.map((c) => (
-                  <Chip
-                    key={c} label={c} colorDot={COLOR_MAP[c]}
-                    selected={selectedColors.includes(c)}
-                    onPress={() => {
-                      setSelectedColors((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]);
-                      setTimeout(syncVariants, 0);
-                    }}
-                  />
-                ))}
-              </View>
-              {selectedColors.length > 0 && selectedSizes.length > 0 && (
-                <View className="rounded-xl overflow-hidden" style={{ borderWidth: 1, borderColor: SECTION_BORDER }}>
-                  {selectedColors.map((color) => (
-                    <View key={color}>
-                      <View className="px-3 py-2" style={{ backgroundColor: '#fef3c7' }}>
-                        <Text className="text-xs font-bold" style={{ color: '#92400e' }}>{color}</Text>
-                      </View>
-                      <View className="flex-row flex-wrap gap-2 p-3" style={{ backgroundColor: '#fef7f0' }}>
-                        {selectedSizes.map((size) => {
-                          const v = wizardData.variants.find((vr) => vr.color === color && vr.size === size);
-                          return (
-                            <View key={size} className="items-center" style={{ width: 68 }}>
-                              <Text className="text-[10px] mb-1" style={{ color: '#78350f' }}>{size}</Text>
-                              <TextInput
-                                className="w-full text-center rounded-lg py-1.5 text-xs font-semibold"
-                                style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', color: '#1f2937' }}
-                                value={(v?.quantity ?? 0).toString()}
-                                onChangeText={(t) => setVariantQty(color, size, t)}
-                                keyboardType="number-pad"
-                                selectTextOnFocus
-                              />
-                            </View>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </>
-          )}
-
-          {wizardData.type === 'jewellery' && (
-            <>
-              <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Purity</Text>
-              <View className="flex-row flex-wrap mb-3">
-                {GOLD_PURITIES.map((p) => (
-                  <Chip key={p} label={p} selected={goldPurity === p} onPress={() => { setGoldPurity(p); setTimeout(syncVariants, 0); }} />
-                ))}
-              </View>
-              <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Gold Color</Text>
-              <View className="flex-row flex-wrap mb-3">
-                {GOLD_COLORS.map((gc) => (
-                  <Chip key={gc} label={gc} selected={goldColor === gc} onPress={() => { setGoldColor(gc); setTimeout(syncVariants, 0); }} />
-                ))}
-              </View>
-              <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Stone</Text>
-              <View className="flex-row flex-wrap mb-3">
-                {STONE_TYPES.map((st) => (
-                  <Chip key={st} label={st} selected={stoneType === st} onPress={() => { setStoneType(st); setTimeout(syncVariants, 0); }} />
-                ))}
-              </View>
-              <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Weight</Text>
-              <View className="flex-row flex-wrap mb-3">
-                {PRODUCT_SIZES.jewellery.map((w) => (
-                  <Chip
-                    key={w} label={w}
-                    selected={selectedWeights.includes(w)}
-                    onPress={() => {
-                      setSelectedWeights((prev) => prev.includes(w) ? prev.filter((x) => x !== w) : [...prev, w]);
-                      setTimeout(syncVariants, 0);
-                    }}
-                  />
-                ))}
-              </View>
-              {selectedWeights.length > 0 && (
-                <View className="rounded-xl p-3" style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER }}>
-                  {selectedWeights.map((w) => {
-                    const v = wizardData.variants.find((vr) => vr.size === w);
-                    return (
-                      <View key={w} className="flex-row items-center justify-between py-2">
-                        <Text className="text-sm" style={{ color: '#78350f' }}>{w}</Text>
-                        <TextInput
-                          className="w-20 text-center rounded-lg py-1.5 text-sm font-semibold"
-                          style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', color: '#1f2937' }}
-                          value={(v?.quantity ?? 0).toString()}
-                          onChangeText={(t) => setVariantQty(goldColor, w, t)}
-                          keyboardType="number-pad"
-                          selectTextOnFocus
-                        />
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </>
-          )}
-        </SectionCard>
       </ScrollView>
 
-      {/* ─── Sticky Footer ────────────────────────────────────────────── */}
+      <Modal
+        visible={!!pickerSlot}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPickerSlot(null)}
+      >
+        <Pressable
+          className="flex-1 justify-end"
+          onPress={() => setPickerSlot(null)}
+          style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+        >
+          <Pressable className="mx-4 mb-6 rounded-2xl p-4" style={{ backgroundColor: '#ffffff' }} onPress={() => {}}>
+            <Text className="text-sm font-semibold mb-2" style={{ color: '#78350f' }}>{pickerTitle}</Text>
+            {pickerActions.map((item) => (
+              <Pressable
+                key={item.label}
+                onPress={() => runPickerAction(item.action)}
+                className="py-3"
+              >
+                <Text className="text-sm font-semibold" style={{ color: item.destructive ? '#dc2626' : '#1f2937' }}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+            <Pressable onPress={() => setPickerSlot(null)} className="pt-2 pb-1">
+              <Text className="text-sm font-semibold" style={{ color: '#6b7280' }}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={!!confirmDialog}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (confirmDialog?.dismissible) setConfirmDialog(null);
+        }}
+      >
+        <Pressable
+          className="flex-1 items-center justify-center px-6"
+          onPress={() => {
+            if (confirmDialog?.dismissible) setConfirmDialog(null);
+          }}
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+        >
+          <Pressable className="w-full rounded-2xl p-4" style={{ backgroundColor: '#ffffff' }} onPress={() => {}}>
+            <Text className="text-base font-bold mb-1" style={{ color: '#78350f' }}>{confirmTitle}</Text>
+            <Text className="text-sm mb-3" style={{ color: '#6b7280' }}>{confirmMessage}</Text>
+            {confirmActions.map((item) => (
+              <Pressable
+                key={item.label}
+                onPress={() => runConfirmAction(item.onPress)}
+                className="py-2.5"
+              >
+                <Text className="text-sm font-semibold" style={{ color: item.style === 'destructive' ? '#dc2626' : '#1f2937' }}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Sticky Footer */}
       <View
         style={{ paddingBottom: insets.bottom + 8, backgroundColor: CARD_BG, borderTopWidth: 1, borderTopColor: SECTION_BORDER }}
         className="px-4 pt-3"
