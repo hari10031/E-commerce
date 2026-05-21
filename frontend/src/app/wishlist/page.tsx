@@ -154,7 +154,7 @@ export default function WishlistPage() {
                       src={primaryImage.url}
                       alt={product.title}
                       fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="object-contain group-hover:scale-105 transition-transform duration-500"
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-4xl">🌸</div>

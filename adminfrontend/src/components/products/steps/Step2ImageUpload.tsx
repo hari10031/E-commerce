@@ -111,7 +111,7 @@ export function Step2ImageUpload({ data, onChange, productType }: Step2Props) {
             {pendingPreview ? (
               // Local blob preview — next/image cannot render blob: URLs.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={pendingPreview} alt="preview" className="object-cover w-full h-full" />
+              <img src={pendingPreview} alt="preview" className="object-contain w-full h-full" />
             ) : (
               <Upload className="w-6 h-6 text-gray-400" />
             )}
@@ -150,7 +150,7 @@ export function Step2ImageUpload({ data, onChange, productType }: Step2Props) {
                 alt={pair.color}
                 width={56}
                 height={56}
-                className="rounded-lg object-cover flex-shrink-0"
+                className="rounded-lg object-contain flex-shrink-0"
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

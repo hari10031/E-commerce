@@ -123,7 +123,7 @@ export default function CartPage() {
                       src={primaryImage.url}
                       alt={item.product.title}
                       fill
-                      className="object-cover"
+                      className="object-contain"
                     />
                   ) : (
                     <div className="h-full w-full bg-gray-200 flex items-center justify-center text-2xl">🌸</div>

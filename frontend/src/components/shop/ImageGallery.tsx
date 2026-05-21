@@ -52,7 +52,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
           src={activeImage.url}
           alt={activeImage.alt_text ?? title}
           fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-contain transition-transform duration-500 group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, 50vw"
           priority
         />
@@ -101,7 +101,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                 src={img.url}
                 alt={img.alt_text ?? `${title} ${idx + 1}`}
                 fill
-                className="object-cover"
+                className="object-contain"
               />
             </button>
           ))}

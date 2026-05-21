@@ -156,7 +156,7 @@ export default function OrderDetailPage() {
                   alt={item.product.title ?? ''}
                   width={56}
                   height={56}
-                  className="rounded-lg object-cover flex-shrink-0"
+                  className="rounded-lg object-contain flex-shrink-0"
                 />
               ) : (
                 <div className="w-14 h-14 rounded-lg bg-gray-100 flex-shrink-0" />

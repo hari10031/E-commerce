@@ -119,7 +119,7 @@ export function Step6Review({ data, editId }: Step6Props) {
                   alt={img.color}
                   width={48}
                   height={48}
-                  className="rounded-lg object-cover"
+                  className="rounded-lg object-contain"
                 />
                 <span className="absolute -bottom-1 left-0 right-0 text-center text-xs text-gray-600 leading-none">
                   {img.color.slice(0, 5)}

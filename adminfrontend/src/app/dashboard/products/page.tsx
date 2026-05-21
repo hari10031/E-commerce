@@ -176,7 +176,7 @@ export default function ProductsPage() {
                                 alt={product.title}
                                 width={36}
                                 height={36}
-                                className="rounded-lg object-cover flex-shrink-0"
+                                className="rounded-lg object-contain flex-shrink-0"
                               />
                             ) : (
                               <div className="w-9 h-9 rounded-lg bg-gray-100 flex-shrink-0" />

@@ -83,7 +83,7 @@ export function ProductCard({ product }: ProductCardProps) {
               src={primaryImage.url}
               alt={primaryImage.alt_text ?? product.title}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              className="object-contain transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="h-full w-full bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">

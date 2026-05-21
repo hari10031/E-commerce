@@ -58,7 +58,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                           src={primaryImage.url}
                           alt={item.product.title}
                           fill
-                          className="object-cover"
+                          className="object-contain"
                         />
                       ) : (
                         <div className="h-full w-full bg-gray-200" />

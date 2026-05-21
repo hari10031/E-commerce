@@ -131,7 +131,7 @@ export default function CategoriesPage() {
                 <div className="flex items-center gap-3 p-4 border-b border-gray-50">
                   <div className="relative w-12 h-12 rounded-lg bg-gray-50 overflow-hidden flex-shrink-0">
                     {parent.image_url ? (
-                      <Image src={parent.image_url} alt={parent.name} fill className="object-cover" />
+                      <Image src={parent.image_url} alt={parent.name} fill className="object-contain" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Tag className="w-5 h-5 text-gray-300" />

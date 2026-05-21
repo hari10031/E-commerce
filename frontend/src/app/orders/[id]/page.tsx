@@ -114,7 +114,7 @@ export default function OrderDetailPage() {
                           src={primaryImage.url}
                           alt={item.product.title}
                           fill
-                          className="object-cover"
+                          className="object-contain"
                         />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-2xl">🌸</div>
