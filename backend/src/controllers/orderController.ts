@@ -26,16 +26,113 @@ const orderSelect = `
   )
 `
 
+// Builds the internal order from the user's cart + address, then creates the
+// matching Razorpay order. The amount is computed server-side — never trusted
+// from the client. verifyPayment later flips this order to 'confirmed'.
 export async function createRazorpayOrder(req: AuthRequest, res: Response) {
-  const { amount, receipt } = req.body
-  if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid amount' })
+  const { address, coupon } = req.body
+  const userId = req.user!.id
 
-  const order = await razorpay.orders.create({
-    amount: Math.round(amount * 100),
+  const { data: cart } = await supabase
+    .from('cart_items')
+    .select('product_id, variant_id, quantity, product:products(base_price, discount_pct), variant:variants(quantity)')
+    .eq('user_id', userId)
+
+  if (!cart || cart.length === 0) {
+    return res.status(400).json({ error: 'Your cart is empty' })
+  }
+
+  let subtotal = 0
+  const items: { product_id: string; variant_id: string; quantity: number; unit_price: number }[] = []
+  for (const c of cart) {
+    const product = c.product as unknown as { base_price: number; discount_pct: number } | null
+    const variant = c.variant as unknown as { quantity: number } | null
+    if (!product || !variant) {
+      return res.status(400).json({ error: 'An item in your cart is no longer available' })
+    }
+    if (variant.quantity < c.quantity) {
+      return res.status(400).json({ error: 'Insufficient stock for an item in your cart' })
+    }
+    const unitPrice = Math.round(product.base_price * (1 - (product.discount_pct ?? 0) / 100))
+    subtotal += unitPrice * c.quantity
+    items.push({ product_id: c.product_id, variant_id: c.variant_id, quantity: c.quantity, unit_price: unitPrice })
+  }
+
+  // Optional coupon
+  let discount = 0
+  let couponCode: string | null = null
+  if (coupon) {
+    const { data: cp } = await supabase
+      .from('coupons')
+      .select('code, discount_percent, max_uses, used_count, expires_at, is_active')
+      .eq('code', coupon)
+      .maybeSingle()
+    const valid =
+      cp &&
+      cp.is_active &&
+      (!cp.expires_at || new Date(cp.expires_at) > new Date()) &&
+      cp.used_count < cp.max_uses
+    if (valid) {
+      discount = Math.round((subtotal * cp.discount_percent) / 100)
+      couponCode = cp.code
+    }
+  }
+
+  const shipping = subtotal >= 999 ? 0 : 99
+  const total = subtotal + shipping - discount
+  if (total <= 0) return res.status(400).json({ error: 'Invalid order total' })
+
+  // Persist the delivery address
+  let addressId: string | null = null
+  if (address?.line1) {
+    const { data: addr } = await supabase
+      .from('addresses')
+      .insert({
+        user_id: userId,
+        line1: address.line1,
+        line2: address.line2 ?? null,
+        city: address.city,
+        state: address.state,
+        pincode: address.pincode,
+        country: address.country ?? 'India',
+      })
+      .select('id')
+      .single()
+    addressId = addr?.id ?? null
+  }
+
+  // Internal order — awaiting payment
+  const { data: order, error: orderErr } = await supabase
+    .from('orders')
+    .insert({
+      user_id: userId,
+      address_id: addressId,
+      status: 'placed',
+      total_amount: total,
+      discount_amount: discount,
+      coupon_applied: couponCode,
+    })
+    .select('id')
+    .single()
+  if (orderErr) return res.status(400).json({ error: orderErr.message })
+
+  await supabase.from('order_items').insert(items.map((i) => ({ order_id: order.id, ...i })))
+  if (couponCode) {
+    await supabase.rpc('increment_coupon_usage', { code: couponCode })
+  }
+
+  const rzpOrder = await razorpay.orders.create({
+    amount: Math.round(total * 100),
     currency: 'INR',
-    receipt,
+    receipt: order.id,
   })
-  res.json(order)
+
+  res.json({
+    razorpay_order_id: rzpOrder.id,
+    amount: rzpOrder.amount,
+    currency: rzpOrder.currency,
+    order_id: order.id,
+  })
 }
 
 export async function placeOrder(req: AuthRequest, res: Response) {
@@ -93,7 +190,7 @@ export async function placeOrder(req: AuthRequest, res: Response) {
 }
 
 export async function verifyPayment(req: AuthRequest, res: Response) {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = req.body
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, order_id } = req.body
 
   const expected = crypto
     .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
@@ -112,7 +209,8 @@ export async function verifyPayment(req: AuthRequest, res: Response) {
       razorpay_payment_id,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', orderId)
+    .eq('id', order_id)
+    .eq('user_id', req.user!.id)
     .select('*, order_items(id, variant_id, quantity)')
     .single()
 
@@ -155,7 +253,14 @@ export async function getOrders(req: AuthRequest, res: Response) {
   const { data, error, count } = await query
   if (error) return res.status(500).json({ error: error.message })
 
-  res.json({ data, count, page: +page, limit: +limit })
+  res.json({
+    data,
+    count,
+    total: count,
+    page: +page,
+    limit: +limit,
+    totalPages: Math.ceil((count ?? 0) / +limit),
+  })
 }
 
 export async function getOrderById(req: AuthRequest, res: Response) {

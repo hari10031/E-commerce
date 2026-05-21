@@ -21,7 +21,7 @@ export function SizeSelector({ variants, selectedColor, selectedVariantId, onSel
 
   return (
     <div>
-      <span className="text-sm font-medium text-gray-700 block mb-2">Size:</span>
+      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-ink block mb-2.5">Size</span>
       <div className="flex flex-wrap gap-2">
         {filtered.map((variant) => {
           const isSelected = variant.id === selectedVariantId
@@ -34,10 +34,10 @@ export function SizeSelector({ variants, selectedColor, selectedVariantId, onSel
               disabled={isOutOfStock}
               title={isOutOfStock ? 'Out of stock' : `${variant.quantity} in stock`}
               className={cn(
-                'px-3 py-1.5 text-sm rounded-md border transition-all font-medium',
+                'min-w-[3rem] px-3.5 py-2 text-sm rounded-xl border transition-all font-medium',
                 isSelected
-                  ? 'border-[oklch(0.60_0.22_35)] bg-[oklch(0.60_0.22_35)] text-white'
-                  : 'border-gray-300 text-gray-700 hover:border-[oklch(0.60_0.22_35)] hover:text-[oklch(0.60_0.22_35)]',
+                  ? 'border-ink bg-ink text-white'
+                  : 'border-neutral-200 text-neutral-700 hover:border-ink',
                 isOutOfStock && 'opacity-40 cursor-not-allowed line-through'
               )}
             >

@@ -30,7 +30,7 @@ export function Step6Review({ data, editId }: Step6Props) {
         type: data.type,
         category_id: data.categoryId,
         base_price: data.pricing.basePrice,
-        discount_percent: data.pricing.discountPercent,
+        discount_pct: data.pricing.discountPercent,
         published,
       };
 
@@ -58,8 +58,8 @@ export function Step6Review({ data, editId }: Step6Props) {
       // Post images
       for (const img of data.images) {
         await api.post('/api/products/' + productId + '/images', {
-          variant_color: img.color,
-          image_url: img.imageUrl,
+          color: img.color,
+          url: img.imageUrl,
           is_primary: data.images.indexOf(img) === 0,
         }, token);
       }

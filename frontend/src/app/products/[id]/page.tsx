@@ -6,7 +6,7 @@ import { AddToCartSection } from './AddToCartSection'
 import { formatPrice, discountedPrice } from '@/lib/utils'
 import type { Product } from '@/types'
 import Link from 'next/link'
-import { ChevronRight, Tag } from 'lucide-react'
+import { ChevronRight, Tag, Truck, ShieldCheck, RotateCcw } from 'lucide-react'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -19,6 +19,12 @@ async function getProduct(id: string): Promise<Product | null> {
     return null
   }
 }
+
+const ASSURANCES = [
+  { icon: Truck, label: 'Free shipping', sub: 'On orders above ₹999' },
+  { icon: ShieldCheck, label: 'Authentic', sub: 'Directly sourced' },
+  { icon: RotateCcw, label: 'Easy returns', sub: '7-day policy' },
+]
 
 export default async function ProductDetailPage({ params }: PageProps) {
   const { id } = await params
@@ -33,116 +39,132 @@ export default async function ProductDetailPage({ params }: PageProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-gray-800">Home</Link>
+      <nav className="flex items-center gap-1.5 text-[13px] text-neutral-400 mb-7">
+        <Link href="/" className="hover:text-brand transition-colors">Home</Link>
         <ChevronRight className="h-3 w-3" />
-        <Link href="/products" className="hover:text-gray-800">Products</Link>
+        <Link href="/products" className="hover:text-brand transition-colors">Products</Link>
         {product.category && (
           <>
             <ChevronRight className="h-3 w-3" />
-            <Link href={`/category/${product.category.slug}`} className="hover:text-gray-800">
+            <Link href={`/category/${product.category.slug}`} className="hover:text-brand transition-colors">
               {product.category.name}
             </Link>
           </>
         )}
         <ChevronRight className="h-3 w-3" />
-        <span className="text-gray-800 truncate max-w-xs">{product.title}</span>
+        <span className="text-neutral-600 truncate max-w-[12rem]">{product.title}</span>
       </nav>
 
-      <div className="grid lg:grid-cols-2 gap-10">
+      <div className="grid lg:grid-cols-2 gap-10 lg:gap-14">
         {/* Left: Images */}
-        <div>
+        <div className="animate-fade-in">
           <ImageGallery images={product.images ?? []} title={product.title} />
         </div>
 
         {/* Right: Details */}
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-up">
           {/* Title & category */}
-          {product.category && (
-            <p className="text-sm font-medium text-[oklch(0.60_0.22_35)] uppercase tracking-wide">
-              {product.category.name}
-            </p>
-          )}
-          <h1 className="text-3xl font-bold text-gray-900 leading-tight">{product.title}</h1>
+          <div>
+            {product.category && (
+              <p className="eyebrow">{product.category.name}</p>
+            )}
+            <h1 className="text-3xl sm:text-[2.5rem] leading-tight font-semibold text-ink font-[var(--font-display)] mt-2">
+              {product.title}
+            </h1>
+          </div>
 
           {/* Pricing */}
-          <div className="space-y-1">
-            <div className="flex items-end gap-3">
-              <span className="text-4xl font-bold text-gray-900">{formatPrice(finalPrice)}</span>
+          <div className="space-y-1.5">
+            <div className="flex items-end gap-3 flex-wrap">
+              <span className="text-4xl font-bold text-ink">{formatPrice(finalPrice)}</span>
               {hasDiscount && (
                 <>
-                  <span className="text-xl text-gray-400 line-through mb-1">
+                  <span className="text-xl text-neutral-400 line-through mb-1">
                     {formatPrice(product.base_price)}
                   </span>
-                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-sm font-bold rounded-full mb-1">
+                  <span className="px-2.5 py-1 bg-brand-accent/15 text-brand-accent text-xs font-bold rounded-full mb-1.5">
                     {product.discount_pct}% OFF
                   </span>
                 </>
               )}
             </div>
             {hasDiscount && (
-              <p className="text-sm text-green-600">You save {formatPrice(savings)}</p>
+              <p className="text-sm text-brand-accent font-medium">You save {formatPrice(savings)}</p>
             )}
+            <p className="text-xs text-neutral-400">Inclusive of all taxes</p>
           </div>
 
           {/* Coupon */}
           {product.coupon_code && (
-            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
-              <Tag className="h-4 w-4 text-[oklch(0.60_0.22_35)]" />
-              <div>
-                <span className="text-sm font-medium text-gray-700">Use code </span>
-                <span className="text-sm font-bold text-[oklch(0.60_0.22_35)] bg-orange-100 px-1.5 py-0.5 rounded font-mono">
+            <div className="flex items-center gap-3 bg-brand-soft border border-brand/20 rounded-xl p-3.5">
+              <div className="h-9 w-9 rounded-full bg-white flex items-center justify-center shrink-0">
+                <Tag className="h-4 w-4 text-brand" />
+              </div>
+              <div className="text-sm">
+                <span className="text-neutral-600">Use code </span>
+                <span className="font-bold text-brand bg-white px-1.5 py-0.5 rounded font-mono text-xs">
                   {product.coupon_code}
                 </span>
                 {product.coupon_disc && (
-                  <span className="text-sm text-gray-600 ml-1">
-                    for extra {product.coupon_disc}% off
-                  </span>
+                  <span className="text-neutral-600"> for extra {product.coupon_disc}% off</span>
                 )}
               </div>
             </div>
           )}
 
-          <hr className="border-gray-100" />
+          <div className="gold-rule" />
 
           {/* Add to cart section */}
           <AddToCartSection product={product} />
 
-          <hr className="border-gray-100" />
+          {/* Assurances */}
+          <div className="grid grid-cols-3 gap-3 pt-2">
+            {ASSURANCES.map(({ icon: Icon, label, sub }) => (
+              <div key={label} className="text-center rounded-xl border border-neutral-200/70 py-3.5 px-2">
+                <Icon className="h-5 w-5 text-brand mx-auto mb-1.5" />
+                <p className="text-xs font-semibold text-ink">{label}</p>
+                <p className="text-[10px] text-neutral-400 mt-0.5 leading-tight">{sub}</p>
+              </div>
+            ))}
+          </div>
 
           {/* Description */}
           {product.description && (
-            <div>
-              <h2 className="text-base font-semibold text-gray-800 mb-2">Description</h2>
-              <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
+            <div className="pt-2">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink mb-2.5">
+                Description
+              </h2>
+              <p className="text-sm text-neutral-600 leading-relaxed">{product.description}</p>
             </div>
           )}
 
           {/* Variants table */}
           {product.variants && product.variants.length > 0 && (
-            <div>
-              <h2 className="text-base font-semibold text-gray-800 mb-3">Available Variants</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
+            <div className="pt-2">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink mb-3">
+                Available Variants
+              </h2>
+              <div className="overflow-hidden rounded-xl border border-neutral-200/70">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 pr-4 font-medium text-gray-600">Color</th>
-                      <th className="text-left py-2 pr-4 font-medium text-gray-600">Size</th>
-                      <th className="text-left py-2 pr-4 font-medium text-gray-600">SKU</th>
-                      <th className="text-left py-2 font-medium text-gray-600">Stock</th>
+                    <tr className="bg-neutral-50 text-left text-xs text-neutral-500">
+                      <th className="py-2.5 px-4 font-medium">Colour</th>
+                      <th className="py-2.5 px-4 font-medium">Size</th>
+                      <th className="py-2.5 px-4 font-medium">SKU</th>
+                      <th className="py-2.5 px-4 font-medium">Availability</th>
                     </tr>
                   </thead>
                   <tbody>
                     {product.variants.map((v) => (
-                      <tr key={v.id} className="border-b border-gray-100">
-                        <td className="py-2 pr-4 capitalize text-gray-700">{v.color}</td>
-                        <td className="py-2 pr-4 text-gray-700">{v.size}</td>
-                        <td className="py-2 pr-4 text-gray-500 font-mono text-xs">{v.sku}</td>
-                        <td className="py-2">
+                      <tr key={v.id} className="border-t border-neutral-100">
+                        <td className="py-2.5 px-4 capitalize text-neutral-700">{v.color}</td>
+                        <td className="py-2.5 px-4 text-neutral-700">{v.size}</td>
+                        <td className="py-2.5 px-4 text-neutral-400 font-mono text-xs">{v.sku}</td>
+                        <td className="py-2.5 px-4">
                           {v.quantity > 0 ? (
-                            <span className="text-green-600">{v.quantity}</span>
+                            <span className="text-brand-accent font-medium">In stock</span>
                           ) : (
-                            <span className="text-red-500">Out of stock</span>
+                            <span className="text-red-500 font-medium">Out of stock</span>
                           )}
                         </td>
                       </tr>

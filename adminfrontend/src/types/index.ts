@@ -31,9 +31,11 @@ export interface Variant {
 export interface ProductImage {
   id: string;
   product_id: string;
-  variant_color: string;
-  image_url: string;
+  color: string;
+  url: string;
   is_primary: boolean;
+  display_order?: number;
+  alt_text?: string;
 }
 
 export interface Product {
@@ -44,7 +46,7 @@ export interface Product {
   category_id: string;
   category?: Category;
   base_price: number;
-  discount_percent: number;
+  discount_pct: number;
   published: boolean;
   variants?: Variant[];
   images?: ProductImage[];
@@ -54,33 +56,36 @@ export interface Product {
 
 export interface OrderItem {
   id: string;
-  order_id: string;
-  product_id: string;
-  variant_id: string;
   quantity: number;
-  price: number;
-  product?: Product;
-  variant?: Variant;
+  unit_price: number;
+  product?: {
+    id: string;
+    title: string;
+    type?: ProductType;
+    images?: { url: string; is_primary?: boolean }[];
+  };
+  variant?: { id: string; color: string; size: string; sku: string };
 }
 
 export interface Address {
-  street: string;
+  id?: string;
+  line1: string;
+  line2?: string;
   city: string;
   state: string;
   pincode: string;
-  country: string;
 }
 
 export interface Order {
   id: string;
-  customer_id: string;
-  customer_email?: string;
-  customer_name?: string;
-  customer_phone?: string;
-  address: Address;
+  user_id?: string;
+  user?: { id: string; name: string; phone?: string };
+  address?: Address;
   status: OrderStatus;
-  total: number;
-  items?: OrderItem[];
+  total_amount: number;
+  discount_amount?: number;
+  coupon_applied?: string;
+  order_items?: OrderItem[];
   created_at: string;
   updated_at: string;
 }
@@ -151,13 +156,4 @@ export interface PaginatedResponse<T> {
   page: number;
   limit: number;
   totalPages: number;
-}
-
-export interface ApiAnalyticsDashboard {
-  stats: DashboardStats;
-  daily_sales: SalesDataPoint[];
-  category_sales: CategorySalesPoint[];
-  order_status_counts: OrderStatusCount[];
-  recent_orders: Order[];
-  inventory: InventoryItem[];
 }

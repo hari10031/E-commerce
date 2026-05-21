@@ -12,13 +12,7 @@ const compat = new FlatCompat({
 const eslintConfig = [
   {
     ignores: [
-      'src/routes/**',
-      'src/router.tsx',
-      'src/routeTree.gen.ts',
-      'src/lib/store.tsx',
-      'src/components/layout/app-shell.tsx',
       'src/components/shop/hero-slider.tsx',
-      'src/components/shop/product-card.tsx',
       'src/components/ui/calendar.tsx',
       'src/components/ui/chart.tsx',
     ],

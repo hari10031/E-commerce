@@ -15,7 +15,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     .order('is_default', { ascending: false })
 
   if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+  res.json({ data: data ?? [] })
 })
 
 router.post(

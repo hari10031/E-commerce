@@ -17,14 +17,20 @@ export async function getAllProducts(req: Request, res: Response) {
     .select(productSelect, { count: 'exact' })
 
   if (published !== 'all') query = query.eq('published', true)
-  if (type) query = query.eq('type', type as string)
+  if (type) {
+    // Accepts one or more (comma-separated) product types.
+    const typeArr = (type as string).split(',').map((t) => t.trim()).filter(Boolean)
+    query = query.in('type', typeArr)
+  }
   if (category) {
-    // A top-level category match also includes products in its sub-categories.
+    // Accepts one or more (comma-separated) category ids. A top-level category
+    // match also includes products in its sub-categories.
+    const catParam = (category as string).split(',').map((c) => c.trim()).filter(Boolean)
     const { data: subCats } = await supabase
       .from('categories')
       .select('id')
-      .eq('parent_id', category as string)
-    const catIds = [category as string, ...(subCats ?? []).map((c) => c.id)]
+      .in('parent_id', catParam)
+    const catIds = [...catParam, ...(subCats ?? []).map((c) => c.id)]
     query = query.in('category_id', catIds)
   }
   if (search) query = query.ilike('title', `%${search}%`)

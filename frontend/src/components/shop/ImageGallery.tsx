@@ -26,6 +26,11 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
   const colors = [...new Set(images.map((i) => i.color).filter(Boolean))] as string[]
   const [activeColor, setActiveColor] = useState<string | null>(colors[0] ?? null)
   const [activeIndex, setActiveIndex] = useState(0)
+  
+  const [zoomStyle, setZoomStyle] = useState<React.CSSProperties>({
+    transformOrigin: 'center center',
+    transform: 'scale(1)',
+  })
 
   const shown = activeColor ? images.filter((i) => i.color === activeColor) : images
   const sorted = [...shown].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
@@ -36,10 +41,27 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
     setActiveIndex(0)
   }
 
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - left) / width) * 100
+    const y = ((e.clientY - top) / height) * 100
+    setZoomStyle({
+      transformOrigin: `${x}% ${y}%`,
+      transform: 'scale(2.2)',
+    })
+  }
+
+  function handleMouseLeave() {
+    setZoomStyle({
+      transformOrigin: 'center center',
+      transform: 'scale(1)',
+    })
+  }
+
   if (!activeImage) {
     return (
-      <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center">
-        <span className="text-6xl">🌸</span>
+      <div className="aspect-square bg-neutral-100 rounded-3xl flex items-center justify-center">
+        <span className="text-6xl opacity-40">🌸</span>
       </div>
     )
   }
@@ -47,12 +69,17 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
   return (
     <div className="space-y-3">
       {/* Main image */}
-      <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 cursor-zoom-in group">
+      <div
+        className="relative aspect-square rounded-3xl overflow-hidden bg-neutral-50 border border-neutral-200/70 cursor-zoom-in group"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
         <Image
           src={activeImage.url}
           alt={activeImage.alt_text ?? title}
           fill
-          className="object-contain transition-transform duration-500 group-hover:scale-105"
+          className="object-contain transition-transform duration-150 ease-out"
+          style={zoomStyle}
           sizes="(max-width: 768px) 100vw, 50vw"
           priority
         />
@@ -61,23 +88,23 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
       {/* Color selector — swaps the gallery to that colour's photos */}
       {colors.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-gray-600 mr-1">Color:</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-ink mr-1">Colour</span>
           {colors.map((c) => (
             <button
               key={c}
               onClick={() => selectColor(c)}
               className={cn(
-                'flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full border-2 transition-colors',
+                'flex items-center gap-1.5 pl-1 pr-3 py-1 rounded-full border transition-colors',
                 c === activeColor
-                  ? 'border-[oklch(0.60_0.22_35)]'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-brand bg-brand-soft'
+                  : 'border-neutral-200 hover:border-neutral-300'
               )}
             >
               <span
-                className="h-5 w-5 rounded-full border border-gray-200"
+                className="h-5 w-5 rounded-full ring-1 ring-inset ring-black/10"
                 style={{ backgroundColor: colorHex(c) }}
               />
-              <span className="text-xs font-medium capitalize text-gray-700">{c}</span>
+              <span className="text-xs font-medium capitalize text-neutral-700">{c}</span>
             </button>
           ))}
         </div>
@@ -91,10 +118,10 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
               key={idx}
               onClick={() => setActiveIndex(idx)}
               className={cn(
-                'relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border-2 transition-colors',
+                'relative h-16 w-16 shrink-0 rounded-xl overflow-hidden border-2 bg-neutral-50 transition-colors',
                 idx === activeIndex
-                  ? 'border-[oklch(0.60_0.22_35)]'
-                  : 'border-transparent hover:border-gray-300'
+                  ? 'border-brand'
+                  : 'border-neutral-200 hover:border-neutral-300'
               )}
             >
               <Image

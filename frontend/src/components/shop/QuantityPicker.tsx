@@ -20,29 +20,31 @@ export function QuantityPicker({ value, onChange, min = 1, max = 10 }: QuantityP
   }
 
   return (
-    <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden w-fit">
+    <div className="flex items-center border border-neutral-200 rounded-full overflow-hidden w-fit bg-white">
       <button
         onClick={decrement}
         disabled={value <= min}
+        aria-label="Decrease quantity"
         className={cn(
-          'h-9 w-9 flex items-center justify-center text-gray-600 transition-colors',
-          value <= min ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'
+          'h-9 w-9 flex items-center justify-center text-neutral-600 transition-colors',
+          value <= min ? 'opacity-30 cursor-not-allowed' : 'hover:bg-brand-soft hover:text-brand'
         )}
       >
-        <Minus className="h-4 w-4" />
+        <Minus className="h-3.5 w-3.5" />
       </button>
-      <span className="h-9 w-10 flex items-center justify-center text-sm font-semibold text-gray-800 border-x border-gray-300">
+      <span className="h-9 w-10 flex items-center justify-center text-sm font-semibold text-ink">
         {value}
       </span>
       <button
         onClick={increment}
         disabled={value >= max}
+        aria-label="Increase quantity"
         className={cn(
-          'h-9 w-9 flex items-center justify-center text-gray-600 transition-colors',
-          value >= max ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'
+          'h-9 w-9 flex items-center justify-center text-neutral-600 transition-colors',
+          value >= max ? 'opacity-30 cursor-not-allowed' : 'hover:bg-brand-soft hover:text-brand'
         )}
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="h-3.5 w-3.5" />
       </button>
     </div>
   )

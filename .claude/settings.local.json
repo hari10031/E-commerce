@@ -42,7 +42,13 @@
       "Bash(sed -n '/export async function getEmployeePerformance/,/^}/p' src/controllers/analyticsController.ts)",
       "Bash(npm ls *)",
       "Bash(ls mobile/src/screens/sales)",
-      "Bash(ls mobile/src/screens/employee*)"
+      "Bash(ls mobile/src/screens/employee*)",
+      "Bash(ls -la src/assets)",
+      "Bash(ls -la assets)",
+      "Bash(sed -n '50,72p' adminfrontend/src/components/products/steps/Step6Review.tsx)",
+      "Bash(sed -n '35,50p' adminfrontend/src/app/dashboard/products/[id]/edit/page.tsx)",
+      "Bash(sed -n '148,160p' adminfrontend/src/app/dashboard/orders/[id]/page.tsx)",
+      "Bash(npx next *)"
     ]
   }
 }

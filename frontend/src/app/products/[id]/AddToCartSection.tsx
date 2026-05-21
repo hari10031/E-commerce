@@ -5,7 +5,7 @@ import { ShoppingCart, Heart } from 'lucide-react'
 import { ColorSwatchSelector } from '@/components/shop/ColorSwatchSelector'
 import { SizeSelector } from '@/components/shop/SizeSelector'
 import { QuantityPicker } from '@/components/shop/QuantityPicker'
-import { useCartStore } from '@/store/cartStore'
+import { useCartStore, CartItem } from '@/store/cartStore'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
@@ -19,7 +19,7 @@ interface AddToCartSectionProps {
 
 export function AddToCartSection({ product }: AddToCartSectionProps) {
   const { token } = useAuthStore()
-  const { items, setItems } = useCartStore()
+  const { setItems } = useCartStore()
   const { productIds, toggle } = useWishlistStore()
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
     product.variants?.[0] ?? null
@@ -66,14 +66,14 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
     }
     setAddingToCart(true)
     try {
-      const updated = await api.post<{ items: typeof items }>(
+      const updated = await api.post<{ items: CartItem[] }>(
         '/api/cart',
         { product_id: product.id, variant_id: selectedVariant.id, quantity },
         token
       )
       setItems(updated.items)
       toast({ title: 'Added to cart!', description: `${product.title} (${selectedVariant.color} / ${selectedVariant.size})` })
-    } catch (err) {
+    } catch {
       toast({ title: 'Failed to add to cart', variant: 'destructive' })
     } finally {
       setAddingToCart(false)
@@ -103,20 +103,29 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
 
       {/* Stock info */}
       {selectedVariant && (
-        <p className="text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm">
           {selectedVariant.quantity > 0 ? (
-            <span className="text-green-600 font-medium">
-              In stock ({selectedVariant.quantity} available)
-            </span>
+            <>
+              <span className="h-2 w-2 rounded-full bg-brand-accent" />
+              <span className="text-neutral-600 font-medium">
+                In stock
+                {selectedVariant.quantity <= 5 && (
+                  <span className="text-brand"> — only {selectedVariant.quantity} left</span>
+                )}
+              </span>
+            </>
           ) : (
-            <span className="text-red-500 font-medium">Out of stock</span>
+            <>
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              <span className="text-red-500 font-medium">Out of stock</span>
+            </>
           )}
-        </p>
+        </div>
       )}
 
       {/* Quantity */}
       <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-gray-700">Qty:</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-ink">Quantity</span>
         <QuantityPicker
           value={quantity}
           onChange={setQuantity}
@@ -126,27 +135,28 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 pt-1">
         <button
           onClick={handleAddToCart}
           disabled={addingToCart || !selectedVariant || (selectedVariant?.quantity ?? 0) === 0}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white transition-colors',
-            'bg-[oklch(0.60_0.22_35)] hover:bg-[oklch(0.50_0.22_35)]',
+            'flex-1 flex items-center justify-center gap-2 py-4 rounded-full text-sm font-bold text-white transition-all',
+            'bg-ink hover:bg-brand',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         >
           <ShoppingCart className="h-4 w-4" />
-          {addingToCart ? 'Adding...' : 'Add to Cart'}
+          {addingToCart ? 'Adding...' : 'Add to Bag'}
         </button>
 
         <button
           onClick={handleWishlistToggle}
+          aria-label="Toggle wishlist"
           className={cn(
-            'h-12 w-12 flex items-center justify-center rounded-xl border-2 transition-colors',
+            'h-[52px] w-[52px] flex items-center justify-center rounded-full border transition-colors',
             isWishlisted
               ? 'border-red-500 text-red-500 bg-red-50'
-              : 'border-gray-300 text-gray-400 hover:border-red-400 hover:text-red-400'
+              : 'border-neutral-300 text-neutral-400 hover:border-red-400 hover:text-red-400'
           )}
         >
           <Heart className={cn('h-5 w-5', isWishlisted && 'fill-current')} />

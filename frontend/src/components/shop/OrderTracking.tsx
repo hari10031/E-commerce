@@ -43,7 +43,7 @@ export function OrderTracking({ status, updatedAt }: OrderTrackingProps) {
   return (
     <div className="relative">
       {/* Connecting line */}
-      <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-gray-200" />
+      <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-neutral-200" />
 
       <div className="space-y-6">
         {STATUS_STEPS.map((step, idx) => {
@@ -57,9 +57,9 @@ export function OrderTracking({ status, updatedAt }: OrderTrackingProps) {
               <div
                 className={cn(
                   'relative z-10 h-10 w-10 rounded-full flex items-center justify-center shrink-0 transition-colors',
-                  isDone && 'bg-[oklch(0.60_0.22_35)] text-white',
-                  isActive && 'bg-[oklch(0.60_0.22_35)] text-white ring-4 ring-orange-100',
-                  isPending && 'bg-gray-100 text-gray-400'
+                  isDone && 'bg-brand text-white',
+                  isActive && 'bg-brand text-white ring-4 ring-brand-soft',
+                  isPending && 'bg-neutral-100 text-neutral-400'
                 )}
               >
                 {isDone ? <Check className="h-4 w-4" /> : step.icon}
@@ -70,15 +70,15 @@ export function OrderTracking({ status, updatedAt }: OrderTrackingProps) {
                 <p
                   className={cn(
                     'text-sm font-medium',
-                    isActive && 'text-[oklch(0.60_0.22_35)]',
-                    isDone && 'text-gray-700',
-                    isPending && 'text-gray-400'
+                    isActive && 'text-brand',
+                    isDone && 'text-neutral-700',
+                    isPending && 'text-neutral-400'
                   )}
                 >
                   {step.label}
                 </p>
                 {isActive && updatedAt && (
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-neutral-500 mt-0.5">
                     {format(new Date(updatedAt), 'dd MMM yyyy, h:mm a')}
                   </p>
                 )}

@@ -10,19 +10,29 @@ interface User {
 
 interface AuthState {
   token: string | null
+  refreshToken: string | null
   user: User | null
-  setAuth: (token: string, user: User) => void
+  hasHydrated: boolean
+  setAuth: (token: string, refreshToken: string | null, user: User) => void
   clearAuth: () => void
+  setHasHydrated: (v: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       token: null,
+      refreshToken: null,
       user: null,
-      setAuth: (token, user) => set({ token, user }),
-      clearAuth: () => set({ token: null, user: null }),
+      hasHydrated: false,
+      setAuth: (token, refreshToken, user) => set({ token, refreshToken, user }),
+      clearAuth: () => set({ token: null, refreshToken: null, user: null }),
+      setHasHydrated: (v) => set({ hasHydrated: v }),
     }),
-    { name: 'nanabanana-auth' }
+    {
+      name: 'nanabanana-auth',
+      partialize: (s) => ({ token: s.token, refreshToken: s.refreshToken, user: s.user }),
+      onRehydrateStorage: () => (state) => state?.setHasHydrated(true),
+    }
   )
 )

@@ -3,20 +3,25 @@ import { supabase } from '../supabase'
 import { AuthRequest } from '../middleware/auth'
 
 const cartSelect = `
-  id, quantity,
+  id, quantity, product_id, variant_id,
   product:products(id, title, base_price, discount_pct, type,
     images:product_images(url, is_primary, color)),
   variant:variants(id, color, size, quantity, sku, image_url)
 `
 
-export async function getCart(req: AuthRequest, res: Response) {
-  const { data, error } = await supabase
+// The storefront always works with the whole cart, so every endpoint
+// responds with the full, current list under { items }.
+async function fetchCart(userId: string) {
+  const { data } = await supabase
     .from('cart_items')
     .select(cartSelect)
-    .eq('user_id', req.user!.id)
+    .eq('user_id', userId)
+    .order('id', { ascending: true })
+  return data ?? []
+}
 
-  if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+export async function getCart(req: AuthRequest, res: Response) {
+  res.json({ items: await fetchCart(req.user!.id) })
 }
 
 export async function addToCart(req: AuthRequest, res: Response) {
@@ -32,17 +37,15 @@ export async function addToCart(req: AuthRequest, res: Response) {
     return res.status(400).json({ error: 'Item out of stock' })
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('cart_items')
     .upsert(
       { user_id: req.user!.id, product_id, variant_id, quantity },
       { onConflict: 'user_id,variant_id', ignoreDuplicates: false }
     )
-    .select(cartSelect)
-    .single()
 
   if (error) return res.status(400).json({ error: error.message })
-  res.status(201).json(data)
+  res.status(201).json({ items: await fetchCart(req.user!.id) })
 }
 
 export async function updateCartItem(req: AuthRequest, res: Response) {
@@ -51,16 +54,14 @@ export async function updateCartItem(req: AuthRequest, res: Response) {
     return res.status(400).json({ error: 'Quantity must be >= 1' })
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('cart_items')
     .update({ quantity })
     .eq('id', req.params.id)
     .eq('user_id', req.user!.id)
-    .select(cartSelect)
-    .single()
 
   if (error) return res.status(400).json({ error: error.message })
-  res.json(data)
+  res.json({ items: await fetchCart(req.user!.id) })
 }
 
 export async function removeFromCart(req: AuthRequest, res: Response) {
@@ -71,10 +72,10 @@ export async function removeFromCart(req: AuthRequest, res: Response) {
     .eq('user_id', req.user!.id)
 
   if (error) return res.status(400).json({ error: error.message })
-  res.json({ success: true })
+  res.json({ items: await fetchCart(req.user!.id) })
 }
 
 export async function clearCart(req: AuthRequest, res: Response) {
   await supabase.from('cart_items').delete().eq('user_id', req.user!.id)
-  res.json({ success: true })
+  res.json({ items: [] })
 }

@@ -172,7 +172,7 @@ export default function ProductsPage() {
                           <div className="flex items-center gap-3">
                             {primaryImage ? (
                               <Image
-                                src={primaryImage.image_url}
+                                src={primaryImage.url}
                                 alt={product.title}
                                 width={36}
                                 height={36}
@@ -193,11 +193,11 @@ export default function ProductsPage() {
                           {product.category?.name ?? '—'}
                         </td>
                         <td className="px-3 py-3 text-right font-medium text-gray-900">
-                          {formatPrice(discountedPrice(product.base_price, product.discount_percent))}
+                          {formatPrice(discountedPrice(product.base_price, product.discount_pct))}
                         </td>
                         <td className="px-3 py-3 text-right">
-                          {product.discount_percent > 0 ? (
-                            <Badge variant="warning">{product.discount_percent}%</Badge>
+                          {product.discount_pct > 0 ? (
+                            <Badge variant="warning">{product.discount_pct}%</Badge>
                           ) : (
                             <span className="text-gray-400">—</span>
                           )}

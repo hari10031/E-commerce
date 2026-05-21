@@ -39,8 +39,8 @@ export default function EditProductPage() {
     type: product.type,
     categoryId: product.category_id,
     images: (product.images ?? []).map((img) => ({
-      color: img.variant_color,
-      imageUrl: img.image_url,
+      color: img.color,
+      imageUrl: img.url,
     })),
     variants: (product.variants ?? []).map((v) => ({
       color: v.color,
@@ -54,7 +54,7 @@ export default function EditProductPage() {
     },
     pricing: {
       basePrice: product.base_price,
-      discountPercent: product.discount_percent,
+      discountPercent: product.discount_pct,
       couponCode: '',
       couponDiscount: 0,
       hasCoupon: false,

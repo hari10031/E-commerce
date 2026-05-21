@@ -34,32 +34,42 @@ export default async function CategoryPage({ params }: PageProps) {
   return (
     <div>
       {/* Hero */}
-      <div className="relative bg-gradient-to-br from-orange-50 to-amber-100 overflow-hidden">
+      <div className="relative bg-[var(--color-ink)] overflow-hidden">
         {category.image_url && (
           <Image
             src={category.image_url}
             alt={category.name}
             fill
-            className="object-cover opacity-20"
+            className="object-cover opacity-25"
           />
         )}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <nav className="flex items-center gap-1 text-sm text-gray-500 mb-4">
-            <Link href="/" className="hover:text-gray-800">Home</Link>
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-ink)] via-[var(--color-ink)]/70 to-[var(--color-ink)]/40" />
+        <div className="absolute -top-20 -right-20 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+          <nav className="flex items-center gap-1.5 text-[13px] text-white/50 mb-5">
+            <Link href="/" className="hover:text-[var(--color-gold)] transition-colors">Home</Link>
             <ChevronRight className="h-3 w-3" />
-            <Link href="/products" className="hover:text-gray-800">Products</Link>
+            <Link href="/products" className="hover:text-[var(--color-gold)] transition-colors">Products</Link>
             <ChevronRight className="h-3 w-3" />
-            <span className="text-gray-800">{category.name}</span>
+            <span className="text-white/80">{category.name}</span>
           </nav>
-          <h1 className="text-3xl font-bold text-gray-900">{category.name}</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-gold)]">
+            Collection
+          </p>
+          <h1 className="text-4xl sm:text-5xl font-semibold text-white font-[var(--font-display)] mt-2">
+            {category.name}
+          </h1>
           {category.description && (
-            <p className="text-gray-600 mt-2 max-w-xl">{category.description}</p>
+            <p className="text-white/60 mt-3 max-w-xl text-sm leading-relaxed">{category.description}</p>
           )}
-          <p className="text-sm text-gray-500 mt-2">{products.length} products</p>
+          <p className="text-sm text-white/40 mt-4">
+            {products.length} {products.length === 1 ? 'piece' : 'pieces'}
+          </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <ProductGrid products={products} />
       </div>
     </div>

@@ -30,45 +30,28 @@ export default async function HomePage() {
       <HeroSlider />
 
       {/* Trust Badges */}
-      <div className="bg-white border-y border-gray-100 shadow-sm relative z-25">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center text-sm text-gray-600">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 text-center sm:text-left">
-              <div className="p-2 rounded-full bg-orange-50 shrink-0">
-                <Truck className="h-5 w-5 text-[oklch(0.60_0.22_35)]" />
+      <div className="bg-white border-y border-neutral-100 relative z-25">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            {[
+              { icon: Truck, title: 'Free Shipping', sub: 'Above ₹999 on all items' },
+              { icon: Shield, title: 'Secure Payments', sub: '100% encrypted transactions' },
+              { icon: RotateCcw, title: 'Easy Returns', sub: '7-day hassle-free policy' },
+              { icon: Sparkles, title: '100% Authentic', sub: 'Directly sourced weaves' },
+            ].map(({ icon: Icon, title, sub }) => (
+              <div
+                key={title}
+                className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left"
+              >
+                <div className="h-10 w-10 rounded-full bg-brand-soft flex items-center justify-center shrink-0">
+                  <Icon className="h-[1.15rem] w-[1.15rem] text-brand" />
+                </div>
+                <div>
+                  <p className="font-semibold text-ink text-xs uppercase tracking-[0.12em]">{title}</p>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">{sub}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-gray-800 text-xs uppercase tracking-wider">Free Shipping</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">Above ₹999 on all items</p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 text-center sm:text-left">
-              <div className="p-2 rounded-full bg-orange-50 shrink-0">
-                <Shield className="h-5 w-5 text-[oklch(0.60_0.22_35)]" />
-              </div>
-              <div>
-                <p className="font-semibold text-gray-800 text-xs uppercase tracking-wider">Secure Payments</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">100% Encrypted transactions</p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 text-center sm:text-left">
-              <div className="p-2 rounded-full bg-orange-50 shrink-0">
-                <RotateCcw className="h-5 w-5 text-[oklch(0.60_0.22_35)]" />
-              </div>
-              <div>
-                <p className="font-semibold text-gray-800 text-xs uppercase tracking-wider">Easy Returns</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">7-day hassle-free policy</p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 text-center sm:text-left">
-              <div className="p-2 rounded-full bg-orange-50 shrink-0">
-                <Sparkles className="h-5 w-5 text-[oklch(0.60_0.22_35)]" />
-              </div>
-              <div>
-                <p className="font-semibold text-gray-800 text-xs uppercase tracking-wider">100% Authentic</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">Directly sourced weaves</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -77,17 +60,25 @@ export default async function HomePage() {
       <CategoryShowcase products={products} categories={categories} />
 
       {/* Banner CTA */}
-      <section className="bg-gradient-to-br from-[oklch(0.60_0.22_35)] to-[oklch(0.50_0.22_35)] text-white mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold font-display tracking-wide mb-4">Explore Our Full Heritage Collection</h2>
-          <p className="text-white/80 mb-8 max-w-xl mx-auto text-sm sm:text-base font-light leading-relaxed">
-            Choose from over 500 styles of traditional silk sarees, designer suits, and gold temple jewellery — all with secure payments and fast delivery.
+      <section className="relative bg-[var(--color-ink)] text-white mt-12 overflow-hidden">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-brand/25 blur-3xl" />
+        <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-[var(--color-gold)]/10 blur-3xl" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-gold)]">
+            The NanaBanana Edit
+          </p>
+          <h2 className="text-3xl sm:text-4xl font-semibold font-[var(--font-display)] mt-3 mb-4">
+            Explore Our Full Heritage Collection
+          </h2>
+          <p className="text-white/55 mb-9 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
+            Over 500 styles of traditional silk sarees, designer ensembles, and temple
+            gold jewellery — secure payments and swift delivery, every time.
           </p>
           <Link
             href="/products"
-            className="inline-flex items-center gap-2 bg-white text-[oklch(0.60_0.22_35)] font-semibold px-8 py-3.5 rounded-md hover:bg-orange-50 transition-colors shadow-lg uppercase tracking-wider text-xs"
+            className="inline-flex items-center gap-2 bg-white text-ink font-semibold px-8 py-4 rounded-full hover:bg-[var(--color-gold)] transition-colors text-xs uppercase tracking-[0.14em]"
           >
-            Shop Entire Catalog <ChevronRight className="h-4 w-4" />
+            Shop Entire Catalogue <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
       </section>

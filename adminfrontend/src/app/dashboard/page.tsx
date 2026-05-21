@@ -16,21 +16,43 @@ import {
   AlertTriangle,
   TrendingUp,
 } from 'lucide-react';
-import type { ApiAnalyticsDashboard } from '@/types';
+import type { DashboardStats, SalesDataPoint, OrderStatus } from '@/types';
 import Link from 'next/link';
+
+interface RecentOrder {
+  id: string;
+  status: OrderStatus;
+  created_at: string;
+  total_amount: number;
+  user?: { name?: string; phone?: string };
+}
 
 export default function DashboardPage() {
   const token = useAuthStore((s) => s.token);
-  const [data, setData] = useState<ApiAnalyticsDashboard | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [dailySales, setDailySales] = useState<SalesDataPoint[]>([]);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!token) return;
-    api.get<ApiAnalyticsDashboard>('/api/analytics/dashboard', token)
-      .then(setData)
+
+    // Stats drive the page — a failure here is fatal.
+    api.get<DashboardStats>('/api/analytics/dashboard', token)
+      .then(setStats)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+
+    // Chart + recent orders are best-effort; degrade silently on failure
+    // (e.g. /sales is admin-only and 403s for employees).
+    api.get<SalesDataPoint[]>('/api/analytics/sales', token)
+      .then((rows) => setDailySales(rows ?? []))
+      .catch(() => setDailySales([]));
+
+    api.get<{ data: RecentOrder[] }>('/api/orders?limit=5', token)
+      .then((res) => setRecentOrders(res.data ?? []))
+      .catch(() => setRecentOrders([]));
   }, [token]);
 
   if (loading) {
@@ -54,9 +76,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!data) return null;
-
-  const { stats, daily_sales, recent_orders } = data;
+  if (!stats) return null;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -111,7 +131,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Revenue Chart */}
-      <RevenueChart data={daily_sales ?? []} />
+      <RevenueChart data={dailySales} />
 
       {/* Recent Orders */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
@@ -133,7 +153,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {(recent_orders ?? []).slice(0, 5).map((order) => (
+              {recentOrders.slice(0, 5).map((order) => (
                 <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                   <td className="px-5 py-3">
                     <Link
@@ -143,17 +163,17 @@ export default function DashboardPage() {
                       #{order.id.slice(0, 8)}
                     </Link>
                   </td>
-                  <td className="px-3 py-3 text-gray-700">{order.customer_email ?? '—'}</td>
+                  <td className="px-3 py-3 text-gray-700">{order.user?.name ?? '—'}</td>
                   <td className="px-3 py-3 text-gray-500 text-xs">{formatDateTime(order.created_at)}</td>
                   <td className="px-3 py-3">
                     <StatusBadge status={order.status} />
                   </td>
                   <td className="px-5 py-3 text-right font-medium text-gray-900">
-                    {formatPrice(order.total)}
+                    {formatPrice(order.total_amount)}
                   </td>
                 </tr>
               ))}
-              {(!recent_orders || recent_orders.length === 0) && (
+              {recentOrders.length === 0 && (
                 <tr>
                   <td colSpan={5} className="text-center py-8 text-gray-400">No recent orders</td>
                 </tr>

@@ -19,7 +19,7 @@ const SLIDES = [
     cta: 'Explore Sarees',
     href: '/products?type=saree',
     image: heroSaree1,
-    accent: 'border-orange-500/35 text-orange-400 bg-orange-500/10',
+    accent: 'border-brand-accent/30 text-[var(--color-gold)] bg-white/5',
   },
   {
     title: 'Heritage Banarasi',
@@ -28,7 +28,7 @@ const SLIDES = [
     cta: 'Shop Banarasi',
     href: '/products?type=saree',
     image: heroSaree2,
-    accent: 'border-rose-500/35 text-rose-400 bg-rose-500/10',
+    accent: 'border-brand-accent/30 text-[var(--color-gold)] bg-white/5',
   },
   {
     title: 'Designer Lehengas & Gowns',
@@ -37,7 +37,7 @@ const SLIDES = [
     cta: 'View Dresses',
     href: '/products?type=dress',
     image: fabric1,
-    accent: 'border-emerald-500/35 text-emerald-400 bg-emerald-500/10',
+    accent: 'border-brand-accent/30 text-[var(--color-gold)] bg-white/5',
   },
   {
     title: 'Temple Jewellery',
@@ -46,7 +46,7 @@ const SLIDES = [
     cta: 'Shop Jewellery',
     href: '/products?type=jewellery',
     image: fabric2,
-    accent: 'border-amber-500/35 text-amber-400 bg-amber-500/10',
+    accent: 'border-brand-accent/30 text-[var(--color-gold)] bg-white/5',
   },
   {
     title: 'Traditional Splendor',
@@ -55,7 +55,7 @@ const SLIDES = [
     cta: 'Browse All Products',
     href: '/products',
     image: storefront,
-    accent: 'border-yellow-500/35 text-yellow-400 bg-yellow-500/10',
+    accent: 'border-brand-accent/30 text-[var(--color-gold)] bg-white/5',
   },
 ]
 
@@ -101,7 +101,7 @@ export function HeroSlider() {
                   alt={slide.title}
                   fill
                   priority={idx === 0}
-                  className={`object-cover object-center w-full h-full transition-transform duration-[4500ms] ease-out ${
+                  className={`object-contain object-center w-full h-full transition-transform duration-[4500ms] ease-out ${
                     isActive ? 'scale-105' : 'scale-100'
                   }`}
                 />
@@ -137,7 +137,7 @@ export function HeroSlider() {
                   <div className="flex flex-wrap gap-4">
                     <Link
                       href={slide.href}
-                      className="px-8 py-3.5 bg-[oklch(0.60_0.22_35)] hover:bg-[oklch(0.50_0.22_35)] text-white font-semibold text-sm tracking-wider uppercase rounded-md shadow-lg shadow-orange-900/30 transition-all duration-300 flex items-center gap-2 hover:scale-[1.02]"
+                      className="px-8 py-3.5 bg-brand hover:bg-brand-dark text-cream font-bold text-xs tracking-wider uppercase rounded-full shadow-lg shadow-brand/20 transition-all duration-300 flex items-center gap-2 hover:scale-[1.02]"
                     >
                       {slide.cta}
                       <ChevronRight className="h-4 w-4" />
@@ -172,8 +172,8 @@ export function HeroSlider() {
           <button
             key={idx}
             onClick={() => setCurrent(idx)}
-            className={`h-1 rounded-full transition-all duration-500 ${
-              idx === current ? 'w-10 bg-[oklch(0.60_0.22_35)]' : 'w-3.5 bg-white/40 hover:bg-white/70'
+            className={`h-[3px] rounded-full transition-all duration-500 ${
+              idx === current ? 'w-10 bg-brand' : 'w-3.5 bg-white/40 hover:bg-white/70'
             }`}
             aria-label={`Go to slide ${idx + 1}`}
           />

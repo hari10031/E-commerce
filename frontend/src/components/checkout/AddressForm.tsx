@@ -54,12 +54,20 @@ export function AddressForm({ onSubmit, savedAddresses = [], defaultValues, isLo
     setValue('pincode', addr.pincode)
   }
 
+  // Prefill with the saved address so returning customers don't retype.
+  React.useEffect(() => {
+    if (!defaultValues && savedAddresses.length > 0 && selectedSavedId === null) {
+      selectSavedAddress(savedAddresses[0])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedAddresses])
+
   const inputClass = (hasError: boolean) =>
     cn(
-      'w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2',
+      'w-full px-3.5 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 transition-colors',
       hasError
         ? 'border-red-400 focus:ring-red-200'
-        : 'border-gray-300 focus:ring-[oklch(0.60_0.22_35)]/30 focus:border-[oklch(0.60_0.22_35)]'
+        : 'border-neutral-200 focus:ring-brand/15 focus:border-brand'
     )
 
   return (
@@ -75,15 +83,15 @@ export function AddressForm({ onSubmit, savedAddresses = [], defaultValues, isLo
                 type="button"
                 onClick={() => selectSavedAddress(addr)}
                 className={cn(
-                  'w-full text-left p-3 rounded-lg border text-sm transition-colors',
+                  'w-full text-left p-3.5 rounded-xl border text-sm transition-colors',
                   selectedSavedId === addr.id
-                    ? 'border-[oklch(0.60_0.22_35)] bg-orange-50'
-                    : 'border-gray-200 hover:border-gray-400'
+                    ? 'border-brand bg-brand-soft'
+                    : 'border-neutral-200 hover:border-neutral-300'
                 )}
               >
-                <p className="font-medium text-gray-800">{addr.line1}</p>
-                {addr.line2 && <p className="text-gray-500">{addr.line2}</p>}
-                <p className="text-gray-500">
+                <p className="font-medium text-ink">{addr.line1}</p>
+                {addr.line2 && <p className="text-neutral-500">{addr.line2}</p>}
+                <p className="text-neutral-500">
                   {addr.city}, {addr.state} – {addr.pincode}
                 </p>
               </button>
@@ -165,8 +173,8 @@ export function AddressForm({ onSubmit, savedAddresses = [], defaultValues, isLo
           type="submit"
           disabled={isLoading}
           className={cn(
-            'w-full py-3 rounded-md text-sm font-semibold text-white transition-colors',
-            'bg-[oklch(0.60_0.22_35)] hover:bg-[oklch(0.50_0.22_35)]',
+            'w-full py-3.5 rounded-full text-sm font-semibold text-white transition-colors',
+            'bg-ink hover:bg-brand',
             'disabled:opacity-60 disabled:cursor-not-allowed'
           )}
         >

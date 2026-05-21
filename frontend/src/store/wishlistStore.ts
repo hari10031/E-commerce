@@ -1,6 +1,5 @@
 'use client'
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
 interface WishlistState {
   productIds: string[]
@@ -8,18 +7,15 @@ interface WishlistState {
   toggle: (id: string) => void
 }
 
-export const useWishlistStore = create<WishlistState>()(
-  persist(
-    (set) => ({
-      productIds: [],
-      setIds: (ids) => set({ productIds: ids }),
-      toggle: (id) =>
-        set((s) => ({
-          productIds: s.productIds.includes(id)
-            ? s.productIds.filter((x) => x !== id)
-            : [...s.productIds, id],
-        })),
-    }),
-    { name: 'nb-wishlist' }
-  )
-)
+// Wishlist is backend-owned. This store is just an in-memory mirror,
+// populated from the API on load (see StoreSync) — not persisted.
+export const useWishlistStore = create<WishlistState>((set) => ({
+  productIds: [],
+  setIds: (ids) => set({ productIds: Array.isArray(ids) ? ids : [] }),
+  toggle: (id) =>
+    set((s) => ({
+      productIds: (s.productIds ?? []).includes(id)
+        ? (s.productIds ?? []).filter((x) => x !== id)
+        : [...(s.productIds ?? []), id],
+    })),
+}))

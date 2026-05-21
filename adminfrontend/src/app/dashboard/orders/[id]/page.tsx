@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { formatPrice, formatDateTime } from '@/lib/utils';
 import { StatusUpdateDropdown } from '@/components/orders/StatusUpdateDropdown';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, MapPin, Phone, Mail, Package } from 'lucide-react';
+import { ChevronLeft, MapPin, Phone, Package } from 'lucide-react';
 import type { Order, OrderStatus } from '@/types';
 
 const STATUS_TIMELINE: OrderStatus[] = ['placed', 'confirmed', 'processing', 'shipped', 'delivered'];
@@ -104,21 +104,15 @@ export default function OrderDetailPage() {
             <div className="flex items-center gap-2 text-sm">
               <div className="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
                 <span className="text-amber-700 text-xs font-bold">
-                  {(order.customer_name ?? 'U')[0].toUpperCase()}
+                  {(order.user?.name ?? 'U')[0].toUpperCase()}
                 </span>
               </div>
-              <span className="font-medium text-gray-900">{order.customer_name ?? '—'}</span>
+              <span className="font-medium text-gray-900">{order.user?.name ?? '—'}</span>
             </div>
-            {order.customer_email && (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Mail className="w-4 h-4" />
-                {order.customer_email}
-              </div>
-            )}
-            {order.customer_phone && (
+            {order.user?.phone && (
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Phone className="w-4 h-4" />
-                {order.customer_phone}
+                {order.user.phone}
               </div>
             )}
           </div>
@@ -132,10 +126,10 @@ export default function OrderDetailPage() {
               Delivery Address
             </h3>
             <div className="text-sm text-gray-600 space-y-1">
-              <p>{order.address.street}</p>
+              <p>{order.address.line1}</p>
+              {order.address.line2 && <p>{order.address.line2}</p>}
               <p>{order.address.city}, {order.address.state}</p>
               <p>{order.address.pincode}</p>
-              <p>{order.address.country}</p>
             </div>
           </div>
         )}
@@ -145,14 +139,14 @@ export default function OrderDetailPage() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
         <div className="flex items-center gap-2 p-5 border-b border-gray-50">
           <Package className="w-4 h-4 text-amber-500" />
-          <h3 className="font-semibold text-gray-900">Order Items ({(order.items ?? []).length})</h3>
+          <h3 className="font-semibold text-gray-900">Order Items ({(order.order_items ?? []).length})</h3>
         </div>
         <div className="divide-y divide-gray-50">
-          {(order.items ?? []).map((item) => (
+          {(order.order_items ?? []).map((item) => (
             <div key={item.id} className="flex items-center gap-4 p-4">
               {item.product?.images?.[0] ? (
                 <Image
-                  src={item.product.images[0].image_url}
+                  src={item.product.images[0].url}
                   alt={item.product.title ?? ''}
                   width={56}
                   height={56}
@@ -169,12 +163,12 @@ export default function OrderDetailPage() {
                 <p className="text-xs text-gray-400">SKU: {item.variant?.sku}</p>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="font-semibold text-gray-900">{formatPrice(item.price)}</p>
+                <p className="font-semibold text-gray-900">{formatPrice(item.unit_price * item.quantity)}</p>
                 <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
               </div>
             </div>
           ))}
-          {(!order.items || order.items.length === 0) && (
+          {(!order.order_items || order.order_items.length === 0) && (
             <div className="py-8 text-center text-gray-400 text-sm">No items</div>
           )}
         </div>
@@ -182,7 +176,7 @@ export default function OrderDetailPage() {
         <div className="flex justify-end p-5 border-t border-gray-50">
           <div className="text-right">
             <p className="text-sm text-gray-500">Order Total</p>
-            <p className="text-xl font-bold text-gray-900">{formatPrice(order.total)}</p>
+            <p className="text-xl font-bold text-gray-900">{formatPrice(order.total_amount)}</p>
           </div>
         </div>
       </div>

@@ -99,7 +99,7 @@ export function RazorpayButton({ addressData, totalAmount, coupon, onSuccess }: 
           name: user?.name,
           email: user?.email,
         },
-        theme: { color: 'oklch(0.60 0.22 35)' },
+        theme: { color: '#8B1E22' },
         handler: async (response) => {
           try {
             // Verify payment on backend
@@ -147,8 +147,8 @@ export function RazorpayButton({ addressData, totalAmount, coupon, onSuccess }: 
       onClick={handlePay}
       disabled={loading}
       className={cn(
-        'w-full py-4 rounded-lg text-base font-bold text-white transition-colors',
-        'bg-[oklch(0.60_0.22_35)] hover:bg-[oklch(0.50_0.22_35)]',
+        'w-full py-4 rounded-xl text-xs font-semibold uppercase tracking-widest text-white transition-all duration-300',
+        'bg-brand hover:bg-brand-dark',
         'disabled:opacity-60 disabled:cursor-not-allowed'
       )}
     >

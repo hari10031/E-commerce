@@ -36,8 +36,8 @@ export function OrdersTable({ orders }: OrdersTableProps) {
               </td>
               <td className="px-3 py-3">
                 <div>
-                  <p className="text-gray-900 font-medium">{order.customer_name ?? '—'}</p>
-                  <p className="text-xs text-gray-400">{order.customer_email ?? ''}</p>
+                  <p className="text-gray-900 font-medium">{order.user?.name ?? '—'}</p>
+                  <p className="text-xs text-gray-400">{order.user?.phone ?? ''}</p>
                 </div>
               </td>
               <td className="px-3 py-3 text-gray-500 text-xs whitespace-nowrap">
@@ -47,7 +47,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 <StatusBadge status={order.status} />
               </td>
               <td className="px-3 py-3 text-right font-semibold text-gray-900">
-                {formatPrice(order.total)}
+                {formatPrice(order.total_amount)}
               </td>
               <td className="px-5 py-3 text-right">
                 <Link href={`/dashboard/orders/${order.id}`}>
