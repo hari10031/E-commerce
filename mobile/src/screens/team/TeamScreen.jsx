@@ -57,7 +57,7 @@ function EmployeeCard({ employee, isPending, onApprove, onReject, onPress }) {
   );
 }
 
-export default function TeamScreen({ navigation }) {
+export default function TeamScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('active');
@@ -107,12 +107,22 @@ export default function TeamScreen({ navigation }) {
 
   const count = employeeList.length;
 
+  const referrer = route.params?.referrer;
+  const handleBack = () => {
+    if (referrer) {
+      navigation.navigate(referrer);
+    } else {
+      navigation.goBack();
+    }
+  };
+
   return (
     <View className="flex-1 bg-gray-50">
       <ScreenHeader
         title="Team"
         subtitle={`${count} ${activeTab}`}
         navigation={navigation}
+        onBack={handleBack}
         rightElement={
           <Pressable
             onPress={() => navigation.navigate('Employees')}

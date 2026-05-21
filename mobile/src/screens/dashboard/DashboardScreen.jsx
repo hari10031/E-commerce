@@ -250,7 +250,10 @@ export default function DashboardScreen({ navigation }) {
 
   const navigateToTab = (tabName, screen, params) => {
     if (screen) {
-      navigation.navigate(tabName, { screen, params });
+      navigation.navigate(tabName, {
+        screen,
+        params: { ...params, referrer: 'DashboardTab' },
+      });
     } else {
       navigation.navigate(tabName);
     }

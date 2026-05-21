@@ -97,6 +97,15 @@ export default function ProductWizardScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
 
+  const handleBack = () => {
+    const referrer = route.params?.referrer;
+    if (referrer) {
+      navigation.navigate(referrer);
+    } else {
+      navigation.goBack();
+    }
+  };
+
   const [wizardData, setWizardData] = useState({
     type,
     categoryId: '',
@@ -613,7 +622,7 @@ export default function ProductWizardScreen({ route, navigation }) {
       openConfirm(
         publish ? 'Published!' : 'Saved!',
         publish ? 'Product is now live on the store.' : 'Product saved as draft.',
-        [{ label: 'OK', onPress: () => navigation.goBack() }],
+        [{ label: 'OK', onPress: handleBack }],
         false
       );
     } catch (err) {
@@ -770,7 +779,7 @@ export default function ProductWizardScreen({ route, navigation }) {
     <View className="flex-1" style={{ backgroundColor: WARM_BG, paddingTop: insets.top }}>
       {/* Header */}
       <View className="px-4 py-3 flex-row items-center" style={{ backgroundColor: CARD_BG, borderBottomWidth: 1, borderBottomColor: SECTION_BORDER }}>
-        <Pressable onPress={() => navigation.goBack()} className="w-9 h-9 items-center justify-center rounded-full mr-3" style={{ backgroundColor: '#fef2f2' }}>
+        <Pressable onPress={handleBack} className="w-9 h-9 items-center justify-center rounded-full mr-3" style={{ backgroundColor: '#fef2f2' }}>
           <Ionicons name="arrow-back" size={20} color={ACCENT} />
         </Pressable>
         <View className="flex-1">
@@ -784,7 +793,7 @@ export default function ProductWizardScreen({ route, navigation }) {
         <Pressable
           onPress={() => openConfirm('Discard?', 'You will lose unsaved changes.', [
             { label: 'Cancel', style: 'cancel' },
-            { label: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+            { label: 'Discard', style: 'destructive', onPress: handleBack },
           ])}
           className="px-3 py-1.5 rounded-lg"
         >

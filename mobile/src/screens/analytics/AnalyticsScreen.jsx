@@ -42,7 +42,7 @@ function RankBadge({ rank }) {
   );
 }
 
-export default function AnalyticsScreen({ navigation }) {
+export default function AnalyticsScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const [empPeriod, setEmpPeriod] = useState(null);
 
@@ -80,12 +80,22 @@ export default function AnalyticsScreen({ navigation }) {
 
   const periodLabel = empPeriod === 'today' ? 'Today' : empPeriod === 'week' ? 'Last 7 days' : empPeriod === 'month' ? 'Last 30 days' : 'All time';
 
+  const referrer = route.params?.referrer;
+  const handleBack = () => {
+    if (referrer) {
+      navigation.navigate(referrer);
+    } else {
+      navigation.goBack();
+    }
+  };
+
   return (
     <View className="flex-1 bg-gray-50">
       <ScreenHeader
         title="Analytics"
         subtitle="Sales & performance"
         navigation={navigation}
+        onBack={handleBack}
       />
 
       {isLoading ? (

@@ -181,8 +181,28 @@ function AdminTabs({ onCreatePress }) {
         },
       })}
     >
-      <Tab.Screen name="DashboardTab" component={DashboardStack} options={{ title: 'Dashboard' }} />
-      <Tab.Screen name="CollectionsTab" component={CollectionsStack} options={{ title: 'Collections' }} />
+      <Tab.Screen
+        name="DashboardTab"
+        component={DashboardStack}
+        options={{ title: 'Dashboard' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('DashboardTab', { screen: 'Dashboard' });
+          },
+        })}
+      />
+      <Tab.Screen
+        name="CollectionsTab"
+        component={CollectionsStack}
+        options={{ title: 'Collections' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('CollectionsTab', { screen: 'Products' });
+          },
+        })}
+      />
       <Tab.Screen
         name="CreateTab"
         component={CreatePlaceholder}
@@ -197,8 +217,28 @@ function AdminTabs({ onCreatePress }) {
           },
         })}
       />
-      <Tab.Screen name="CustomersTab" component={CustomersStack} options={{ title: 'Customers' }} />
-      <Tab.Screen name="MoreTab" component={MoreStack} options={{ title: 'More' }} />
+      <Tab.Screen
+        name="CustomersTab"
+        component={CustomersStack}
+        options={{ title: 'Customers' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('CustomersTab', { screen: 'Customers' });
+          },
+        })}
+      />
+      <Tab.Screen
+        name="MoreTab"
+        component={MoreStack}
+        options={{ title: 'More' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('MoreTab', { screen: 'More' });
+          },
+        })}
+      />
     </Tab.Navigator>
   );
 }
@@ -225,8 +265,28 @@ function EmployeeTabs({ onCreatePress }) {
         },
       })}
     >
-      <Tab.Screen name="DashboardTab" component={DashboardStack} options={{ title: 'Dashboard' }} />
-      <Tab.Screen name="CollectionsTab" component={CollectionsStack} options={{ title: 'Collections' }} />
+      <Tab.Screen
+        name="DashboardTab"
+        component={DashboardStack}
+        options={{ title: 'Dashboard' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('DashboardTab', { screen: 'Dashboard' });
+          },
+        })}
+      />
+      <Tab.Screen
+        name="CollectionsTab"
+        component={CollectionsStack}
+        options={{ title: 'Collections' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('CollectionsTab', { screen: 'Products' });
+          },
+        })}
+      />
       <Tab.Screen
         name="CreateTab"
         component={CreatePlaceholder}
@@ -241,7 +301,17 @@ function EmployeeTabs({ onCreatePress }) {
           },
         })}
       />
-      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Profile' }} />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileStack}
+        options={{ title: 'Profile' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('ProfileTab', { screen: 'Profile' });
+          },
+        })}
+      />
     </Tab.Navigator>
   );
 }
@@ -268,9 +338,39 @@ function CustomerTabs() {
         },
       })}
     >
-      <Tab.Screen name="DashboardTab" component={DashboardStack} options={{ title: 'Dashboard' }} />
-      <Tab.Screen name="CollectionsTab" component={CollectionsStack} options={{ title: 'Collections' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Profile' }} />
+      <Tab.Screen
+        name="DashboardTab"
+        component={DashboardStack}
+        options={{ title: 'Dashboard' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('DashboardTab', { screen: 'Dashboard' });
+          },
+        })}
+      />
+      <Tab.Screen
+        name="CollectionsTab"
+        component={CollectionsStack}
+        options={{ title: 'Collections' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('CollectionsTab', { screen: 'Products' });
+          },
+        })}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileStack}
+        options={{ title: 'Profile' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('ProfileTab', { screen: 'Profile' });
+          },
+        })}
+      />
     </Tab.Navigator>
   );
 }
