@@ -2,6 +2,8 @@ import { GoogleGenAI } from '@google/genai'
 
 // "Nano banana" = Gemini 2.5 Flash Image. Override via env if the model id changes.
 const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image'
+// Vision+text model used to write product copy from a product photo.
+const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash'
 
 let client: GoogleGenAI | null = null
 
@@ -188,4 +190,58 @@ authentic traditional Indian styling throughout.
     if (data) return Buffer.from(data, 'base64')
   }
   throw new Error('Gemini did not return an image — try a clearer source photo')
+}
+
+interface GenerateContentInput {
+  imageBase64: string
+  mimeType: string
+  productType?: string
+  color?: string
+  category?: string
+}
+
+// Writes an SEO product title + description by looking at the product photo.
+// Uses Gemini (vision+text) — no Anthropic key needed.
+export async function generateProductContent(
+  input: GenerateContentInput
+): Promise<{ title: string; description: string }> {
+  const { imageBase64, mimeType, productType, color, category } = input
+  const descriptor = [color, category, productType].filter(Boolean).join(' ') || 'ethnic-wear product'
+
+  const prompt = `You are a product copywriter for an Indian ethnic-wear e-commerce store.
+Look closely at the uploaded product photo. It is a ${descriptor}.
+Write an appealing product listing based on what you actually see in the image
+(fabric, weave, motifs, border, colour) plus the hint that it is a ${descriptor}.
+
+Respond with ONLY valid JSON — no markdown, no code fences, no preamble:
+{"title": "SEO-friendly title, max 80 characters", "description": "2-3 sentences covering fabric, occasion and colour appeal"}`
+
+  const response = await getClient().models.generateContent({
+    model: TEXT_MODEL,
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType, data: imageBase64 } },
+        ],
+      },
+    ],
+  })
+
+  const parts = response.candidates?.[0]?.content?.parts ?? []
+  const text = parts.map((p) => p.text || '').join('').trim()
+  // Gemini sometimes wraps JSON in ```json fences — strip them before parsing.
+  const cleaned = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
+
+  let parsed: { title?: unknown; description?: unknown }
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch {
+    throw new Error('AI returned invalid content — please try again')
+  }
+  return {
+    title: String(parsed.title ?? '').slice(0, 80),
+    description: String(parsed.description ?? ''),
+  }
 }

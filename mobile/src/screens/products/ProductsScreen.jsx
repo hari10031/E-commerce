@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/authStore';
 import { getProducts, getCategories, getInventory } from '../../lib/api';
 import ProductCard from '../../components/products/ProductCard';
+import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 
 const WARM_BG = '#fffaf5';
 const CARD_BG = '#ffffff';
@@ -156,6 +157,8 @@ export default function ProductsScreen({ navigation, route }) {
     enabled: isSearching,
     staleTime: 30_000,
   });
+
+  useRefetchOnFocus(refetch);
 
   const products = data?.pages.flatMap((p) => p.data) ?? [];
   const searchResults = searchData?.data ?? [];

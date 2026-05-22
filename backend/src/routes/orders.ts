@@ -7,6 +7,7 @@ import {
   placeOrder,
   updateOrderStatus,
   cancelOrder,
+  requestRefund,
 } from '../controllers/orderController'
 import { AuthRequest } from '../middleware/auth'
 
@@ -33,5 +34,6 @@ router.post(
 
 router.patch('/:id/status', requireRole('admin', 'employee'), updateOrderStatus)
 router.post('/:id/cancel', cancelOrder)
+router.post('/:id/refund', requestRefund)
 
 export default router

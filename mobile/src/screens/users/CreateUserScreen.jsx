@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import { createUser } from '../../lib/api';
+import { notifyDialog } from '../../lib/dialog';
 
 const ROLES = [
   { value: 'customer', label: 'Customer', icon: 'person', desc: 'Shops on the store' },
@@ -45,9 +46,11 @@ export default function CreateUserScreen({ route, navigation }) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ['customers'] });
       qc.invalidateQueries({ queryKey: ['employees'] });
-      Alert.alert('User created', `${data.name} (${role}) can now sign in.`, [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      notifyDialog({
+        title: 'User created',
+        message: `${data.name} (${role}) can now sign in.`,
+        onClose: () => navigation.goBack(),
+      });
     },
     onError: (err) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

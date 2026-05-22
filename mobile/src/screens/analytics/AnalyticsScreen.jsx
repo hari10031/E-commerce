@@ -72,9 +72,11 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   const isLoading = salesLoading || catLoading || empLoading || summaryLoading;
 
+  // The daily_sales RPC returns date as a "DD/MM" string and revenue as a
+  // numeric string — parse both so the chart shows real values, not NaN.
   const barData = (salesData ?? []).map((day) => ({
-    value: day.revenue ?? 0,
-    label: new Date(day.date).getDate().toString().padStart(2, '0'),
+    value: Number(day.revenue) || 0,
+    label: typeof day.date === 'string' ? day.date.split('/')[0] : '',
     frontColor: '#be185d',
   }));
 

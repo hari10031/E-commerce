@@ -30,12 +30,18 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
   const isWishlisted = productIds.includes(product.id)
   const selectedColor = selectedVariant?.color ?? null
 
-  function handleColorSelect(variant: Variant) {
+  function selectVariant(variant: Variant) {
     setSelectedVariant(variant)
+    // Never leave the quantity above the new variant's available stock.
+    setQuantity((q) => Math.min(q, Math.max(1, variant.quantity || 1)))
+  }
+
+  function handleColorSelect(variant: Variant) {
+    selectVariant(variant)
   }
 
   function handleSizeSelect(variant: Variant) {
-    setSelectedVariant(variant)
+    selectVariant(variant)
   }
 
   async function handleWishlistToggle() {
@@ -91,8 +97,8 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
         />
       )}
 
-      {/* Size selector */}
-      {product.variants && product.variants.length > 0 && (
+      {/* Size selector — sarees have no size, only colour */}
+      {product.type !== 'saree' && product.variants && product.variants.length > 0 && (
         <SizeSelector
           variants={product.variants}
           selectedColor={selectedColor}
@@ -130,7 +136,7 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
           value={quantity}
           onChange={setQuantity}
           min={1}
-          max={Math.min(10, selectedVariant?.quantity ?? 10)}
+          max={Math.max(1, selectedVariant?.quantity ?? 1)}
         />
       </div>
 

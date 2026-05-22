@@ -1,47 +1,51 @@
 import { Router, Request, Response } from 'express'
 import sharp from 'sharp'
-import Anthropic from '@anthropic-ai/sdk'
 import multer from 'multer'
 import { authenticate, requireApprovedEmployee } from '../middleware/auth'
 import { aiLimiter } from '../middleware/rateLimiter'
 import { uploadImage } from '../services/storageService'
-import { generateProductImage } from '../services/geminiService'
+import { generateProductImage, generateProductContent } from '../services/geminiService'
 
 const router = Router()
-const client = new Anthropic()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
+// Writes a product title + description from the product photo, via Gemini.
+// Accepts a multipart `image` file or a JSON `imageUrl`.
 router.post(
   '/generate-content',
   aiLimiter,
   authenticate,
   requireApprovedEmployee,
+  upload.single('image'),
   async (req: Request, res: Response) => {
-    const { productType, category, colors, sizes } = req.body
+    const { productType, color, category, imageUrl } = req.body
 
-    const msg = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a product copywriter for an Indian e-commerce store selling ${productType}.
-Generate a product listing for:
-- Category: ${category}
-- Colors: ${Array.isArray(colors) ? colors.join(', ') : colors}
-- Sizes: ${Array.isArray(sizes) ? sizes.join(', ') : sizes}
-
-Respond ONLY with valid JSON, no markdown or preamble:
-{"title": "max 80 chars, SEO-friendly title", "description": "2-3 sentences covering fabric, occasion, and color appeal"}`,
-        },
-      ],
-    })
-
-    const text = msg.content[0].type === 'text' ? msg.content[0].text : ''
     try {
-      res.json(JSON.parse(text))
-    } catch {
-      res.status(500).json({ error: 'AI returned invalid JSON', raw: text })
+      let buffer: Buffer
+      let mimeType: string
+
+      if (req.file) {
+        buffer = req.file.buffer
+        mimeType = req.file.mimetype
+      } else if (imageUrl) {
+        const resp = await fetch(imageUrl)
+        if (!resp.ok) return res.status(400).json({ error: 'Could not fetch the source image' })
+        buffer = Buffer.from(await resp.arrayBuffer())
+        mimeType = resp.headers.get('content-type') || 'image/jpeg'
+      } else {
+        return res.status(400).json({ error: 'Provide an image file or imageUrl' })
+      }
+
+      const content = await generateProductContent({
+        imageBase64: buffer.toString('base64'),
+        mimeType,
+        productType,
+        color,
+        category,
+      })
+      res.json(content)
+    } catch (err) {
+      res.status(502).json({ error: err instanceof Error ? err.message : 'Content generation failed' })
     }
   }
 )

@@ -222,20 +222,31 @@ export async function getCategoryInventory(_req: AuthRequest, res: Response) {
 }
 
 export async function getCategorySales(_req: AuthRequest, res: Response) {
-  const { data, error } = await supabase
-    .from('order_items')
-    .select(`
-      quantity, unit_price,
-      product:products(type)
-    `)
+  // Combine online order items with offline ("mark as sold") sales so per-type
+  // revenue reflects every sales channel — not just web orders.
+  const [online, offline] = await Promise.all([
+    supabase.from('order_items').select('quantity, unit_price, product:products(type)'),
+    supabase.from('offline_sales').select('quantity, unit_price, product:products(type)'),
+  ])
 
-  if (error) return res.status(500).json({ error: error.message })
+  if (online.error) return res.status(500).json({ error: online.error.message })
+  if (offline.error) return res.status(500).json({ error: offline.error.message })
 
-  const grouped: Record<string, number> = {}
-  for (const item of data ?? []) {
-    const type = (item.product as any)?.type ?? 'unknown'
-    grouped[type] = (grouped[type] ?? 0) + item.quantity * item.unit_price
+  const grouped: Record<string, { revenue: number; count: number }> = {}
+  const tally = (rows: any[] | null) => {
+    for (const item of rows ?? []) {
+      const type = item.product?.type ?? 'unknown'
+      if (!grouped[type]) grouped[type] = { revenue: 0, count: 0 }
+      grouped[type].revenue += Number(item.quantity) * Number(item.unit_price)
+      grouped[type].count += Number(item.quantity)
+    }
   }
+  tally(online.data)
+  tally(offline.data)
 
-  res.json(Object.entries(grouped).map(([type, revenue]) => ({ type, revenue })))
+  res.json(
+    Object.entries(grouped)
+      .map(([type, g]) => ({ type, revenue: g.revenue, count: g.count }))
+      .sort((a, b) => b.revenue - a.revenue)
+  )
 }

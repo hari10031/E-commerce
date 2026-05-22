@@ -103,8 +103,14 @@ export const updatePushToken = (fcmToken) =>
     body: JSON.stringify({ fcmToken }),
   });
 
-export const logout = () =>
-  apiFetch('/auth/logout', { method: 'POST' }).catch(() => { });
+// Pass the still-valid access token explicitly: sign-out clears the auth
+// store before the request lands, so reading the token from the store would
+// be too late and the server session would never be revoked.
+export const logout = (token) =>
+  apiFetch('/auth/logout', {
+    method: 'POST',
+    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+  }).catch(() => { });
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 

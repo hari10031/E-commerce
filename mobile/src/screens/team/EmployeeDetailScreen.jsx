@@ -24,20 +24,32 @@ function KpiCard({ icon, label, value, color }) {
 }
 
 function SaleRow({ sale }) {
+  const amount = Number(sale.unit_price || 0) * Number(sale.quantity || 0);
+  const variantLabel = [sale.variant?.color, sale.variant?.size].filter(Boolean).join(' · ');
   return (
-    <View className="flex-row items-center py-3 border-b border-gray-50">
+    <View className="flex-row items-start py-3 border-b border-gray-50">
       <View className="w-9 h-9 bg-rose-50 rounded-lg items-center justify-center mr-3">
         <Ionicons name="receipt-outline" size={16} color="#be185d" />
       </View>
-      <View className="flex-1">
+      <View className="flex-1 mr-2">
         <Text className="text-sm font-medium text-gray-900" numberOfLines={1}>
-          {sale.product?.title || sale.productName || 'Sale'}
+          {sale.product?.title || 'Sale'}
         </Text>
-        <Text className="text-xs text-gray-500 mt-0.5">
-          Qty: {sale.quantity ?? 1} · {formatDate(sale.createdAt || sale.date)}
+        {variantLabel ? (
+          <Text className="text-xs text-gray-500 mt-0.5">{variantLabel}</Text>
+        ) : null}
+        <Text className="text-xs text-gray-400 mt-0.5">
+          Qty {sale.quantity ?? 1} · {formatDate(sale.created_at)}
         </Text>
+        <View className="flex-row items-center mt-1">
+          <Ionicons name="person-outline" size={12} color="#9ca3af" />
+          <Text className="text-xs text-gray-600 ml-1" numberOfLines={1}>
+            Sold to: {sale.customer_name || 'Walk-in customer'}
+            {sale.customer_phone ? ` · ${sale.customer_phone}` : ''}
+          </Text>
+        </View>
       </View>
-      <Text className="text-sm font-bold text-gray-900">{formatPrice(sale.totalPrice ?? sale.price)}</Text>
+      <Text className="text-sm font-bold text-gray-900">{formatPrice(amount)}</Text>
     </View>
   );
 }
@@ -52,18 +64,21 @@ export default function EmployeeDetailScreen({ route, navigation }) {
     staleTime: 60_000,
   });
 
+  const employeeId = employee?._id || employee?.id;
+
   const { data: salesData, isLoading: salesLoading } = useQuery({
-    queryKey: ['offline-sales', employee?._id || employee?.id],
-    queryFn: () => getOfflineSales({ employee: employee?._id || employee?.id }),
+    queryKey: ['offline-sales', employeeId],
+    // Backend filters offline sales by the `soldBy` query param.
+    queryFn: () => getOfflineSales({ soldBy: employeeId }),
     staleTime: 60_000,
-    enabled: !!(employee?._id || employee?.id),
+    enabled: !!employeeId,
   });
 
   const empStats = empPerf?.employees?.find(
-    (e) => e.id === (employee?._id || employee?.id) || e.name === employee?.name
+    (e) => e.id === employeeId || e.name === employee?.name
   );
 
-  const sales = Array.isArray(salesData) ? salesData : salesData?.sales ?? [];
+  const sales = salesData?.data ?? [];
   const isLoading = perfLoading && salesLoading;
 
   return (

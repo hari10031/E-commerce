@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getCustomers } from '../../lib/api';
 import { formatPrice, initials } from '../../lib/utils';
 import EmptyState from '../../components/ui/EmptyState';
+import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 
 const AVATAR_COLORS = ['#ec4899', '#8b5cf6', '#f59e0b', '#14b8a6', '#881337'];
 
@@ -26,6 +27,8 @@ export default function CustomersScreen({ navigation }) {
     queryFn: () => getCustomers({ search: search.trim() || undefined, limit: 100 }),
     staleTime: 30_000,
   });
+
+  useRefetchOnFocus(refetch);
 
   const customers = data?.data ?? [];
 

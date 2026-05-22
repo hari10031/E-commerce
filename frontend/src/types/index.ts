@@ -73,6 +73,8 @@ export interface Order {
   total_amount: number
   discount_amount: number
   coupon_applied?: string
+  refund_status?: 'requested' | 'completed' | null
+  refund_reason?: string | null
   created_at: string
   updated_at: string
   address?: {

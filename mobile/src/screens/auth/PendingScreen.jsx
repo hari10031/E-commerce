@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { getMe } from '../../lib/api';
 import useAuthStore from '../../store/authStore';
 import { registerPushToken } from '../../lib/notifications';
+import { notifyDialog } from '../../lib/dialog';
 
 export default function PendingScreen() {
   const insets = useSafeAreaInsets();
@@ -24,11 +25,11 @@ export default function PendingScreen() {
       setAuth(useAuthStore.getState().token, data);
       registerPushToken();
     } else if (data?.employee_status === 'rejected') {
-      Alert.alert(
-        'Application Rejected',
-        'Your employee application was rejected. Please contact an admin.',
-        [{ text: 'OK', onPress: clearAuth }]
-      );
+      notifyDialog({
+        title: 'Application rejected',
+        message: 'Your employee application was rejected. Please contact an admin for help.',
+        onClose: clearAuth,
+      });
     }
   }, [data]);
 

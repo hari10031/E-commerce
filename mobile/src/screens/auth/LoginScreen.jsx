@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
@@ -11,11 +11,30 @@ import { Ionicons } from '@expo/vector-icons';
 import { login } from '../../lib/api';
 import useAuthStore from '../../store/authStore';
 import { registerPushToken } from '../../lib/notifications';
+import { notifyDialog } from '../../lib/dialog';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().min(1, 'Password is required'),
 });
+
+// Turn raw Supabase / network errors into a clear, friendly sentence.
+function friendlyLoginError(raw) {
+  const msg = (raw || '').toLowerCase();
+  if (msg.includes('invalid login credentials') || msg.includes('invalid email or password')) {
+    return 'Incorrect email or password. Please check and try again.';
+  }
+  if (msg.includes('email not confirmed')) {
+    return 'Please confirm your email address before signing in.';
+  }
+  if (msg.includes('network') || msg.includes('failed to fetch') || msg.includes('fetch')) {
+    return 'Could not reach the server. Check your internet connection and try again.';
+  }
+  if (msg.includes('too many') || msg.includes('rate limit')) {
+    return 'Too many attempts. Please wait a minute and try again.';
+  }
+  return raw || 'Something went wrong. Please try again.';
+}
 
 export default function LoginScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -34,19 +53,19 @@ export default function LoginScreen({ navigation }) {
 
       // Employees must be approved before they can enter the app.
       if (u.role === 'employee' && u.employee_status !== 'approved') {
-        Alert.alert(
-          u.employee_status === 'rejected' ? 'Account rejected' : 'Approval pending',
-          u.employee_status === 'rejected'
-            ? 'Your employee application was rejected. Please contact an admin.'
-            : 'Your account is waiting for admin approval. Please try again once it is approved.'
-        );
+        notifyDialog({
+          title: u.employee_status === 'rejected' ? 'Account rejected' : 'Approval pending',
+          message: u.employee_status === 'rejected'
+            ? 'Your employee application was rejected. Please contact an admin for help.'
+            : 'Your account is waiting for admin approval. You can sign in once an admin approves it.',
+        });
         return;
       }
 
       setAuth(data.token, data.user, data.refreshToken);
       await registerPushToken();
     } catch (err) {
-      Alert.alert('Login Failed', err.message);
+      notifyDialog({ title: 'Could not sign in', message: friendlyLoginError(err.message) });
     }
   };
 

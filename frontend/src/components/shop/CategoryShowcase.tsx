@@ -61,10 +61,12 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
           {/* Section Header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
             <div>
-              <div className="inline-flex items-center gap-1 text-brand text-xs font-semibold uppercase tracking-wider mb-2">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>{subtitle}</span>
-              </div>
+              {subtitle && (
+                <div className="inline-flex items-center gap-1 text-brand text-xs font-semibold uppercase tracking-wider mb-2">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>{subtitle}</span>
+                </div>
+              )}
               <h2 className="text-3xl sm:text-4xl font-semibold text-ink font-display">
                 {title}
               </h2>
@@ -82,16 +84,16 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
             </Link>
           </div>
 
-          {/* Subcategory Grid */}
+          {/* Subcategory Slider — horizontal scroll, one row */}
           {subCats.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="flex gap-5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1 snap-x snap-mandatory">
               {subCats.map((cat) => {
                 const coverImage = getSubcategoryImage(cat.id, typeKey)
                 return (
                   <Link
                     key={cat.id}
                     href={`/products?type=${typeKey}&category=${cat.id}`}
-                    className="group relative block aspect-[3/4] overflow-hidden rounded-2xl bg-neutral-100/50 border border-brand-accent/15 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-500"
+                    className="group relative block w-[240px] sm:w-[260px] shrink-0 snap-start aspect-[3/4] overflow-hidden rounded-2xl bg-neutral-100/50 border border-brand-accent/15 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-500"
                   >
                     <Image
                       src={coverImage}
@@ -140,8 +142,8 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
     <div className="bg-white">
       {/* 1. Sarees Section */}
       {renderSection(
-        'Exclusive Silk & Handloom Sarees',
-        'Bridal & Festive Handweaves',
+        'Saree Collections',
+        '',
         'Discover our masterpieces woven in pure Kanjivaram, Banarasi, Chanderi, and soft Organzas by master weavers across India.',
         'saree',
         sareeSubs
@@ -149,8 +151,8 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
 
       {/* 2. Dresses Section */}
       {renderSection(
-        'Designer Dresses & Salwars',
-        'Charming Festive Outfits',
+        'Dress Collections',
+        '',
         'Stunning silhouettes tailored with delicate hand embroidery, Gota Patti, and traditional brocades for festive elegance.',
         'dress',
         dressSubs

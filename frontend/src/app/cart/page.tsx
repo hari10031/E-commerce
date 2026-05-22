@@ -64,19 +64,15 @@ export default function CartPage() {
     setValidatingCoupon(true)
     setCouponError('')
     try {
-      const res = await api.get<{ valid: boolean; discount_pct: number; message?: string }>(
+      const res = await api.get<{ code: string; discount_pct: number }>(
         `/api/coupons/validate/${code}`,
         token ?? undefined
       )
-      if (res.valid) {
-        setCoupon(code, res.discount_pct)
-        toast({ title: `Coupon applied — ${res.discount_pct}% off` })
-      } else {
-        setCoupon(null, 0)
-        setCouponError(res.message ?? 'Invalid coupon code')
-      }
-    } catch {
-      setCouponError('Failed to validate coupon')
+      setCoupon(code, res.discount_pct)
+      toast({ title: `Coupon applied — ${res.discount_pct}% off` })
+    } catch (e) {
+      setCoupon(null, 0)
+      setCouponError(e instanceof Error ? e.message : 'Invalid coupon code')
     } finally {
       setValidatingCoupon(false)
     }

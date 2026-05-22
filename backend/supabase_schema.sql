@@ -185,9 +185,15 @@ create table if not exists orders (
   coupon_applied      text,
   razorpay_order_id   text,
   razorpay_payment_id text,
+  refund_status       text,
+  refund_reason       text,
   created_at          timestamptz default now(),
   updated_at          timestamptz default now()
 );
+
+-- Customer refund requests: refund_status is null / 'requested' / 'completed'.
+alter table orders add column if not exists refund_status text;
+alter table orders add column if not exists refund_reason text;
 
 create index if not exists idx_orders_user on orders(user_id);
 create index if not exists idx_orders_status on orders(status);
@@ -236,10 +242,18 @@ create table if not exists coupons (
   discount_pct numeric(5,2) not null,
   max_uses     int,
   used_count   int default 0,
+  starts_at    timestamptz,
   expires_at   timestamptz,
+  category_id  uuid references categories(id) on delete set null,
+  product_id   uuid references products(id) on delete set null,
   active       boolean default true,
   created_at   timestamptz default now()
 );
+
+-- Coupon validity window + scope (category/sub-category or a single product).
+alter table coupons add column if not exists starts_at   timestamptz;
+alter table coupons add column if not exists category_id uuid references categories(id) on delete set null;
+alter table coupons add column if not exists product_id  uuid references products(id) on delete set null;
 
 create index if not exists idx_coupons_code on coupons(code);
 create index if not exists idx_coupons_active on coupons(active) where active = true;

@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import useAuthStore from '../../store/authStore';
 import { getDashboard, getOfflineSales, getCategoryInventory, getProducts } from '../../lib/api';
 import { formatPrice } from '../../lib/utils';
+import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 
 const COLOR_MAP = {
   red: '#dc2626',
@@ -212,7 +213,7 @@ export default function DashboardScreen({ navigation }) {
 
   const { data: salesData, isLoading: salesLoading, refetch: refetchSales } = useQuery({
     queryKey: ['offline-sales'],
-    queryFn: () => getOfflineSales({ limit: 5 }),
+    queryFn: () => getOfflineSales({ limit: 200 }),
     staleTime: 60_000,
     enabled: isAdmin || isEmployee,
   });
@@ -227,11 +228,23 @@ export default function DashboardScreen({ navigation }) {
   const recentSales = salesData?.data ?? salesData ?? [];
   const isLoading = (isAdmin || isEmployee) && dashLoading;
 
+  // Employee KPI — the employee's own offline sales (the backend already
+  // scopes /sales to sold_by === current user for the employee role).
+  const offlineSales = Array.isArray(recentSales) ? recentSales : [];
+  const myRevenue = offlineSales.reduce(
+    (s, x) => s + Number(x.unit_price || 0) * Number(x.quantity || 0),
+    0
+  );
+  const mySaleCount = offlineSales.length;
+  const myItemsSold = offlineSales.reduce((s, x) => s + Number(x.quantity || 0), 0);
+
   const onRefresh = () => {
     refetchDash();
     refetchSales();
     refetchCat();
   };
+
+  useRefetchOnFocus(onRefresh);
 
   // Roll the per-category inventory up into the 3 main product types.
   const mainCategories = MAIN_CATS.map((m) => {
@@ -314,18 +327,18 @@ export default function DashboardScreen({ navigation }) {
         {/* Employee KPI Card */}
         {isEmployee && (
           <View className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-            {dashLoading ? (
+            {salesLoading ? (
               <ActivityIndicator color="#f59e0b" />
             ) : (
               <>
                 <Text className="text-xs font-semibold text-gray-400 tracking-widest">MY SALES</Text>
                 <View className="flex-row items-end mt-2">
                   <Text className="text-3xl font-bold text-gray-900">
-                    {formatPrice(stats?.revenueThisMonth ?? stats?.totalRevenue ?? 0)}
+                    {formatPrice(myRevenue)}
                   </Text>
                 </View>
                 <Text className="text-xs text-gray-500 mt-2">
-                  {stats?.totalOrders ?? 0} orders this month
+                  {mySaleCount} sales · {myItemsSold} items sold
                 </Text>
               </>
             )}
@@ -514,9 +527,9 @@ export default function DashboardScreen({ navigation }) {
             {recentSales.slice(0, 5).map((sale, idx) => (
               <SaleRow
                 key={sale.id ?? idx}
-                customerName={sale.customer_name ?? sale.customerName ?? 'Walk-in'}
-                productName={sale.product_name ?? sale.productName ?? sale.items?.[0]?.name ?? 'Product'}
-                price={sale.total_amount ?? sale.totalAmount ?? sale.amount ?? 0}
+                customerName={sale.customer_name || 'Walk-in customer'}
+                productName={sale.product?.title || 'Product'}
+                price={Number(sale.unit_price || 0) * Number(sale.quantity || 0)}
               />
             ))}
           </View>

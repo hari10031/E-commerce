@@ -10,7 +10,10 @@ import { api } from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 import { format } from 'date-fns'
 import { OrderTracking } from '@/components/shop/OrderTracking'
+import { toast } from '@/components/ui/Toaster'
 import type { Order, OrderStatus } from '@/types'
+
+const REFUNDABLE_STATUSES: OrderStatus[] = ['confirmed', 'processing', 'shipped', 'delivered']
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   placed: 'bg-blue-50 text-blue-700',
@@ -30,6 +33,37 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [refundOpen, setRefundOpen] = useState(false)
+  const [refundReason, setRefundReason] = useState('')
+  const [refundSubmitting, setRefundSubmitting] = useState(false)
+
+  async function handleRequestRefund() {
+    if (!token || !order) return
+    if (!refundReason.trim()) {
+      toast({ title: 'Please add a reason', variant: 'destructive' })
+      return
+    }
+    setRefundSubmitting(true)
+    try {
+      const updated = await api.post<Order>(
+        `/api/orders/${order.id}/refund`,
+        { reason: refundReason.trim() },
+        token
+      )
+      setOrder(updated)
+      setRefundOpen(false)
+      setRefundReason('')
+      toast({ title: 'Refund requested', description: 'Our team will review it shortly.' })
+    } catch (e) {
+      toast({
+        title: 'Could not request refund',
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'destructive',
+      })
+    } finally {
+      setRefundSubmitting(false)
+    }
+  }
 
   useEffect(() => {
     if (!hasHydrated) return
@@ -191,6 +225,63 @@ export default function OrderDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Refund */}
+          {order.status === 'refunded' ? (
+            <div className="bg-white rounded-2xl border border-neutral-200/70 p-6">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink mb-2">Refund</h2>
+              <p className="text-sm text-emerald-600 font-medium">
+                Refund completed — the amount has been returned to your payment method.
+              </p>
+            </div>
+          ) : order.refund_status === 'requested' ? (
+            <div className="bg-white rounded-2xl border border-neutral-200/70 p-6">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink mb-2">Refund</h2>
+              <p className="text-sm text-amber-600 font-medium">Refund requested — under review.</p>
+              {order.refund_reason && (
+                <p className="text-xs text-neutral-500 mt-2">Reason: {order.refund_reason}</p>
+              )}
+            </div>
+          ) : REFUNDABLE_STATUSES.includes(order.status) ? (
+            <div className="bg-white rounded-2xl border border-neutral-200/70 p-6">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink mb-3">
+                Need a refund?
+              </h2>
+              {refundOpen ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    placeholder="Tell us why you'd like a refund"
+                    rows={3}
+                    className="w-full text-sm rounded-xl border border-neutral-200 p-3 focus:outline-none focus:border-brand resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleRequestRefund}
+                      disabled={refundSubmitting}
+                      className="flex-1 py-2.5 rounded-full bg-ink text-white text-xs font-bold hover:bg-brand transition-colors disabled:opacity-50"
+                    >
+                      {refundSubmitting ? 'Submitting…' : 'Submit Request'}
+                    </button>
+                    <button
+                      onClick={() => { setRefundOpen(false); setRefundReason('') }}
+                      className="px-4 py-2.5 rounded-full border border-neutral-200 text-xs font-semibold text-neutral-500 hover:border-neutral-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setRefundOpen(true)}
+                  className="w-full py-2.5 rounded-full border border-neutral-300 text-xs font-bold uppercase tracking-wider text-ink hover:border-brand hover:text-brand transition-colors"
+                >
+                  Request Refund
+                </button>
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

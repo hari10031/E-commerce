@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { body, validationResult } from 'express-validator'
+import type { User, Session } from '@supabase/supabase-js'
 import { supabase, supabaseAuth } from '../supabase'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { authLimiter } from '../middleware/rateLimiter'
@@ -21,25 +22,38 @@ router.post(
 
     const { email, password, name, phone, role = 'customer' } = req.body
 
-    const { data, error } = await supabaseAuth.auth.signUp({
+    let session: Session | null = null
+
+    // Create the user pre-confirmed via the admin API: no verification email is
+    // sent (avoids Supabase email rate limits) and no email confirmation step
+    // is needed for either role.
+    const { data: created, error: createErr } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          name,
-          phone: phone ?? null,
-          role,
-          ...(role === 'employee' ? { employee_status: 'pending' } : {}),
-        },
+      email_confirm: true,
+      user_metadata: {
+        name,
+        phone: phone ?? null,
+        role,
+        ...(role === 'employee' ? { employee_status: 'pending' } : {}),
       },
     })
+    if (createErr) return res.status(400).json({ error: createErr.message })
 
-    if (error) return res.status(400).json({ error: error.message })
+    const user: User | null = created.user
+
+    // Customers can use the app right away — hand back a session so the web
+    // storefront logs them in immediately after registering. Employees stay
+    // blocked until an admin sets employee_status to 'approved'.
+    if (role === 'customer' && user) {
+      const { data: signIn } = await supabaseAuth.auth.signInWithPassword({ email, password })
+      session = signIn.session ?? null
+    }
 
     // Sync extra fields to profiles table
-    if (data.user) {
+    if (user) {
       await supabase.from('profiles').upsert({
-        id: data.user.id,
+        id: user.id,
         name,
         phone: phone ?? null,
         role,
@@ -47,7 +61,7 @@ router.post(
       })
     }
 
-    res.status(201).json({ user: data.user, session: data.session })
+    res.status(201).json({ user, session })
   }
 )
 

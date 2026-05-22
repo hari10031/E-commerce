@@ -10,6 +10,8 @@ import { getCategories, createCategory, deleteCategory } from '../../lib/api';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ScreenHeader from '../../components/ui/ScreenHeader';
+import { confirmDialog } from '../../lib/dialog';
+import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 import * as Haptics from 'expo-haptics';
 
 function CategoryModal({ visible, onClose, onSave, isSaving, parents }) {
@@ -129,6 +131,8 @@ export default function CategoriesScreen({ navigation }) {
     staleTime: 120_000,
   });
 
+  useRefetchOnFocus(refetch);
+
   const all = categories ?? [];
   const topLevel = all.filter((c) => !c.parent_id);
   const childrenOf = (id) => all.filter((c) => c.parent_id === id);
@@ -163,10 +167,13 @@ export default function CategoriesScreen({ navigation }) {
     const msg = kids.length
       ? `Delete "${cat.name}" and its ${kids.length} sub-categor${kids.length === 1 ? 'y' : 'ies'}?`
       : `Delete "${cat.name}"? Products in this category will not be deleted.`;
-    Alert.alert('Delete Category', msg, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(cat.id) },
-    ]);
+    confirmDialog({
+      title: 'Delete Category',
+      message: msg,
+      confirmText: 'Delete',
+      destructive: true,
+      onConfirm: () => deleteMutation.mutate(cat.id),
+    });
   };
 
   if (isLoading) return <LoadingSpinner />;

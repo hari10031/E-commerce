@@ -7,10 +7,10 @@ export const API_URL =
 
 export const VALID_ORDER_TRANSITIONS = {
   placed: ['confirmed', 'cancelled'],
-  confirmed: ['processing', 'cancelled'],
-  processing: ['shipped', 'cancelled'],
-  shipped: ['delivered'],
-  delivered: [],
+  confirmed: ['processing', 'cancelled', 'refunded'],
+  processing: ['shipped', 'cancelled', 'refunded'],
+  shipped: ['delivered', 'refunded'],
+  delivered: ['refunded'],
   cancelled: [],
   refunded: [],
 };

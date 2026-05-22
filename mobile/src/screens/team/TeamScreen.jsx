@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import { getEmployees, getUsers, approveEmployee } from '../../lib/api';
 import { initials } from '../../lib/utils';
+import { confirmDialog } from '../../lib/dialog';
+import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 
 const TABS = [
   { key: 'active', label: 'Active' },
@@ -80,6 +82,8 @@ export default function TeamScreen({ navigation, route }) {
     staleTime: 30_000,
   });
 
+  useRefetchOnFocus(refetch);
+
   const approveMutation = useMutation({
     mutationFn: ({ id, action }) => approveEmployee(id, action),
     onSuccess: () => {
@@ -92,17 +96,22 @@ export default function TeamScreen({ navigation, route }) {
   });
 
   const handleApprove = (emp) => {
-    Alert.alert('Approve Employee', `Approve ${emp.name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Approve', onPress: () => approveMutation.mutate({ id: emp._id || emp.id, action: 'approve' }) },
-    ]);
+    confirmDialog({
+      title: 'Approve Employee',
+      message: `Approve ${emp.name}?`,
+      confirmText: 'Approve',
+      onConfirm: () => approveMutation.mutate({ id: emp._id || emp.id, action: 'approve' }),
+    });
   };
 
   const handleReject = (emp) => {
-    Alert.alert('Reject Employee', `Reject ${emp.name}? This cannot be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reject', style: 'destructive', onPress: () => approveMutation.mutate({ id: emp._id || emp.id, action: 'reject' }) },
-    ]);
+    confirmDialog({
+      title: 'Reject Employee',
+      message: `Reject ${emp.name}? This cannot be undone.`,
+      confirmText: 'Reject',
+      destructive: true,
+      onConfirm: () => approveMutation.mutate({ id: emp._id || emp.id, action: 'reject' }),
+    });
   };
 
   const count = employeeList.length;

@@ -157,6 +157,28 @@ export default function OrderDetailScreen({ route, navigation }) {
               </Text>
             </View>
           )}
+
+          {/* Refund request */}
+          {order.refund_status === 'requested' && (
+            <View className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
+              <View className="flex-row items-center mb-1">
+                <Ionicons name="cash-outline" size={16} color="#e11d48" />
+                <Text className="text-sm font-bold text-rose-700 ml-2">Refund requested by customer</Text>
+              </View>
+              {order.refund_reason && (
+                <Text className="text-xs text-rose-600 mt-0.5">Reason: {order.refund_reason}</Text>
+              )}
+              <Text className="text-[11px] text-rose-500 mt-1.5">
+                Update status to "Refunded" to issue the refund to the customer.
+              </Text>
+            </View>
+          )}
+          {order.refund_status === 'completed' && (
+            <View className="bg-green-50 border border-green-200 rounded-2xl p-4 flex-row items-center">
+              <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
+              <Text className="text-sm text-green-700 font-medium ml-2">Refund completed</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 

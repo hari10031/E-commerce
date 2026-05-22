@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
@@ -9,6 +9,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { register as apiRegister } from '../../lib/api';
+import { notifyDialog } from '../../lib/dialog';
+
+// Turn raw Supabase errors into a clear, friendly sentence.
+function friendlyRegisterError(raw) {
+  const msg = (raw || '').toLowerCase();
+  if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) {
+    return 'An account with this email already exists. Try signing in instead.';
+  }
+  if (msg.includes('password')) {
+    return 'Password must be at least 8 characters.';
+  }
+  if (msg.includes('network') || msg.includes('failed to fetch') || msg.includes('fetch')) {
+    return 'Could not reach the server. Check your internet connection and try again.';
+  }
+  return raw || 'Could not create your account. Please try again.';
+}
 
 const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -44,13 +60,13 @@ export default function RegisterScreen({ navigation }) {
     try {
       await apiRegister({ name, email, password, phone: phone || undefined, role: 'employee' });
       reset();
-      Alert.alert(
-        'Registration submitted',
-        'Your employee account was created. An admin must approve it before you can sign in. Please log in once approved.',
-        [{ text: 'Go to Login', onPress: () => navigation.navigate('Login') }]
-      );
+      notifyDialog({
+        title: 'Account created',
+        message: 'Your employee account needs admin approval before you can sign in. You will be taken to the login page — sign in once an admin approves you.',
+        onClose: () => navigation.navigate('Login'),
+      });
     } catch (err) {
-      Alert.alert('Registration Failed', err.message);
+      notifyDialog({ title: 'Registration failed', message: friendlyRegisterError(err.message) });
     }
   };
 

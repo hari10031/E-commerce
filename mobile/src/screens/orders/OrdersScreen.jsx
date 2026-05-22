@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getOrders } from '../../lib/api';
 import OrderCard from '../../components/orders/OrderCard';
 import EmptyState from '../../components/ui/EmptyState';
+import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 
 const STATUS_TABS = [
   { label: 'All', value: null },
@@ -35,6 +36,8 @@ export default function OrdersScreen({ navigation }) {
     getNextPageParam: (last) => last.page < last.totalPages ? last.page + 1 : undefined,
     staleTime: 30_000,
   });
+
+  useRefetchOnFocus(refetch);
 
   const orders = data?.pages.flatMap((p) => p.data) ?? [];
 

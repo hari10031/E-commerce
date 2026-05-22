@@ -11,6 +11,8 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import EmptyState from '../../components/ui/EmptyState';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import { formatDate, initials } from '../../lib/utils';
+import { confirmDialog } from '../../lib/dialog';
+import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 import * as Haptics from 'expo-haptics';
 
 const TABS = ['Pending', 'Active'];
@@ -35,6 +37,10 @@ export default function EmployeesScreen({ navigation }) {
     staleTime: 30_000,
   });
 
+  // Reload whenever the admin opens this screen so newly registered
+  // employees appear without needing a manual pull-to-refresh.
+  useRefetchOnFocus(refetch);
+
   const approveMutation = useMutation({
     mutationFn: ({ id, action }) => approveEmployee(id, action),
     onSuccess: (_, { action }) => {
@@ -52,14 +58,13 @@ export default function EmployeesScreen({ navigation }) {
 
   const handleAction = (emp, action) => {
     const label = action === 'approve' ? 'Approve' : 'Reject';
-    Alert.alert(
-      `${label} Employee`,
-      `${label} ${emp.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: label, style: action === 'approve' ? 'default' : 'destructive', onPress: () => approveMutation.mutate({ id: emp.id, action }) },
-      ]
-    );
+    confirmDialog({
+      title: `${label} Employee`,
+      message: `${label} ${emp.name}?`,
+      confirmText: label,
+      destructive: action === 'reject',
+      onConfirm: () => approveMutation.mutate({ id: emp.id, action }),
+    });
   };
 
   const employees = data?.data ?? [];

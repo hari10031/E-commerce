@@ -5,7 +5,7 @@ import { Providers } from './providers'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { Toaster } from '@/components/ui/Toaster'
-import { Plus_Jakarta_Sans, Playfair_Display } from 'next/font/google'
+import { Plus_Jakarta_Sans, Poppins } from 'next/font/google'
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -14,10 +14,10 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: 'swap',
 })
 
-const playfairDisplay = Playfair_Display({
+const poppins = Poppins({
   subsets: ['latin'],
   variable: '--font-display',
-  weight: ['400', '600', '700'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
 })
 
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${playfairDisplay.variable}`}>
+    <html lang="en" className={`${plusJakartaSans.variable} ${poppins.variable}`}>
       <body>
         <Providers>
           <Navbar />

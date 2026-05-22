@@ -144,10 +144,10 @@ export interface Notification {
 
 export const VALID_ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   placed:     ['confirmed', 'cancelled'],
-  confirmed:  ['processing', 'cancelled'],
-  processing: ['shipped'],
-  shipped:    ['delivered'],
-  delivered:  [],
+  confirmed:  ['processing', 'cancelled', 'refunded'],
+  processing: ['shipped', 'refunded'],
+  shipped:    ['delivered', 'refunded'],
+  delivered:  ['refunded'],
   cancelled:  [],
   refunded:   [],
 }

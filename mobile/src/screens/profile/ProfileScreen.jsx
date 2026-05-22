@@ -10,6 +10,7 @@ import { updateMe, logout, getOfflineSales } from '../../lib/api';
 import useAuthStore from '../../store/authStore';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import { initials, formatPrice } from '../../lib/utils';
+import { confirmDialog } from '../../lib/dialog';
 import * as Haptics from 'expo-haptics';
 
 export default function ProfileScreen({ navigation }) {
@@ -49,21 +50,20 @@ export default function ProfileScreen({ navigation }) {
   );
 
   const handleSignOut = () => {
-    // Clear local auth first so the UI returns to Login immediately — the
-    // server logout call must never block or undo sign-out.
+    // Revoke the server session with the still-valid token, then clear local
+    // auth so AppNavigator immediately swaps back to the Login stack.
+    logout(token).catch(() => { });
     clearAuth();
-    logout().catch(() => { });
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: handleSignOut },
-      ],
-    );
+    confirmDialog({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out?',
+      confirmText: 'Sign Out',
+      destructive: true,
+      onConfirm: handleSignOut,
+    });
   };
 
   const handleToggleViewMode = () => {

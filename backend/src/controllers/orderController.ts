@@ -35,7 +35,7 @@ export async function createRazorpayOrder(req: AuthRequest, res: Response) {
 
   const { data: cart } = await supabase
     .from('cart_items')
-    .select('product_id, variant_id, quantity, product:products(base_price, discount_pct), variant:variants(quantity)')
+    .select('product_id, variant_id, quantity, product:products(base_price, discount_pct, category_id, category:categories(parent_id)), variant:variants(quantity)')
     .eq('user_id', userId)
 
   if (!cart || cart.length === 0) {
@@ -64,16 +64,33 @@ export async function createRazorpayOrder(req: AuthRequest, res: Response) {
   if (coupon) {
     const { data: cp } = await supabase
       .from('coupons')
-      .select('code, discount_percent, max_uses, used_count, expires_at, is_active')
+      .select('code, discount_pct, max_uses, used_count, starts_at, expires_at, active, category_id, product_id')
       .eq('code', coupon)
       .maybeSingle()
-    const valid =
+    const now = new Date()
+    const timeValid =
       cp &&
-      cp.is_active &&
-      (!cp.expires_at || new Date(cp.expires_at) > new Date()) &&
-      cp.used_count < cp.max_uses
-    if (valid) {
-      discount = Math.round((subtotal * cp.discount_percent) / 100)
+      cp.active &&
+      (!cp.starts_at || new Date(cp.starts_at) <= now) &&
+      (!cp.expires_at || new Date(cp.expires_at) > now) &&
+      (cp.max_uses == null || cp.used_count < cp.max_uses)
+    // Scope gate: a coupon limited to a category/product only applies when the
+    // cart holds at least one matching item.
+    let scopeMatch = true
+    if (timeValid && (cp.category_id || cp.product_id)) {
+      scopeMatch = cart.some((c) => {
+        if (cp.product_id && c.product_id === cp.product_id) return true
+        if (cp.category_id) {
+          const p = c.product as unknown as
+            | { category_id: string | null; category: { parent_id: string | null } | null }
+            | null
+          return p?.category_id === cp.category_id || p?.category?.parent_id === cp.category_id
+        }
+        return false
+      })
+    }
+    if (timeValid && scopeMatch) {
+      discount = Math.round((subtotal * cp.discount_pct) / 100)
       couponCode = cp.code
     }
   }
@@ -288,7 +305,7 @@ export async function updateOrderStatus(req: AuthRequest, res: Response) {
 
   const { data: current } = await supabase
     .from('orders')
-    .select('status, user_id')
+    .select('status, user_id, razorpay_payment_id, total_amount')
     .eq('id', id)
     .single()
 
@@ -301,9 +318,23 @@ export async function updateOrderStatus(req: AuthRequest, res: Response) {
     })
   }
 
+  // Issue the money back through Razorpay before marking the order refunded.
+  if (status === 'refunded' && current.razorpay_payment_id) {
+    try {
+      await razorpay.payments.refund(current.razorpay_payment_id, {
+        amount: Math.round(Number(current.total_amount) * 100),
+      })
+    } catch (err) {
+      return res.status(502).json({
+        error: err instanceof Error ? err.message : 'Razorpay refund failed',
+      })
+    }
+  }
+
+  const refundPatch = status === 'refunded' ? { refund_status: 'completed' } : {}
   const { data, error } = await supabase
     .from('orders')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({ status, ...refundPatch, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()
@@ -312,6 +343,46 @@ export async function updateOrderStatus(req: AuthRequest, res: Response) {
 
   notifyCustomerStatusUpdate(current.user_id, id, status)
 
+  res.json(data)
+}
+
+// Customer asks for a refund on a paid order. Records the request; an admin
+// then transitions the order to 'refunded', which issues the Razorpay refund.
+export async function requestRefund(req: AuthRequest, res: Response) {
+  const reason = (req.body?.reason ?? '').toString().trim()
+  if (!reason) {
+    return res.status(400).json({ error: 'Please add a reason for the refund request' })
+  }
+
+  let query = supabase
+    .from('orders')
+    .select('status, refund_status, user_id')
+    .eq('id', req.params.id)
+  if (req.user!.role === 'customer') query = query.eq('user_id', req.user!.id)
+
+  const { data: current } = await query.single()
+  if (!current) return res.status(404).json({ error: 'Order not found' })
+
+  const refundable: OrderStatus[] = ['confirmed', 'processing', 'shipped', 'delivered']
+  if (!refundable.includes(current.status as OrderStatus)) {
+    return res.status(400).json({ error: `A ${current.status} order cannot be refunded` })
+  }
+  if (current.refund_status === 'requested' || current.refund_status === 'completed') {
+    return res.status(400).json({ error: 'A refund has already been requested for this order' })
+  }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      refund_status: 'requested',
+      refund_reason: reason,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', req.params.id)
+    .select(orderSelect)
+    .single()
+
+  if (error) return res.status(400).json({ error: error.message })
   res.json(data)
 }
 
