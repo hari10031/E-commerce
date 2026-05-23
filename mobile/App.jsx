@@ -1,0 +1,41 @@
+import './global.css';
+import React, { useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StatusBar } from 'expo-status-bar';
+import AppNavigator from './src/navigation/AppNavigator';
+import { navigationRef } from './src/navigation/navigationRef';
+import useAuthStore from './src/store/authStore';
+import { registerPushToken } from './src/lib/notifications';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
+
+function PushRegistrar() {
+  const token = useAuthStore((s) => s.token);
+  useEffect(() => {
+    if (token) registerPushToken();
+  }, [token]);
+  return null;
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SafeAreaProvider>
+        <NavigationContainer ref={navigationRef}>
+          <StatusBar style="dark" />
+          <PushRegistrar />
+          <AppNavigator />
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </QueryClientProvider>
+  );
+}

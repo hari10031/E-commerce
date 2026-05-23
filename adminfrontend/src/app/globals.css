@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: oklch(0.65 0.18 45);
+  --color-primary-foreground: oklch(0.98 0.01 45);
+  --color-primary-hover: oklch(0.58 0.20 42);
+
+  --color-sidebar-bg: oklch(0.16 0.02 260);
+  --color-sidebar-hover: oklch(0.22 0.03 260);
+  --color-sidebar-active: oklch(0.65 0.18 45);
+  --color-sidebar-text: oklch(0.80 0.02 260);
+  --color-sidebar-muted: oklch(0.55 0.02 260);
+
+  --color-background: oklch(0.97 0.005 260);
+  --color-foreground: oklch(0.15 0.02 260);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.15 0.02 260);
+  --color-muted: oklch(0.94 0.005 260);
+  --color-muted-foreground: oklch(0.55 0.02 260);
+  --color-border: oklch(0.88 0.01 260);
+  --color-input: oklch(0.88 0.01 260);
+  --color-ring: oklch(0.65 0.18 45);
+
+  --color-destructive: oklch(0.58 0.22 25);
+  --color-destructive-foreground: oklch(0.98 0.01 25);
+
+  --color-success: oklch(0.62 0.18 142);
+  --color-success-foreground: oklch(0.98 0.01 142);
+
+  --color-warning: oklch(0.75 0.16 80);
+  --color-warning-foreground: oklch(0.15 0.02 80);
+
+  --color-info: oklch(0.60 0.18 220);
+  --color-info-foreground: oklch(0.98 0.01 220);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-foreground);
+}
+
+/* Status badge colors */
+.badge-placed {
+  background-color: oklch(0.85 0.08 220);
+  color: oklch(0.35 0.12 220);
+}
+
+.badge-confirmed {
+  background-color: oklch(0.85 0.08 270);
+  color: oklch(0.35 0.12 270);
+}
+
+.badge-processing {
+  background-color: oklch(0.93 0.10 80);
+  color: oklch(0.40 0.14 70);
+}
+
+.badge-shipped {
+  background-color: oklch(0.85 0.08 300);
+  color: oklch(0.35 0.12 300);
+}
+
+.badge-delivered {
+  background-color: oklch(0.85 0.10 142);
+  color: oklch(0.32 0.14 142);
+}
+
+.badge-cancelled {
+  background-color: oklch(0.90 0.06 25);
+  color: oklch(0.40 0.16 25);
+}
+
+/* Low stock highlight */
+.row-low-stock {
+  background-color: oklch(0.95 0.05 60);
+}
+
+.row-critical-stock {
+  background-color: oklch(0.93 0.06 25);
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-muted) 25%,
+    var(--color-border) 50%,
+    var(--color-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

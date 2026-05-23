@@ -1,0 +1,53 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Build outputs
+/dist/
+/build/
+/out/
+coverage/
+*.tsbuildinfo
+
+# Next.js
+.next/
+
+# Vite
+.vite/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+ios/Pods/
+ios/build/
+
+# Cache
+.cache/
+.parcel-cache/
+.turbo/
+
+# Env files (keep examples)
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.local.example
