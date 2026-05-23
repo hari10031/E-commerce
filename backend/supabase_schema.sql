@@ -20,20 +20,26 @@ begin
     create type order_status as enum ('placed', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded');
   end if;
   if not exists (select 1 from pg_type where typname = 'product_type') then
-    create type product_type as enum ('saree', 'dress', 'jewellery');
+    create type product_type as enum ('saree', 'jewellery');
   end if;
 end $$;
 
--- Migrate old product_type values (banana/gold) on pre-existing databases.
+-- Migrate legacy product_type values on pre-existing databases.
+-- 'dress' has been retired; any existing dress rows are remapped to 'saree'
+-- so the value can no longer be selected from the apps.
 do $$
 begin
   if exists (select 1 from pg_enum e join pg_type t on e.enumtypid = t.oid
              where t.typname = 'product_type' and e.enumlabel = 'banana') then
-    alter type product_type rename value 'banana' to 'dress';
+    alter type product_type rename value 'banana' to 'saree';
   end if;
   if exists (select 1 from pg_enum e join pg_type t on e.enumtypid = t.oid
              where t.typname = 'product_type' and e.enumlabel = 'gold') then
     alter type product_type rename value 'gold' to 'jewellery';
+  end if;
+  if exists (select 1 from pg_enum e join pg_type t on e.enumtypid = t.oid
+             where t.typname = 'product_type' and e.enumlabel = 'dress') then
+    update products set type = 'saree' where type::text = 'dress';
   end if;
 end $$;
 
@@ -102,8 +108,11 @@ create index if not exists idx_categories_parent on categories(parent_id);
 -- Real categories are nested under these via parent_id. Slugs MUST match the
 -- product_type enum values so the apps can map a type to its root category.
 insert into categories (name, slug)
-values ('Sarees', 'saree'), ('Dresses', 'dress'), ('Jewellery', 'jewellery')
+values ('Sarees', 'saree'), ('Jewellery', 'jewellery')
 on conflict (slug) do nothing;
+
+-- Retire the legacy 'Dresses' top-level category if it exists.
+delete from categories where slug = 'dress' and parent_id is null;
 
 -- ── Products ─────────────────────────────────────────────────────────────────
 create table if not exists products (

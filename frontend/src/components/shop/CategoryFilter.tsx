@@ -9,7 +9,6 @@ import type { Category } from '@/types'
 
 const PRODUCT_TYPES = [
   { value: 'saree', label: 'Sarees' },
-  { value: 'dress', label: 'Dresses' },
   { value: 'jewellery', label: 'Jewellery' },
 ]
 

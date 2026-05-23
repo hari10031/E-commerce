@@ -14,8 +14,6 @@ export default function StepAIGenerate({ wizardData, update }) {
     switch (wizardData.type) {
       case 'saree':
         return `AI will generate a studio drape shot of your ${wizardData.categoryName} saree`;
-      case 'dress':
-        return `AI will create a fashion photograph of your ${wizardData.categoryName}`;
       case 'jewellery':
         return `AI will photograph your ${wizardData.categoryName} on velvet display`;
       default:

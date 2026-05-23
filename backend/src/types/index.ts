@@ -8,7 +8,7 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled'
   | 'refunded'
-export type ProductType = 'saree' | 'dress' | 'jewellery'
+export type ProductType = 'saree' | 'jewellery'
 
 export interface Profile {
   id: string

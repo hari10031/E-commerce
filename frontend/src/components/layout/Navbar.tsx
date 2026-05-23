@@ -23,7 +23,6 @@ import type { Category } from '@/types'
 
 const NAV_TYPES = [
   { slug: 'saree', label: 'Sarees' },
-  { slug: 'dress', label: 'Dresses' },
   { slug: 'jewellery', label: 'Jewellery' },
 ] as const
 

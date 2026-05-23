@@ -1,4 +1,4 @@
-export type ProductType = 'saree' | 'dress' | 'jewellery';
+export type ProductType = 'saree' | 'jewellery';
 
 export type OrderStatus =
   | 'placed'

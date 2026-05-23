@@ -19,11 +19,10 @@ interface Step3Props {
   onChange: (variants: VariantCell[]) => void;
 }
 
-// Saree has no sizes (colour-only). Dress uses clothing sizes; jewellery uses gram weights.
+// Saree has no sizes (colour-only); jewellery uses gram weights.
 export function getSizes(type: ProductType): string[] {
-  if (type === 'saree') return [];
   if (type === 'jewellery') return ['1g', '2g', '5g', '10g'];
-  return ['S', 'M', 'L', 'XL', 'XXL'];
+  return [];
 }
 
 export function Step3Variants({ productType, colors, variants, onChange }: Step3Props) {

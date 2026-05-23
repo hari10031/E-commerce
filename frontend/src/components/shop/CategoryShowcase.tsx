@@ -14,17 +14,12 @@ interface CategoryShowcaseProps {
 export function CategoryShowcase({ products, categories }: CategoryShowcaseProps) {
   // Find root categories
   const sareeRoot = useMemo(() => categories.find((c) => c.slug === 'saree'), [categories])
-  const dressRoot = useMemo(() => categories.find((c) => c.slug === 'dress'), [categories])
   const jewelleryRoot = useMemo(() => categories.find((c) => c.slug === 'jewellery'), [categories])
 
   // Get subcategories for each root
   const sareeSubs = useMemo(() => {
     return sareeRoot ? categories.filter((c) => c.parent_id === sareeRoot.id) : []
   }, [categories, sareeRoot])
-
-  const dressSubs = useMemo(() => {
-    return dressRoot ? categories.filter((c) => c.parent_id === dressRoot.id) : []
-  }, [categories, dressRoot])
 
   const jewellerySubs = useMemo(() => {
     return jewelleryRoot ? categories.filter((c) => c.parent_id === jewelleryRoot.id) : []
@@ -40,7 +35,6 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
     // High-quality fallback matching category type
     const fallbacks: Record<string, string> = {
       saree: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&auto=format&fit=crop',
-      dress: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&auto=format&fit=crop',
       jewellery: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&auto=format&fit=crop'
     }
     return fallbacks[typeKey] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop'
@@ -51,7 +45,7 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
     title: string,
     subtitle: string,
     description: string,
-    typeKey: 'saree' | 'dress' | 'jewellery',
+    typeKey: 'saree' | 'jewellery',
     subCats: Category[]
   ) {
     return (
@@ -149,16 +143,7 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
         sareeSubs
       )}
 
-      {/* 2. Dresses Section */}
-      {renderSection(
-        'Dress Collections',
-        '',
-        'Stunning silhouettes tailored with delicate hand embroidery, Gota Patti, and traditional brocades for festive elegance.',
-        'dress',
-        dressSubs
-      )}
-
-      {/* 3. Jewellery Section */}
+      {/* 2. Jewellery Section */}
       {renderSection(
         'Fine Antique & Temple Jewellery',
         'Heritage Jewellery Collection',

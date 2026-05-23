@@ -136,7 +136,6 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 const MAIN_CATS = [
   { type: 'saree', label: 'Sarees', icon: 'shirt', color: '#db2777' },
-  { type: 'dress', label: 'Dresses', icon: 'flower', color: '#7c3aed' },
   { type: 'jewellery', label: 'Jewellery', icon: 'diamond', color: '#d97706' },
 ];
 

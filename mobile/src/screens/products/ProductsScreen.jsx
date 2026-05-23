@@ -17,7 +17,6 @@ const AMBER_500 = '#f59e0b';
 
 const TYPE_CARDS = [
   { key: 'saree', label: 'Sarees', image: require('../../../assets/saree.jpg'), bgColor: '#fff1f2', textColor: '#9f1239', borderColor: '#fecdd3', icon: 'shirt-outline', iconColor: '#db2777' },
-  { key: 'dress', label: 'Dresses', image: require('../../../assets/dress.png'), bgColor: '#f5f3ff', textColor: '#5b21b6', borderColor: '#ddd6fe', icon: 'flower-outline', iconColor: '#7c3aed' },
   { key: 'jewellery', label: 'Gold & Jewellery', image: require('../../../assets/jewellery.jpg'), bgColor: '#fffbeb', textColor: '#92400e', borderColor: '#fde68a', icon: 'diamond-outline', iconColor: '#d97706' },
 ];
 
@@ -390,11 +389,9 @@ export default function ProductsScreen({ navigation, route }) {
   const typeLabel =
     selectedType === 'saree'
       ? 'sarees'
-      : selectedType === 'dress'
-        ? 'dresses'
-        : selectedType === 'jewellery'
-          ? 'jewellery items'
-          : 'items';
+      : selectedType === 'jewellery'
+        ? 'jewellery items'
+        : 'items';
 
   return (
     <View className="flex-1" style={{ backgroundColor: WARM_BG, paddingTop: insets.top }}>

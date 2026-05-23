@@ -15,16 +15,6 @@ const PHOTO_BLOCKS = {
     'Zari Work',
     'Tag/Label',
   ],
-  dress: [
-    'Complete Outfit',
-    'Top/Kurta',
-    'Bottom/Pants',
-    'Dupatta/Chunni',
-    'Embroidery Detail',
-    'Fabric Closeup',
-    'Back View',
-    'Tag/Label',
-  ],
   jewellery: [
     'Full Piece',
     'Front Detail',

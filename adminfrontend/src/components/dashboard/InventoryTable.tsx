@@ -11,7 +11,6 @@ interface InventoryTableProps {
 const TYPE_OPTIONS: Array<{ label: string; value: string }> = [
   { label: 'All', value: '' },
   { label: 'Saree', value: 'saree' },
-  { label: 'Dress', value: 'dress' },
   { label: 'Jewellery', value: 'jewellery' },
 ];
 

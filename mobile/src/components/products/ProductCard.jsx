@@ -6,7 +6,6 @@ import { PRODUCT_TYPES } from '../../constants';
 
 const PLACEHOLDER_STYLES = {
   saree: { bg: '#fce7f3', text: '#9f1239', emoji: '🥻' },
-  dress: { bg: '#ede9fe', text: '#5b21b6', emoji: '👗' },
   jewellery: { bg: '#fef3c7', text: '#92400e', emoji: '💎' },
 };
 

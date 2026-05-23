@@ -13,15 +13,6 @@ const TYPES = [
     iconColor: '#db2777',
   },
   {
-    key: 'dress',
-    label: 'Dresses',
-    emoji: '👗',
-    icon: 'flower-outline',
-    bgColor: '#f5f3ff',
-    borderColor: '#6d28d9',
-    iconColor: '#7c3aed',
-  },
-  {
     key: 'jewellery',
     label: 'Gold',
     emoji: '💎',
@@ -70,9 +61,9 @@ export default function TypeSelectorModal({ visible, onClose, onSelect }) {
 
             <Divider />
 
-            {/* Top row: Sarees + Dresses side by side */}
+            {/* Sarees + Gold side by side */}
             <View className="flex-row gap-4 mb-4">
-              {TYPES.slice(0, 2).map((t) => (
+              {TYPES.map((t) => (
                 <Pressable
                   key={t.key}
                   onPress={() => onSelect(t.key)}
@@ -90,26 +81,6 @@ export default function TypeSelectorModal({ visible, onClose, onSelect }) {
                   </Text>
                 </Pressable>
               ))}
-            </View>
-
-            {/* Bottom row: Gold centered */}
-            <View className="items-center">
-              <Pressable
-                onPress={() => onSelect(TYPES[2].key)}
-                className="rounded-2xl items-center justify-center border-2"
-                style={{
-                  width: 150,
-                  height: 140,
-                  backgroundColor: TYPES[2].bgColor,
-                  borderColor: 'transparent',
-                }}
-              >
-                <Text className="text-4xl mb-2">{TYPES[2].emoji}</Text>
-                <Ionicons name={TYPES[2].icon} size={26} color={TYPES[2].iconColor} />
-                <Text className="text-sm font-bold mt-2" style={{ color: '#1f2937' }}>
-                  {TYPES[2].label}
-                </Text>
-              </Pressable>
             </View>
 
             {/* Bottom decorative line */}

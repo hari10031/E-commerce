@@ -11,18 +11,6 @@ export const MOCK_CATEGORIES = {
     { id: 'saree-organza', name: 'Organza', slug: 'organza' },
     { id: 'saree-cotton', name: 'Cotton', slug: 'cotton' },
   ],
-  dress: [
-    { id: 'dress-anarkali', name: 'Anarkali', slug: 'anarkali' },
-    { id: 'dress-lehenga', name: 'Lehenga', slug: 'lehenga' },
-    { id: 'dress-salwar', name: 'Salwar Kameez', slug: 'salwar-kameez' },
-    { id: 'dress-kurti', name: 'Kurti', slug: 'kurti' },
-    { id: 'dress-sharara', name: 'Sharara', slug: 'sharara' },
-    { id: 'dress-gharara', name: 'Gharara', slug: 'gharara' },
-    { id: 'dress-indowestern', name: 'Indo-Western', slug: 'indo-western' },
-    { id: 'dress-palazzo', name: 'Palazzo Set', slug: 'palazzo-set' },
-    { id: 'dress-gown', name: 'Gown', slug: 'gown' },
-    { id: 'dress-croptop', name: 'Crop Top Set', slug: 'crop-top-set' },
-  ],
   jewellery: [
     { id: 'jewel-temple', name: 'Temple Jewellery', slug: 'temple-jewellery' },
     { id: 'jewel-kundan', name: 'Kundan', slug: 'kundan' },

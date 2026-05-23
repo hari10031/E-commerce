@@ -16,7 +16,7 @@ import {
   getCategories, createCategory, getProduct,
 } from '../../../lib/api';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
-import { GOLD_PURITIES, STONE_TYPES } from '../../../constants/categories';
+import { GOLD_PURITIES } from '../../../constants/categories';
 import { PRODUCT_SIZES, PRODUCT_TYPES } from '../../../constants';
 import { formatPrice, discountedPrice } from '../../../lib/utils';
 
@@ -29,7 +29,6 @@ const AMBER_500 = '#f59e0b';
 // Photo angles captured for EACH colour of a product.
 const PHOTO_BLOCKS = {
   saree: ['Saree image', 'Texture', 'Border', 'Pallu'],
-  dress: ['Complete Outfit', 'Fabric Closeup', 'Embroidery Detail', 'Back View'],
   jewellery: ['Full Piece', 'Front Detail', 'Stone Setting', 'Hallmark'],
 };
 
@@ -165,8 +164,8 @@ export default function ProductWizardScreen({ route, navigation }) {
   // Product-wide variant options
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [selectedWeights, setSelectedWeights] = useState([]);
+  const [newWeightName, setNewWeightName] = useState('');
   const [goldPurity, setGoldPurity] = useState('22K');
-  const [stoneType, setStoneType] = useState('None');
 
   const update = useCallback((partial) => setWizardData((prev) => ({ ...prev, ...partial })), []);
 
@@ -189,6 +188,17 @@ export default function ProductWizardScreen({ route, navigation }) {
   const t = wizardData.type;
   const photoBlocks = PHOTO_BLOCKS[t] || PHOTO_BLOCKS.saree;
 
+  // Jewellery products are colour-less in the storefront — the wizard still
+  // needs a grouping key for photo slots, so seed a single pseudo "Jewellery"
+  // entry into `colors`. Render code below hides the colour UI for this type.
+  const JEWELLERY_PSEUDO_COLOR = 'Jewellery';
+  useEffect(() => {
+    if (t !== 'jewellery') return;
+    if (wizardData.colors.length === 0) {
+      update({ colors: [JEWELLERY_PSEUDO_COLOR] });
+    }
+  }, [t, wizardData.colors.length, update]);
+
   const { data: editProduct, isLoading: isLoadingEdit } = useQuery({
     queryKey: ['product', productId],
     queryFn: () => getProduct(productId),
@@ -207,7 +217,12 @@ export default function ProductWizardScreen({ route, navigation }) {
       ...variants.map((v) => v.color).filter(Boolean),
       ...images.map((i) => i.color).filter(Boolean),
     ]);
-    const colors = [...colorSet];
+    let colors = [...colorSet];
+    // Jewellery products are colour-less but the wizard needs a grouping key
+    // for photo slots — fall back to the pseudo "Jewellery" entry.
+    if (editType === 'jewellery' && colors.length === 0) {
+      colors = ['Jewellery'];
+    }
 
     const stock = {};
     if (editType === 'saree') {
@@ -217,14 +232,14 @@ export default function ProductWizardScreen({ route, navigation }) {
       }
       setSelectedSizes([]);
       setSelectedWeights([]);
-    } else {
+    } else if (editType === 'jewellery') {
+      // Jewellery — keyed by weight only (no colour dimension).
       for (const v of variants) {
-        if (!v.color || !v.size) continue;
-        stock[v.color] = { ...(stock[v.color] || {}), [v.size]: Number(v.quantity) || 0 };
+        if (!v.size) continue;
+        stock[v.size] = Number(v.quantity) || 0;
       }
       const sizes = [...new Set(variants.map((v) => v.size).filter(Boolean))];
-      if (editType === 'dress') setSelectedSizes(sizes);
-      if (editType === 'jewellery') setSelectedWeights(sizes);
+      setSelectedWeights(sizes);
     }
 
     // display_order scheme: AI-generated images 0-9, uploaded originals 10-19.
@@ -345,7 +360,11 @@ export default function ProductWizardScreen({ route, navigation }) {
       }
 
       // expo-image-picker v17 (SDK 54): mediaTypes is a string array now.
-      const options = { mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [3, 4] };
+      // Jewellery uploads skip the crop dialog — admin/employee want the
+      // original frame so the AI sees full context.
+      const options = t === 'jewellery'
+        ? { mediaTypes: ['images'], quality: 0.85 }
+        : { mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [3, 4] };
       const result = source === 'camera'
         ? await ImagePicker.launchCameraAsync(options)
         : await ImagePicker.launchImageLibraryAsync(options);
@@ -562,9 +581,20 @@ export default function ProductWizardScreen({ route, navigation }) {
     // Minimum 1 piece — a saree colour in the catalogue always has at least one.
     update({ stock: { ...wizardData.stock, [color]: Math.max(1, parseInt(val) || 1) } });
   };
-  const setSubQty = (color, sub, val) => {
-    const colorStock = { ...(wizardData.stock[color] || {}), [sub]: Math.max(0, parseInt(val) || 0) };
-    update({ stock: { ...wizardData.stock, [color]: colorStock } });
+  // Jewellery stock is keyed by weight directly (no colour dimension).
+  const setJewelleryQty = (weight, val) => {
+    update({ stock: { ...wizardData.stock, [weight]: Math.max(0, parseInt(val) || 0) } });
+  };
+
+  const addWeight = (raw) => {
+    const name = (raw || '').trim();
+    if (!name) return;
+    if (selectedWeights.some((w) => w.toLowerCase() === name.toLowerCase())) {
+      Alert.alert('Already added', `"${name}" is already in the weight list.`);
+      return;
+    }
+    setSelectedWeights((prev) => [...prev, name]);
+    setNewWeightName('');
   };
 
   const buildVariants = () => {
@@ -573,18 +603,10 @@ export default function ProductWizardScreen({ route, navigation }) {
         color: c, size: '', quantity: Number(wizardData.stock[c]) || 1, sku: '',
       }));
     }
-    if (t === 'dress') {
-      return wizardData.colors.flatMap((c) =>
-        selectedSizes.map((s) => ({
-          color: c, size: s, quantity: Number(wizardData.stock[c]?.[s]) || 0, sku: '',
-        }))
-      );
-    }
-    return wizardData.colors.flatMap((c) =>
-      selectedWeights.map((w) => ({
-        color: c, size: w, quantity: Number(wizardData.stock[c]?.[w]) || 0, sku: '',
-      }))
-    );
+    // Jewellery: single variant per weight, no colour.
+    return selectedWeights.map((w) => ({
+      color: '', size: w, quantity: Number(wizardData.stock[w]) || 0, sku: '',
+    }));
   };
 
   // ─── Save ──────────────────────────────────────────────────────────────────
@@ -626,13 +648,16 @@ export default function ProductWizardScreen({ route, navigation }) {
 
       let primarySet = false;
       for (const color of wizardData.colors) {
+        // Jewellery uses the "Jewellery" pseudo colour internally; persist
+        // images without a colour so the storefront doesn't render a colour pill.
+        const persistedColor = t === 'jewellery' ? '' : color;
         // Generated images first.
         for (let idx = 0; idx < photoBlocks.length; idx++) {
           const img = imageFor(color, photoBlocks[idx]);
           if (!img?.generatedUrl) continue;
           await addProductImage(product.id, {
             url: img.generatedUrl,
-            color,
+            color: persistedColor,
             alt_text: photoBlocks[idx],
             is_primary: !primarySet,
             display_order: idx,
@@ -645,7 +670,7 @@ export default function ProductWizardScreen({ route, navigation }) {
           if (!img?.uploadedUrl) continue;
           await addProductImage(product.id, {
             url: img.uploadedUrl,
-            color,
+            color: persistedColor,
             alt_text: photoBlocks[idx],
             is_primary: !primarySet,
             display_order: 10 + idx,
@@ -813,24 +838,24 @@ export default function ProductWizardScreen({ route, navigation }) {
         </View>
       );
     }
-    const subs = t === 'dress' ? selectedSizes : selectedWeights;
-    if (subs.length === 0) {
+    // Jewellery — show one row per weight, keyed at the top level (no colour).
+    if (selectedWeights.length === 0) {
       return (
         <Text className="text-[11px] mt-2" style={{ color: '#a16207' }}>
-          Select {t === 'dress' ? 'sizes' : 'weights'} above to set stock.
+          Add weights above to set stock.
         </Text>
       );
     }
     return (
       <View className="flex-row flex-wrap gap-2 mt-2">
-        {subs.map((sub) => (
-          <View key={sub} className="items-center" style={{ width: 64 }}>
-            <Text className="text-[10px] mb-1" style={{ color: '#78350f' }}>{sub}</Text>
+        {selectedWeights.map((w) => (
+          <View key={w} className="items-center" style={{ width: 64 }}>
+            <Text className="text-[10px] mb-1" style={{ color: '#78350f' }}>{w}</Text>
             <TextInput
               className="w-full text-center rounded-lg py-1.5 text-xs font-semibold"
               style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', color: '#1f2937' }}
-              value={(wizardData.stock[color]?.[sub] ?? 0).toString()}
-              onChangeText={(v) => setSubQty(color, sub, v)}
+              value={(wizardData.stock[w] ?? 0).toString()}
+              onChangeText={(v) => setJewelleryQty(w, v)}
               keyboardType="number-pad"
               selectTextOnFocus
             />
@@ -868,24 +893,38 @@ export default function ProductWizardScreen({ route, navigation }) {
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 100 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-        {/* ─── Sizes / Weights (product-wide) ───────────────────────────── */}
-        {t === 'dress' && (
-          <SectionCard icon="resize" iconColor="#0d9488" title="Sizes" subtitle="Pick the sizes this dress comes in">
-            <View className="flex-row flex-wrap">
-              {PRODUCT_SIZES.dress.map((s) => (
-                <Chip
-                  key={s} label={s}
-                  selected={selectedSizes.includes(s)}
-                  onPress={() => setSelectedSizes((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])}
-                />
-              ))}
-            </View>
-          </SectionCard>
-        )}
+        {/* ─── Weights (product-wide) ───────────────────────────────────── */}
         {t === 'jewellery' && (
-          <SectionCard icon="diamond" iconColor="#d97706" title="Weight, Purity & Stone" subtitle="Product-wide jewellery options">
+          <SectionCard icon="diamond" iconColor="#d97706" title="Weight & Purity" subtitle="Product-wide jewellery options">
             <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Weight</Text>
-            <View className="flex-row flex-wrap mb-3">
+
+            {/* Custom weight entry — admin/employee can type any gram value */}
+            <View className="flex-row items-center gap-2 mb-2">
+              <TextInput
+                className="flex-1 rounded-xl px-3 py-2.5 text-sm"
+                style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER, color: '#1f2937' }}
+                placeholder="Custom weight (e.g. 7.5g)"
+                placeholderTextColor="#a16207"
+                value={newWeightName}
+                onChangeText={setNewWeightName}
+                onSubmitEditing={() => addWeight(newWeightName)}
+                returnKeyType="done"
+              />
+              <Pressable
+                onPress={() => addWeight(newWeightName)}
+                className="px-4 py-2.5 rounded-xl flex-row items-center"
+                style={{ backgroundColor: AMBER_500 }}
+              >
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text className="text-white text-sm font-semibold ml-1">Weight</Text>
+              </Pressable>
+            </View>
+
+            {/* Preset weight chips — tap to toggle quickly */}
+            <Text className="text-[11px] font-medium mb-1.5" style={{ color: '#a16207' }}>
+              Or tap a preset:
+            </Text>
+            <View className="flex-row flex-wrap mb-2">
               {PRODUCT_SIZES.jewellery.map((w) => (
                 <Chip
                   key={w} label={w}
@@ -894,16 +933,35 @@ export default function ProductWizardScreen({ route, navigation }) {
                 />
               ))}
             </View>
+
+            {/* Custom weights already added — show as removable chips */}
+            {selectedWeights.filter((w) => !PRODUCT_SIZES.jewellery.includes(w)).length > 0 && (
+              <>
+                <Text className="text-[11px] font-medium mb-1.5 mt-1" style={{ color: '#a16207' }}>
+                  Custom weights:
+                </Text>
+                <View className="flex-row flex-wrap mb-3">
+                  {selectedWeights
+                    .filter((w) => !PRODUCT_SIZES.jewellery.includes(w))
+                    .map((w) => (
+                      <Pressable
+                        key={w}
+                        onPress={() => setSelectedWeights((prev) => prev.filter((x) => x !== w))}
+                        className="flex-row items-center px-3 py-2 rounded-full mr-2 mb-2"
+                        style={{ backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b' }}
+                      >
+                        <Text className="text-xs font-semibold" style={{ color: '#92400e' }}>{w}</Text>
+                        <Ionicons name="close-circle" size={14} color="#d97706" style={{ marginLeft: 4 }} />
+                      </Pressable>
+                    ))}
+                </View>
+              </>
+            )}
+
             <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Purity</Text>
-            <View className="flex-row flex-wrap mb-3">
+            <View className="flex-row flex-wrap">
               {GOLD_PURITIES.map((p) => (
                 <Chip key={p} label={p} selected={goldPurity === p} onPress={() => setGoldPurity(p)} />
-              ))}
-            </View>
-            <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Stone</Text>
-            <View className="flex-row flex-wrap">
-              {STONE_TYPES.map((st) => (
-                <Chip key={st} label={st} selected={stoneType === st} onPress={() => setStoneType(st)} />
               ))}
             </View>
           </SectionCard>
@@ -911,81 +969,89 @@ export default function ProductWizardScreen({ route, navigation }) {
 
         {/* ─── Colours & Photos ─────────────────────────────────────────── */}
         <SectionCard
-          icon="color-palette"
+          icon={t === 'jewellery' ? 'images' : 'color-palette'}
           iconColor="#db2777"
-          title="Colours & Photos"
-          subtitle={`${wizardData.colors.length} colours · ${totalPhotos} photos`}
+          title={t === 'jewellery' ? 'Photos' : 'Colours & Photos'}
+          subtitle={t === 'jewellery'
+            ? `${totalPhotos} photos`
+            : `${wizardData.colors.length} colours · ${totalPhotos} photos`}
         >
           <Text className="text-xs mb-3" style={{ color: '#a16207' }}>
-            Add every colour this design comes in. For each colour upload its photos, then tap a
-            photo → ✨ Generate AI Image for a clean studio shot.
+            {t === 'jewellery'
+              ? 'Upload the photos for this piece, then tap a photo → ✨ Generate AI Image for a clean studio shot.'
+              : 'Add every colour this design comes in. For each colour upload its photos, then tap a photo → ✨ Generate AI Image for a clean studio shot.'}
           </Text>
 
-          {/* Add colour */}
-          <View className="flex-row items-center gap-2 mb-3">
-            <TextInput
-              className="flex-1 rounded-xl px-3 py-2.5 text-sm"
-              style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER, color: '#1f2937' }}
-              placeholder="Colour name (e.g. Green)"
-              placeholderTextColor="#a16207"
-              value={newColorName}
-              onChangeText={setNewColorName}
-              onSubmitEditing={addColor}
-              returnKeyType="done"
-            />
-            <Pressable onPress={addColor} className="px-4 py-2.5 rounded-xl flex-row items-center" style={{ backgroundColor: AMBER_500 }}>
-              <Ionicons name="add" size={16} color="#fff" />
-              <Text className="text-white text-sm font-semibold ml-1">Colour</Text>
-            </Pressable>
-          </View>
-
-          {/* Colour palette — tap a swatch to add it with the correct shade */}
-          <Text className="text-[11px] font-medium mb-1.5" style={{ color: '#a16207' }}>
-            Or tap a colour:
-          </Text>
-          <View className="flex-row flex-wrap mb-3">
-            {COLOR_PALETTE.map((c) => {
-              const picked = wizardData.colors.some((x) => x.toLowerCase() === c.name.toLowerCase());
-              return (
-                <Pressable
-                  key={c.name}
-                  onPress={() => addColorNamed(c.name)}
-                  disabled={picked}
-                  className="items-center mr-2.5 mb-2.5"
-                  style={{ width: 46, opacity: picked ? 0.4 : 1 }}
-                >
-                  <View
-                    className="rounded-full items-center justify-center"
-                    style={{ width: 32, height: 32, backgroundColor: c.hex, borderWidth: 1, borderColor: '#d1d5db' }}
-                  >
-                    {picked && <Ionicons name="checkmark" size={16} color="#ffffff" />}
-                  </View>
-                  <Text className="text-[8px] mt-0.5 text-center" style={{ color: '#78350f' }} numberOfLines={1}>
-                    {c.name}
-                  </Text>
+          {/* Add colour — sarees only (jewellery is colour-less) */}
+          {t !== 'jewellery' && (
+            <>
+              <View className="flex-row items-center gap-2 mb-3">
+                <TextInput
+                  className="flex-1 rounded-xl px-3 py-2.5 text-sm"
+                  style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER, color: '#1f2937' }}
+                  placeholder="Colour name (e.g. Green)"
+                  placeholderTextColor="#a16207"
+                  value={newColorName}
+                  onChangeText={setNewColorName}
+                  onSubmitEditing={addColor}
+                  returnKeyType="done"
+                />
+                <Pressable onPress={addColor} className="px-4 py-2.5 rounded-xl flex-row items-center" style={{ backgroundColor: AMBER_500 }}>
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text className="text-white text-sm font-semibold ml-1">Colour</Text>
                 </Pressable>
-              );
-            })}
-          </View>
+              </View>
 
-          {wizardData.colors.length === 0 && (
-            <View className="rounded-xl p-5 items-center" style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderStyle: 'dashed', borderColor: '#fde8d0' }}>
-              <Ionicons name="color-palette-outline" size={28} color="#d4a017" />
-              <Text className="text-xs mt-2 text-center" style={{ color: '#92400e' }}>
-                No colours yet. Add one above to start uploading photos.
+              <Text className="text-[11px] font-medium mb-1.5" style={{ color: '#a16207' }}>
+                Or tap a colour:
               </Text>
-            </View>
+              <View className="flex-row flex-wrap mb-3">
+                {COLOR_PALETTE.map((c) => {
+                  const picked = wizardData.colors.some((x) => x.toLowerCase() === c.name.toLowerCase());
+                  return (
+                    <Pressable
+                      key={c.name}
+                      onPress={() => addColorNamed(c.name)}
+                      disabled={picked}
+                      className="items-center mr-2.5 mb-2.5"
+                      style={{ width: 46, opacity: picked ? 0.4 : 1 }}
+                    >
+                      <View
+                        className="rounded-full items-center justify-center"
+                        style={{ width: 32, height: 32, backgroundColor: c.hex, borderWidth: 1, borderColor: '#d1d5db' }}
+                      >
+                        {picked && <Ionicons name="checkmark" size={16} color="#ffffff" />}
+                      </View>
+                      <Text className="text-[8px] mt-0.5 text-center" style={{ color: '#78350f' }} numberOfLines={1}>
+                        {c.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {wizardData.colors.length === 0 && (
+                <View className="rounded-xl p-5 items-center" style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderStyle: 'dashed', borderColor: '#fde8d0' }}>
+                  <Ionicons name="color-palette-outline" size={28} color="#d4a017" />
+                  <Text className="text-xs mt-2 text-center" style={{ color: '#92400e' }}>
+                    No colours yet. Add one above to start uploading photos.
+                  </Text>
+                </View>
+              )}
+            </>
           )}
 
           {wizardData.colors.map((color) => (
             <View key={color} className="rounded-xl mb-3 p-3" style={{ backgroundColor: '#fffdf9', borderWidth: 1, borderColor: SECTION_BORDER }}>
-              <View className="flex-row items-center mb-2">
-                <View className="w-5 h-5 rounded-full mr-2" style={{ backgroundColor: colorHex(color), borderWidth: 1, borderColor: '#e5e7eb' }} />
-                <Text className="flex-1 text-sm font-bold" style={{ color: '#78350f' }}>{color}</Text>
-                <Pressable onPress={() => removeColor(color)} hitSlop={8} className="px-2 py-1">
-                  <Ionicons name="trash-outline" size={16} color="#dc2626" />
-                </Pressable>
-              </View>
+              {t !== 'jewellery' && (
+                <View className="flex-row items-center mb-2">
+                  <View className="w-5 h-5 rounded-full mr-2" style={{ backgroundColor: colorHex(color), borderWidth: 1, borderColor: '#e5e7eb' }} />
+                  <Text className="flex-1 text-sm font-bold" style={{ color: '#78350f' }}>{color}</Text>
+                  <Pressable onPress={() => removeColor(color)} hitSlop={8} className="px-2 py-1">
+                    <Ionicons name="trash-outline" size={16} color="#dc2626" />
+                  </Pressable>
+                </View>
+              )}
               {renderColorPhotos(color)}
 
               {/* Per-colour AI generation */}
@@ -999,14 +1065,14 @@ export default function ProductWizardScreen({ route, navigation }) {
                   <>
                     <ActivityIndicator size="small" color="#7c3aed" />
                     <Text className="text-xs font-semibold ml-2" style={{ color: '#6d28d9' }}>
-                      Generating {color} images…
+                      Generating {t === 'jewellery' ? 'images' : `${color} images`}…
                     </Text>
                   </>
                 ) : (
                   <>
                     <Ionicons name="sparkles" size={14} color="#7c3aed" />
                     <Text className="text-xs font-semibold ml-2" style={{ color: '#6d28d9' }}>
-                      ✨ Generate AI Image — {color}
+                      {t === 'jewellery' ? '✨ Generate AI Image' : `✨ Generate AI Image — ${color}`}
                     </Text>
                   </>
                 )}

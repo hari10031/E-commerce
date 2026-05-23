@@ -10,7 +10,6 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Category IDs from the database inspection:
 const SAREE_ROOT_ID = 'ad203466-5991-4ceb-b1d4-ad1de4613387'
-const DRESS_ROOT_ID = 'e199c9b6-59f5-4bad-b3a2-9e4c4f4a221c'
 const JEWELLERY_ROOT_ID = '4dd49120-3d90-4f8c-9c80-8468e9b2380b'
 
 const SUB_CATEGORIES = [
@@ -19,11 +18,6 @@ const SUB_CATEGORIES = [
   { name: 'Banarasi Brocade', slug: 'banarasi', parent_id: SAREE_ROOT_ID },
   { name: 'Chanderi Cotton', slug: 'chanderi', parent_id: SAREE_ROOT_ID },
   { name: 'Organza Premium', slug: 'organza', parent_id: SAREE_ROOT_ID },
-  // Dresses
-  { name: 'Anarkali Suits', slug: 'anarkali', parent_id: DRESS_ROOT_ID },
-  { name: 'Salwar Kameez', slug: 'salwar', parent_id: DRESS_ROOT_ID },
-  { name: 'Designer Lehengas', slug: 'lehenga', parent_id: DRESS_ROOT_ID },
-  { name: 'Georgette Gowns', slug: 'gown', parent_id: DRESS_ROOT_ID },
   // Jewellery
   { name: 'Temple Necklaces', slug: 'temple-neck', parent_id: JEWELLERY_ROOT_ID },
   { name: 'Antique Chokers', slug: 'choker', parent_id: JEWELLERY_ROOT_ID },
@@ -72,52 +66,6 @@ const PRODUCTS = [
     discount_pct: 20,
     colors: ['Peach Pink', 'Rosewater'],
     image_url: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=800&auto=format&fit=crop',
-  },
-
-  // Dresses
-  {
-    title: 'Ivory Anarkali Suit with Gota Patti',
-    description: 'This ivory georgette Anarkali suit features a 24-kali flare, complete with delicate hand-done Gota Patti embroidery on the yoke and border, paired with an organza dupatta.',
-    type: 'dress',
-    sub_category_slug: 'anarkali',
-    base_price: 8500,
-    discount_pct: 10,
-    colors: ['Ivory White', 'Off-White'],
-    sizes: ['S', 'M', 'L', 'XL'],
-    image_url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&auto=format&fit=crop',
-  },
-  {
-    title: 'Emerald Green Festive Silk Salwar Suit',
-    description: 'A rich Chanderi silk salwar kameez set in emerald green, detailed with fine Zardozi embroidery on the collar and sleeves, matching slim trousers and silk dupatta.',
-    type: 'dress',
-    sub_category_slug: 'salwar',
-    base_price: 5900,
-    discount_pct: 0,
-    colors: ['Emerald Green', 'Forest Green'],
-    sizes: ['M', 'L', 'XL'],
-    image_url: 'https://images.unsplash.com/photo-1610030470228-a3f1245a4980?w=800&auto=format&fit=crop',
-  },
-  {
-    title: 'Royal Pink Banarasi Lehenga Choli',
-    description: 'A breathtaking designer lehenga in hot pink, tailored from authentic Banarasi silk brocade, featuring a matching blouse and mint-green sheer dupatta.',
-    type: 'dress',
-    sub_category_slug: 'lehenga',
-    base_price: 18500,
-    discount_pct: 15,
-    colors: ['Hot Pink', 'Ruby Rose'],
-    sizes: ['S', 'M', 'L'],
-    image_url: 'https://images.unsplash.com/photo-1631857455684-a54a2f03665f?w=800&auto=format&fit=crop',
-  },
-  {
-    title: 'Wine Red Georgette Evening Gown',
-    description: 'An elegant floor-length georgette gown in deep wine red, featuring a pleated bodice, hand-embroidered waist belt, and sheer bell sleeves.',
-    type: 'dress',
-    sub_category_slug: 'gown',
-    base_price: 7200,
-    discount_pct: 25,
-    colors: ['Wine Red', 'Plum'],
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    image_url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&auto=format&fit=crop',
   },
 
   // Jewellery

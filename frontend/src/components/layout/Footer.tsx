@@ -4,7 +4,6 @@ import { Mail, Phone, MapPin, Truck, ShieldCheck, RotateCcw } from 'lucide-react
 
 const SHOP_LINKS = [
   { href: '/products?type=saree', label: 'Sarees' },
-  { href: '/products?type=dress', label: 'Dresses' },
   { href: '/products?type=jewellery', label: 'Jewellery' },
   { href: '/products', label: 'All Collections' },
 ]

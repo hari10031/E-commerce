@@ -18,7 +18,6 @@ import { cn } from '@/lib/utils';
 const TYPE_FILTERS: Array<{ label: string; value: string }> = [
   { label: 'All', value: '' },
   { label: 'Saree', value: 'saree' },
-  { label: 'Dress', value: 'dress' },
   { label: 'Jewellery', value: 'jewellery' },
 ];
 

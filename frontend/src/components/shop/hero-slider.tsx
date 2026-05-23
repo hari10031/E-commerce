@@ -31,15 +31,6 @@ const SLIDES = [
     accent: 'border-brand-accent/30 text-[var(--color-gold)] bg-white/5',
   },
   {
-    title: 'Designer Lehengas & Gowns',
-    subtitle: 'Contemporary Ethnic Wear',
-    description: 'Captivating silhouettes, hand-embroidery, and flowy fabrics. Designed to make every occasion memorable and elegant.',
-    cta: 'View Dresses',
-    href: '/products?type=dress',
-    image: fabric1,
-    accent: 'border-brand-accent/30 text-[var(--color-gold)] bg-white/5',
-  },
-  {
     title: 'Temple Jewellery',
     subtitle: '22k Gold Antique Masterpieces',
     description: 'Exquisite craftsmanship inspired by divine motifs. Hand-carved necklaces, jhumkas, and bangles designed to be passed down generations.',

@@ -1,4 +1,4 @@
-export type ProductType = 'saree' | 'dress' | 'jewellery'
+export type ProductType = 'saree' | 'jewellery'
 export type OrderStatus =
   | 'placed'
   | 'confirmed'
@@ -13,6 +13,7 @@ export interface ProductImage {
   is_primary: boolean
   color?: string
   alt_text?: string
+  display_order?: number
 }
 
 export interface Variant {

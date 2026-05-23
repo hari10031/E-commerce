@@ -15,17 +15,14 @@ export const VALID_ORDER_TRANSITIONS = {
   refunded: [],
 };
 
-// Saree has no sizes (colour variants only). Dress uses clothing sizes.
-// Jewellery uses gram weights.
+// Saree has no sizes (colour variants only). Jewellery uses gram weights.
 export const PRODUCT_SIZES = {
   saree: [],
-  dress: ['S', 'M', 'L', 'XL', 'XXL'],
   jewellery: ['1g', '2g', '5g', '10g', '20g', '50g'],
 };
 
 export const PRODUCT_TYPES = [
   { value: 'saree', label: 'Saree', emoji: '🥻', color: 'bg-pink-100 text-pink-700' },
-  { value: 'dress', label: 'Dress', emoji: '👗', color: 'bg-violet-100 text-violet-700' },
   { value: 'jewellery', label: 'Jewellery', emoji: '💎', color: 'bg-amber-100 text-amber-700' },
 ];
 

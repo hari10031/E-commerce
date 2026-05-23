@@ -63,7 +63,6 @@ export default function StepVariants({ wizardData, update }) {
   const type = wizardData.type;
 
   if (type === 'jewellery') return <GoldMode wizardData={wizardData} update={update} />;
-  if (type === 'dress') return <DressMode wizardData={wizardData} update={update} />;
   return <SareeMode wizardData={wizardData} update={update} />;
 }
 

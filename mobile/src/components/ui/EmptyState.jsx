@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const THEMED_MESSAGES = {
   saree: { icon: 'shirt-outline', msg: 'No sarees in this collection yet' },
-  dress: { icon: 'flower-outline', msg: 'No dresses added to this collection' },
   jewellery: { icon: 'diamond-outline', msg: 'No jewellery pieces here yet' },
   orders: { icon: 'receipt-outline', msg: 'No orders today \u2014 time for chai!' },
   team: { icon: 'people-outline', msg: 'Your team is growing\u2026' },

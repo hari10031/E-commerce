@@ -23,7 +23,6 @@ interface Step1Props {
 
 const PRODUCT_TYPES: Array<{ value: ProductType; label: string; emoji: string }> = [
   { value: 'saree', label: 'Saree', emoji: '🥻' },
-  { value: 'dress', label: 'Dress', emoji: '👗' },
   { value: 'jewellery', label: 'Jewellery', emoji: '💎' },
 ];
 
@@ -70,7 +69,7 @@ export function Step1TypeCategory({ data, onChange }: Step1Props) {
       {/* Product Type */}
       <div>
         <Label className="text-base font-semibold mb-3 block">Product Type</Label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {PRODUCT_TYPES.map((pt) => (
             <button
               key={pt.value}

@@ -19,23 +19,19 @@ graph LR
 
     subgraph "Data + external"
         SB[("Supabase<br/>Postgres / Auth / Storage")]
-        RD[("Redis")]
         RZP["Razorpay"]
         GEM["Gemini"]
-        TW["Twilio"]
-        EXP["Expo Push"]
     end
 
     FE & AF & MOB --> MW --> RT --> CTRL
     CTRL --> SVC
     CTRL --> SB
-    CTRL --> RD
     SVC --> SB
     SVC --> GEM
-    SVC --> TW
-    SVC --> EXP
     CTRL --> RZP
 ```
+
+
 
 ## 2. Backend structure (`backend/src`)
 

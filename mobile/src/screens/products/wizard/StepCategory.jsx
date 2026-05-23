@@ -5,7 +5,6 @@ import { MOCK_CATEGORIES } from '../../../constants/categories';
 
 const SUBTITLES = {
   saree: 'Select the type of saree',
-  dress: 'Select the type of dress',
   jewellery: 'Select the type of jewellery',
 };
 

@@ -15,7 +15,7 @@ import { PRODUCT_TYPES } from '../../constants';
 import useAuthStore from '../../store/authStore';
 import * as Haptics from 'expo-haptics';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const IMAGE_HEIGHT = 320;
 
 const COLOR_MAP = {
@@ -680,40 +680,42 @@ export default function ProductDetailScreen({ route, navigation }) {
       {/* Full-screen image zoom — works on iOS, Android and web */}
       <Modal
         visible={!!zoomUrl}
-        transparent
+        transparent={false}
         animationType="fade"
         onRequestClose={closeZoom}
+        statusBarTranslucent
       >
-        <View className="flex-1" style={{ backgroundColor: '#000' }}>
-          {/* Vertical pan ScrollView; nested horizontal for side pan when zoomed.
-              maximumZoomScale also enables native pinch on iOS. */}
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          {/* Single pinch-zoom ScrollView. maximumZoomScale enables native iOS
+              pinch; on Android pinch is no-op but the +/− buttons drive
+              `zoomScale` via a transform so the image still zooms. */}
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
             maximumZoomScale={4}
             minimumZoomScale={1}
             bouncesZoom
             centerContent
             showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
           >
-            <ScrollView
-              horizontal
-              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
-              showsHorizontalScrollIndicator={false}
-            >
-              {zoomUrl ? (
-                <Pressable onPress={handleZoomTap}>
-                  <Image
-                    source={{ uri: zoomUrl }}
-                    style={{
-                      width: SCREEN_WIDTH * zoomScale,
-                      height: SCREEN_WIDTH * 1.3 * zoomScale,
-                    }}
-                    resizeMode="contain"
-                  />
-                </Pressable>
-              ) : null}
-            </ScrollView>
+            {zoomUrl ? (
+              <Pressable onPress={handleZoomTap} accessibilityRole="imagebutton">
+                <Image
+                  source={{ uri: zoomUrl }}
+                  style={{
+                    width: SCREEN_WIDTH,
+                    height: SCREEN_HEIGHT,
+                    transform: [{ scale: zoomScale }],
+                  }}
+                  resizeMode="contain"
+                />
+              </Pressable>
+            ) : null}
           </ScrollView>
 
           <Pressable
@@ -728,6 +730,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           <View
             style={{ position: 'absolute', bottom: insets.bottom + 20, left: 0, right: 0 }}
             className="items-center"
+            pointerEvents="box-none"
           >
             <Text className="text-white/50 text-xs mb-2">Double-tap image or use − / + to zoom</Text>
             <View className="flex-row justify-center items-center">

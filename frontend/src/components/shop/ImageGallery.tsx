@@ -33,7 +33,13 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
   })
 
   const shown = activeColor ? images.filter((i) => i.color === activeColor) : images
-  const sorted = [...shown].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
+  // Order: AI-generated images (display_order 0-9) first, then uploaded
+  // originals (10-19). is_primary breaks ties so an admin-pinned shot leads.
+  const sorted = [...shown].sort((a, b) => {
+    const primaryDiff = (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0)
+    if (primaryDiff !== 0) return primaryDiff
+    return (Number(a.display_order) || 0) - (Number(b.display_order) || 0)
+  })
   const activeImage = sorted[activeIndex] ?? sorted[0]
 
   function selectColor(c: string) {

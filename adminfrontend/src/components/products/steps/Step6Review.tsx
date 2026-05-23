@@ -55,12 +55,16 @@ export function Step6Review({ data, editId }: Step6Props) {
         }
       }
 
-      // Post images
-      for (const img of data.images) {
+      // Post images. display_order 0-9 = AI-generated, 10-19 = uploaded
+      // originals. Storefront sorts ascending so generated shots lead.
+      for (let i = 0; i < data.images.length; i++) {
+        const img = data.images[i];
+        const base = img.aiGenerated ? 0 : 10;
         await api.post('/api/products/' + productId + '/images', {
           color: img.color,
           url: img.imageUrl,
-          is_primary: data.images.indexOf(img) === 0,
+          is_primary: i === 0,
+          display_order: base + i,
         }, token);
       }
 
