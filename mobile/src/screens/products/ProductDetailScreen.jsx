@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, Image, Pressable, Alert, ActivityIndicator, Modal,
-  FlatList, Dimensions, Platform, TextInput,
+  FlatList, Dimensions, Platform, TextInput, PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -40,6 +40,8 @@ export default function ProductDetailScreen({ route, navigation }) {
   const viewMode = useAuthStore((s) => s.viewMode);
   const galleryRef = useRef(null);
   const lastTapRef = useRef(0);
+  const pinchStartDistanceRef = useRef(null);
+  const pinchStartScaleRef = useRef(1);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [sellVariant, setSellVariant] = useState(null);
   const [sellQty, setSellQty] = useState(1);
@@ -195,6 +197,42 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
     lastTapRef.current = now;
   };
+
+  const pinchDistance = (touches) => {
+    if (!touches || touches.length < 2) return null;
+    const [first, second] = touches;
+    const dx = first.pageX - second.pageX;
+    const dy = first.pageY - second.pageY;
+    return Math.sqrt((dx * dx) + (dy * dy));
+  };
+
+  const zoomPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponderCapture: (evt) => evt.nativeEvent.touches.length === 2,
+      onMoveShouldSetPanResponderCapture: (evt) => evt.nativeEvent.touches.length === 2,
+      onPanResponderGrant: (evt) => {
+        if (evt.nativeEvent.touches.length !== 2) return;
+        const distance = pinchDistance(evt.nativeEvent.touches);
+        if (!distance) return;
+        pinchStartDistanceRef.current = distance;
+        pinchStartScaleRef.current = zoomScale;
+      },
+      onPanResponderMove: (evt) => {
+        if (evt.nativeEvent.touches.length !== 2) return;
+        const distance = pinchDistance(evt.nativeEvent.touches);
+        const startDistance = pinchStartDistanceRef.current;
+        if (!distance || !startDistance) return;
+        const next = pinchStartScaleRef.current * (distance / startDistance);
+        setZoomScale(Math.max(1, Math.min(4, Number(next.toFixed(3)))));
+      },
+      onPanResponderRelease: () => {
+        pinchStartDistanceRef.current = null;
+      },
+      onPanResponderTerminate: () => {
+        pinchStartDistanceRef.current = null;
+      },
+    })
+  ).current;
 
   if (isLoading) return <LoadingSpinner message="Loading product…" />;
   if (!product) return null;
@@ -686,22 +724,13 @@ export default function ProductDetailScreen({ route, navigation }) {
         statusBarTranslucent
       >
         <View style={{ flex: 1, backgroundColor: '#000' }}>
-          {/* Single pinch-zoom ScrollView. maximumZoomScale enables native iOS
-              pinch; on Android pinch is no-op but the +/− buttons drive
-              `zoomScale` via a transform so the image still zooms. */}
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{
-              flexGrow: 1,
+          <View
+            style={{
+              flex: 1,
               justifyContent: 'center',
               alignItems: 'center',
             }}
-            maximumZoomScale={4}
-            minimumZoomScale={1}
-            bouncesZoom
-            centerContent
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
+            {...zoomPanResponder.panHandlers}
           >
             {zoomUrl ? (
               <Pressable onPress={handleZoomTap} accessibilityRole="imagebutton">
@@ -716,7 +745,7 @@ export default function ProductDetailScreen({ route, navigation }) {
                 />
               </Pressable>
             ) : null}
-          </ScrollView>
+          </View>
 
           <Pressable
             onPress={closeZoom}
