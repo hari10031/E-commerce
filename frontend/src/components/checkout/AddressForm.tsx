@@ -130,7 +130,7 @@ export function AddressForm({ onSubmit, savedAddresses = [], defaultValues, isLo
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               City <span className="text-red-500">*</span>
@@ -156,7 +156,7 @@ export function AddressForm({ onSubmit, savedAddresses = [], defaultValues, isLo
           </div>
         </div>
 
-        <div className="w-1/2">
+        <div className="w-full sm:w-1/2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Pincode <span className="text-red-500">*</span>
           </label>

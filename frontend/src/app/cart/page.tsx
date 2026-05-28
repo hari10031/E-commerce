@@ -109,15 +109,18 @@ export default function CartPage() {
   const itemCount = items.reduce((s, i) => s + i.quantity, 0)
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="mb-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe">
+      <div className="mb-6 sm:mb-8">
         <p className="eyebrow">Shopping Bag</p>
-        <h1 className="text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
-          Your Bag <span className="text-neutral-400 text-xl font-sans font-normal">· {itemCount} items</span>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
+          Your Bag{' '}
+          <span className="text-neutral-400 text-base sm:text-xl font-sans font-normal block sm:inline mt-0.5 sm:mt-0">
+            · {itemCount} items
+          </span>
         </h1>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Items list */}
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => {
@@ -125,14 +128,21 @@ export default function CartPage() {
             const price = discountedPrice(item.product.base_price, item.product.discount_pct)
 
             return (
-              <div key={item.id} className="flex gap-4 sm:gap-5 bg-white border border-neutral-200/70 rounded-2xl p-4 sm:p-5">
+              <div key={item.id} className="flex gap-3 sm:gap-5 bg-white border border-neutral-200/70 rounded-2xl p-3 sm:p-5">
                 {/* Image */}
                 <Link
                   href={`/products/${item.product_id}`}
-                  className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-xl overflow-hidden bg-neutral-50 shrink-0"
+                  className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-xl overflow-hidden bg-neutral-50 shrink-0"
                 >
                   {primaryImage ? (
-                    <Image src={primaryImage.url} alt={item.product.title} fill className="object-contain" />
+                    <Image
+                      src={primaryImage.url}
+                      alt={item.product.title}
+                      fill
+                      className="object-contain"
+                      sizes="128px"
+                      quality={90}
+                    />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-2xl opacity-40">🌸</div>
                   )}
@@ -161,12 +171,12 @@ export default function CartPage() {
                     </button>
                   </div>
 
-                  <div className="flex items-end justify-between mt-auto pt-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-between gap-3 mt-auto pt-3">
                     <QuantityPicker
                       value={item.quantity}
                       onChange={(q) => handleQuantityChange(item.id, q)}
                     />
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
                       <p className="text-[15px] font-bold text-ink">{formatPrice(price * item.quantity)}</p>
                       <p className="text-xs text-neutral-400">{formatPrice(price)} each</p>
                     </div>
@@ -179,7 +189,7 @@ export default function CartPage() {
 
         {/* Order summary */}
         <div className="lg:col-span-1">
-          <div className="bg-white border border-neutral-200/70 rounded-2xl p-6 sticky top-28 space-y-5">
+            <div className="bg-white border border-neutral-200/70 rounded-2xl p-5 sm:p-6 lg:sticky lg:top-28 space-y-5">
             <h2 className="text-base font-semibold text-ink font-[var(--font-display)]">Order Summary</h2>
 
             {/* Coupon */}

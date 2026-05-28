@@ -90,25 +90,25 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="text-center mb-9">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe">
+      <div className="text-center mb-6 sm:mb-9">
         <p className="eyebrow">Secure Checkout</p>
-        <h1 className="text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
           Complete Your Order
         </h1>
       </div>
 
       {/* Step indicator */}
-      <div className="flex items-center justify-center mb-10 max-w-lg mx-auto">
+      <div className="flex items-center justify-center mb-6 sm:mb-10 max-w-md sm:max-w-lg mx-auto px-1">
         {STEPS.map((s, idx) => {
           const Icon = s.icon
           const isActive = step === s.n
           const isDone = step > s.n
           return (
             <React.Fragment key={s.n}>
-              <div className="flex flex-col items-center gap-1.5">
+              <div className="flex flex-col items-center gap-1 sm:gap-1.5 shrink-0">
                 <div
-                  className={`h-11 w-11 rounded-full flex items-center justify-center transition-colors ${
+                  className={`h-9 w-9 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-colors ${
                     isActive
                       ? 'bg-ink text-white'
                       : isDone
@@ -118,24 +118,71 @@ export default function CheckoutPage() {
                 >
                   {isDone ? <CheckCircle className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                 </div>
-                <span className={`text-xs font-medium ${isActive || isDone ? 'text-ink' : 'text-neutral-400'}`}>
+                <span className={`text-[10px] sm:text-xs font-medium hidden sm:block ${isActive || isDone ? 'text-ink' : 'text-neutral-400'}`}>
                   {s.label}
                 </span>
               </div>
               {idx < STEPS.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-3 mb-5 rounded-full ${step > s.n ? 'bg-brand-accent' : 'bg-neutral-200'}`} />
+                <div className={`flex-1 min-w-2 h-0.5 mx-1.5 sm:mx-3 mb-4 sm:mb-5 rounded-full ${step > s.n ? 'bg-brand-accent' : 'bg-neutral-200'}`} />
               )}
             </React.Fragment>
           )
         })}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+        {/* Order summary first on mobile for context */}
+        {step !== 3 && (
+          <div className="lg:col-span-1 order-1 lg:order-2">
+            <div className="bg-white rounded-2xl border border-neutral-200/70 p-5 sm:p-6 lg:sticky lg:top-28">
+              <h2 className="text-sm font-semibold text-ink mb-4 flex items-center gap-2 flex-wrap">
+                <Package className="h-4 w-4 text-brand shrink-0" />
+                Order Summary
+                <span className="text-neutral-400 font-normal">· {items.length} items</span>
+              </h2>
+              <div className="space-y-3 text-sm">
+                {items.map((item) => {
+                  const price = discountedPrice(item.product.base_price, item.product.discount_pct)
+                  return (
+                    <div key={item.id} className="flex justify-between gap-2">
+                      <span className="text-neutral-500 truncate flex-1 min-w-0">
+                        {item.product.title}
+                        <span className="text-neutral-400"> ×{item.quantity}</span>
+                      </span>
+                      <span className="font-medium text-ink shrink-0">{formatPrice(price * item.quantity)}</span>
+                    </div>
+                  )
+                })}
+                <div className="h-px bg-neutral-100" />
+                <div className="flex justify-between text-neutral-500">
+                  <span>Subtotal</span>
+                  <span className="text-ink font-medium">{formatPrice(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-neutral-500">
+                  <span>Shipping</span>
+                  <span>{shipping === 0 ? <span className="text-brand-accent font-medium">Free</span> : <span className="text-ink font-medium">{formatPrice(shipping)}</span>}</span>
+                </div>
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-brand-accent">
+                    <span>Coupon{coupon ? ` · ${coupon}` : ''}</span>
+                    <span>−{formatPrice(couponDiscount)}</span>
+                  </div>
+                )}
+                <div className="h-px bg-neutral-100" />
+                <div className="flex justify-between items-baseline">
+                  <span className="font-semibold text-ink">Total</span>
+                  <span className="text-lg font-bold text-ink">{formatPrice(total)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main content */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 order-2 lg:order-1 min-w-0">
           {step === 1 && (
-            <div className="bg-white rounded-2xl border border-neutral-200/70 p-6 sm:p-7 animate-fade-up">
-              <h2 className="text-lg font-semibold text-ink font-[var(--font-display)] mb-6 flex items-center gap-2">
+            <div className="bg-white rounded-2xl border border-neutral-200/70 p-4 sm:p-6 lg:p-7 animate-fade-up">
+              <h2 className="text-base sm:text-lg font-semibold text-ink font-[var(--font-display)] mb-5 sm:mb-6 flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-brand" />
                 Delivery Address
               </h2>
@@ -148,9 +195,9 @@ export default function CheckoutPage() {
           )}
 
           {step === 2 && address && (
-            <div className="bg-white rounded-2xl border border-neutral-200/70 p-6 sm:p-7 animate-fade-up">
-              <h2 className="text-lg font-semibold text-ink font-[var(--font-display)] mb-5 flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-brand" />
+            <div className="bg-white rounded-2xl border border-neutral-200/70 p-4 sm:p-6 lg:p-7 animate-fade-up">
+              <h2 className="text-base sm:text-lg font-semibold text-ink font-[var(--font-display)] mb-5 flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-brand shrink-0" />
                 Payment
               </h2>
 
@@ -183,7 +230,7 @@ export default function CheckoutPage() {
           )}
 
           {step === 3 && (
-            <div className="bg-white rounded-2xl border border-neutral-200/70 p-10 text-center animate-scale-in">
+            <div className="bg-white rounded-2xl border border-neutral-200/70 p-6 sm:p-10 text-center animate-scale-in">
               <div className="h-20 w-20 rounded-full bg-brand-accent/15 flex items-center justify-center mx-auto mb-5">
                 <CheckCircle className="h-10 w-10 text-brand-accent" />
               </div>
@@ -218,53 +265,6 @@ export default function CheckoutPage() {
             </div>
           )}
         </div>
-
-        {/* Order summary sidebar */}
-        {step !== 3 && (
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl border border-neutral-200/70 p-6 sticky top-28">
-              <h2 className="text-sm font-semibold text-ink mb-4 flex items-center gap-2">
-                <Package className="h-4 w-4 text-brand" />
-                Order Summary
-                <span className="text-neutral-400 font-normal">· {items.length} items</span>
-              </h2>
-              <div className="space-y-3 text-sm">
-                {items.map((item) => {
-                  const price = discountedPrice(item.product.base_price, item.product.discount_pct)
-                  return (
-                    <div key={item.id} className="flex justify-between gap-2">
-                      <span className="text-neutral-500 truncate flex-1">
-                        {item.product.title}
-                        <span className="text-neutral-400"> ×{item.quantity}</span>
-                      </span>
-                      <span className="font-medium text-ink shrink-0">{formatPrice(price * item.quantity)}</span>
-                    </div>
-                  )
-                })}
-                <div className="h-px bg-neutral-100" />
-                <div className="flex justify-between text-neutral-500">
-                  <span>Subtotal</span>
-                  <span className="text-ink font-medium">{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-neutral-500">
-                  <span>Shipping</span>
-                  <span>{shipping === 0 ? <span className="text-brand-accent font-medium">Free</span> : <span className="text-ink font-medium">{formatPrice(shipping)}</span>}</span>
-                </div>
-                {couponDiscount > 0 && (
-                  <div className="flex justify-between text-brand-accent">
-                    <span>Coupon{coupon ? ` · ${coupon}` : ''}</span>
-                    <span>−{formatPrice(couponDiscount)}</span>
-                  </div>
-                )}
-                <div className="h-px bg-neutral-100" />
-                <div className="flex justify-between items-baseline">
-                  <span className="font-semibold text-ink">Total</span>
-                  <span className="text-lg font-bold text-ink">{formatPrice(total)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

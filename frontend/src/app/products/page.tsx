@@ -101,7 +101,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     <div>
       {/* Page header */}
       <div className="bg-gradient-to-b from-brand-soft/60 to-white border-b border-neutral-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center">
           <p className="eyebrow">{eyebrow}</p>
           <h1 className="text-3xl sm:text-4xl font-semibold text-ink font-[var(--font-display)] mt-2">
             {title}
@@ -112,8 +112,8 @@ export default async function ProductsPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 lg:pb-8">
+        <div className="flex gap-6 lg:gap-8">
           {/* Sidebar */}
           <Suspense fallback={<div className="hidden lg:block w-64 shrink-0" />}>
             <CategoryFilter />

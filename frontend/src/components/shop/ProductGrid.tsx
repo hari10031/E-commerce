@@ -25,7 +25,7 @@ function SkeletonCard() {
 export function ProductGrid({ products, loading = false }: ProductGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
         {Array.from({ length: 8 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
@@ -54,7 +54,7 @@ export function ProductGrid({ products, loading = false }: ProductGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
       {products.map((product, i) => (
         <div key={product.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i * 50, 400)}ms` }}>
           <ProductCard product={product} />

@@ -49,7 +49,7 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
     subCats: Category[]
   ) {
     return (
-      <section className="py-16 border-b border-gray-100 last:border-b-0">
+      <section className="py-10 sm:py-14 lg:py-16 border-b border-gray-100 last:border-b-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Section Header */}
@@ -61,7 +61,7 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
                   <span>{subtitle}</span>
                 </div>
               )}
-              <h2 className="text-3xl sm:text-4xl font-semibold text-ink font-display">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-ink font-display">
                 {title}
               </h2>
               <p className="text-sm text-neutral-500 mt-2 max-w-2xl font-light">
@@ -87,7 +87,7 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
                   <Link
                     key={cat.id}
                     href={`/products?type=${typeKey}&category=${cat.id}`}
-                    className="group relative block w-[240px] sm:w-[260px] shrink-0 snap-start aspect-[3/4] overflow-hidden rounded-2xl bg-neutral-100/50 border border-brand-accent/15 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-500"
+                    className="group relative block w-[min(72vw,200px)] sm:w-[240px] md:w-[260px] shrink-0 snap-start aspect-[3/4] overflow-hidden rounded-2xl bg-neutral-100/50 border border-brand-accent/15 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-500"
                   >
                     <Image
                       src={coverImage}

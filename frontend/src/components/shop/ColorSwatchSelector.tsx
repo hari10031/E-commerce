@@ -124,7 +124,7 @@ export function ColorSwatchSelector({ variants, selectedVariantId, onSelect }: C
               disabled={isOutOfStock}
               title={`${variant.color}${isOutOfStock ? ' (Out of stock)' : ''}`}
               className={cn(
-                'relative h-9 w-9 rounded-full transition-all ring-1 ring-inset ring-black/5',
+                'relative h-10 w-10 sm:h-9 sm:w-9 rounded-full transition-all ring-1 ring-inset ring-black/5 touch-target',
                 isSelected
                   ? 'outline outline-2 outline-offset-2 outline-brand scale-105'
                   : 'hover:scale-105',

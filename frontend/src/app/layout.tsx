@@ -27,13 +27,19 @@ export const metadata: Metadata = {
     'Shop authentic sarees, banana fibre products, and gold jewellery from NanaBanana.',
 }
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${plusJakartaSans.variable} ${poppins.variable}`}>
       <body>
         <Providers>
           <Navbar />
-          <main className="min-h-screen">{children}</main>
+          <main className="min-h-screen min-w-0 overflow-x-hidden">{children}</main>
           <Footer />
           <Toaster />
         </Providers>

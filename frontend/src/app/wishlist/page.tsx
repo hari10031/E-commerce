@@ -112,7 +112,7 @@ export default function WishlistPage() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="h-9 w-48 shimmer rounded mb-8" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="rounded-2xl overflow-hidden border border-neutral-200/70 bg-white">
               <div className="aspect-[3/4] shimmer" />
@@ -145,15 +145,16 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="mb-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe">
+      <div className="mb-6 sm:mb-8">
         <p className="eyebrow">Saved For Later</p>
-        <h1 className="text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
-          My Wishlist <span className="text-neutral-400 text-xl font-sans font-normal">· {products.length} items</span>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
+          My Wishlist{' '}
+          <span className="text-neutral-400 text-base sm:text-xl font-sans font-normal">· {products.length} items</span>
         </h1>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
         {products.map((product, i) => {
           const primaryImage = product.images?.find((img) => img.is_primary) ?? product.images?.[0]
           const finalPrice = discountedPrice(product.base_price, product.discount_pct)

@@ -34,7 +34,7 @@ export function SizeSelector({ variants, selectedColor, selectedVariantId, onSel
               disabled={isOutOfStock}
               title={isOutOfStock ? 'Out of stock' : `${variant.quantity} in stock`}
               className={cn(
-                'min-w-[3rem] px-3.5 py-2 text-sm rounded-xl border transition-all font-medium',
+                'min-w-[3rem] min-h-[44px] px-3.5 py-2.5 text-sm rounded-xl border transition-all font-medium',
                 isSelected
                   ? 'border-ink bg-ink text-white'
                   : 'border-neutral-200 text-neutral-700 hover:border-ink',

@@ -42,6 +42,15 @@ export function Navbar() {
       .catch((err) => console.error('Failed to load categories', err))
   }, [])
 
+  useEffect(() => {
+    if (!mobileOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileOpen])
+
   const cartCount = (items ?? []).reduce((sum, i) => sum + i.quantity, 0)
   const wishlistCount = (productIds ?? []).length
 
@@ -66,18 +75,18 @@ export function Navbar() {
   return (
     <>
       {/* Announcement strip */}
-      <div className="bg-[var(--color-ink)] text-cream/95 text-center text-[10px] tracking-[0.24em] font-sans uppercase py-2.5 px-4 border-b border-brand-accent/10">
-        <span className="text-[var(--color-gold)] font-medium">Complimentary shipping</span>
-        <span className="text-white/50"> on orders above ₹999 · Handcrafted heritage weaves</span>
+      <div className="bg-[var(--color-ink)] text-cream/95 text-center text-[9px] sm:text-[10px] tracking-[0.18em] sm:tracking-[0.24em] font-sans uppercase py-2 px-3 sm:px-4 border-b border-brand-accent/10 leading-relaxed">
+        <span className="text-[var(--color-gold)] font-medium">Free shipping above ₹999</span>
+        <span className="text-white/50 hidden sm:inline"> · Handcrafted heritage weaves</span>
       </div>
 
-      <header className="sticky top-0 z-50 bg-[var(--color-background)]/85 backdrop-blur-md border-b border-brand-accent/15 transition-all duration-300">
+      <header className="sticky top-0 z-50 bg-[var(--color-background)]/85 backdrop-blur-md border-b border-brand-accent/15 transition-all duration-300 pt-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-[72px] gap-4">
+          <div className="flex items-center justify-between h-16 sm:h-[72px] gap-3 sm:gap-4">
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="md:hidden p-2 -ml-2 text-ink hover:text-brand transition-colors"
+              className="md:hidden p-2.5 -ml-1 text-ink hover:text-brand transition-colors touch-target"
               aria-label="Menu"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -85,7 +94,7 @@ export function Navbar() {
 
             {/* Logo */}
             <Link href="/" className="flex flex-col items-center md:items-start shrink-0 leading-none group">
-              <span className="text-[1.65rem] font-medium tracking-[0.06em] text-brand font-[var(--font-display)] transition-colors duration-300 group-hover:text-brand-dark">
+              <span className="text-xl sm:text-[1.65rem] font-medium tracking-[0.06em] text-brand font-[var(--font-display)] transition-colors duration-300 group-hover:text-brand-dark">
                 NanaBanana
               </span>
               <span className="hidden md:block text-[8px] tracking-[0.38em] uppercase text-gold-dark mt-1 font-semibold">
@@ -242,8 +251,8 @@ export function Navbar() {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-brand-accent/15 bg-background/95 backdrop-blur-md animate-fade-in">
-            <div className="px-4 py-5 space-y-5">
+          <div className="md:hidden border-t border-brand-accent/15 bg-background/95 backdrop-blur-md animate-fade-in max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain">
+            <div className="px-4 py-5 pb-safe space-y-5">
               <form onSubmit={handleSearch}>
                 <div className="relative border-b border-neutral-300/60 focus-within:border-brand py-1">
                   <Search className="absolute left-1 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />

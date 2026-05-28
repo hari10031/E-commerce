@@ -319,11 +319,11 @@ export function CategoryFilter() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-5">
+            <div className="p-5 pb-safe">
               <FilterBody />
               <button
                 onClick={() => setDrawerOpen(false)}
-                className="w-full mt-6 py-3 text-sm font-semibold rounded-full bg-brand text-white hover:bg-brand-dark transition-colors"
+                className="w-full mt-6 py-3.5 min-h-[48px] text-sm font-semibold rounded-full bg-brand text-white hover:bg-brand-dark transition-colors"
               >
                 Show Results
               </button>

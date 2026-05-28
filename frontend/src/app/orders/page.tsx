@@ -91,11 +91,12 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="mb-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe">
+      <div className="mb-6 sm:mb-8">
         <p className="eyebrow">Order History</p>
-        <h1 className="text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
-          My Orders <span className="text-neutral-400 text-xl font-sans font-normal">· {orders.length}</span>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
+          My Orders{' '}
+          <span className="text-neutral-400 text-base sm:text-xl font-sans font-normal">· {orders.length}</span>
         </h1>
       </div>
 
@@ -104,28 +105,28 @@ export default function OrdersPage() {
           <Link
             key={order.id}
             href={`/orders/${order.id}`}
-            className="block bg-white rounded-2xl border border-neutral-200/70 p-5 lift group animate-fade-up"
+            className="block bg-white rounded-2xl border border-neutral-200/70 p-4 sm:p-5 lift group animate-fade-up"
             style={{ animationDelay: `${Math.min(i * 60, 360)}ms` }}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+              <div className="min-w-0">
                 <p className="text-sm font-bold text-ink font-mono">
                   #{order.id.slice(0, 8).toUpperCase()}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1.5">
-                  <Clock className="h-3.5 w-3.5 text-neutral-400" />
+                  <Clock className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
                   <p className="text-xs text-neutral-500">
                     {format(new Date(order.created_at), 'dd MMM yyyy, h:mm a')}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                 <StatusBadge status={order.status} />
                 <ChevronRight className="h-4 w-4 text-neutral-300 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-neutral-100 flex items-center justify-between">
+            <div className="mt-4 pt-4 border-t border-neutral-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="text-sm text-neutral-500 truncate pr-3">
                 {order.order_items?.length ?? 0} item{(order.order_items?.length ?? 0) !== 1 ? 's' : ''}
                 {order.order_items?.[0] && (

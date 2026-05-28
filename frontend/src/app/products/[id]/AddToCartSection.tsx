@@ -141,12 +141,12 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-1">
+      <div className="flex flex-col sm:flex-row gap-3 pt-1">
         <button
           onClick={handleAddToCart}
           disabled={addingToCart || !selectedVariant || (selectedVariant?.quantity ?? 0) === 0}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-4 rounded-full text-sm font-bold text-white transition-all',
+            'flex-1 flex items-center justify-center gap-2 py-4 min-h-[52px] rounded-full text-sm font-bold text-white transition-all w-full sm:w-auto',
             'bg-ink hover:bg-brand',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
@@ -159,7 +159,7 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
           onClick={handleWishlistToggle}
           aria-label="Toggle wishlist"
           className={cn(
-            'h-[52px] w-[52px] flex items-center justify-center rounded-full border transition-colors',
+            'h-[52px] w-full sm:w-[52px] flex items-center justify-center rounded-full border transition-colors shrink-0',
             isWishlisted
               ? 'border-red-500 text-red-500 bg-red-50'
               : 'border-neutral-300 text-neutral-400 hover:border-red-400 hover:text-red-400'

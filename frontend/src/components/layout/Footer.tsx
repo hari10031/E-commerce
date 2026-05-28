@@ -23,7 +23,7 @@ const ASSURANCES = [
 
 export function Footer() {
   return (
-    <footer className="bg-[var(--color-ink)] text-neutral-400 mt-20">
+    <footer className="bg-[var(--color-ink)] text-neutral-400 mt-12 sm:mt-20 pb-safe">
       {/* Assurance bar */}
       <div className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -36,10 +36,10 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="grid grid-cols-2 md:grid-cols-12 gap-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-8 sm:gap-10">
           {/* Brand */}
-          <div className="col-span-2 md:col-span-5">
+          <div className="sm:col-span-2 md:col-span-5">
             <h2 className="text-2xl font-bold text-white font-[var(--font-display)]">
               NanaBanana
             </h2>
@@ -84,7 +84,7 @@ export function Footer() {
           </div>
 
           {/* Contact */}
-          <div className="col-span-2 md:col-span-2">
+          <div className="sm:col-span-2 md:col-span-2">
             <h3 className="text-xs font-semibold text-white uppercase tracking-[0.18em] mb-5">
               Get in Touch
             </h3>

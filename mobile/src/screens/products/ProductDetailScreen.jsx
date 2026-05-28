@@ -42,6 +42,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const lastTapRef = useRef(0);
   const pinchStartDistanceRef = useRef(null);
   const pinchStartScaleRef = useRef(1);
+  const zoomScaleRef = useRef(1);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [sellVariant, setSellVariant] = useState(null);
   const [sellQty, setSellQty] = useState(1);
@@ -49,6 +50,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const [selectedColor, setSelectedColor] = useState(null);
   const [zoomUrl, setZoomUrl] = useState(null);
   const [zoomScale, setZoomScale] = useState(1);
+  zoomScaleRef.current = zoomScale;
   const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, actions, dismissible }
 
   const isAdmin = user?.role === 'admin';
@@ -215,7 +217,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         const distance = pinchDistance(evt.nativeEvent.touches);
         if (!distance) return;
         pinchStartDistanceRef.current = distance;
-        pinchStartScaleRef.current = zoomScale;
+        pinchStartScaleRef.current = zoomScaleRef.current;
       },
       onPanResponderMove: (evt) => {
         if (evt.nativeEvent.touches.length !== 2) return;

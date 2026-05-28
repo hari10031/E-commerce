@@ -31,8 +31,8 @@ export default async function HomePage() {
 
       {/* Trust Badges */}
       <div className="bg-white border-y border-neutral-100 relative z-25">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
             {[
               { icon: Truck, title: 'Free Shipping', sub: 'Above ₹999 on all items' },
               { icon: Shield, title: 'Secure Payments', sub: '100% encrypted transactions' },
@@ -63,11 +63,11 @@ export default async function HomePage() {
       <section className="relative bg-[var(--color-ink)] text-white mt-12 overflow-hidden">
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-brand/25 blur-3xl" />
         <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-[var(--color-gold)]/10 blur-3xl" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-gold)]">
             The NanaBanana Edit
           </p>
-          <h2 className="text-3xl sm:text-4xl font-semibold font-[var(--font-display)] mt-3 mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold font-[var(--font-display)] mt-3 mb-4">
             Explore Our Full Heritage Collection
           </h2>
           <p className="text-white/55 mb-9 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">

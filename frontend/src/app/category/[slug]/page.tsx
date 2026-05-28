@@ -46,8 +46,8 @@ export default async function CategoryPage({ params }: PageProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-ink)] via-[var(--color-ink)]/70 to-[var(--color-ink)]/40" />
         <div className="absolute -top-20 -right-20 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-          <nav className="flex items-center gap-1.5 text-[13px] text-white/50 mb-5">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20">
+          <nav className="flex items-center gap-1 text-xs sm:text-[13px] text-white/50 mb-4 sm:mb-5 overflow-x-auto no-scrollbar">
             <Link href="/" className="hover:text-[var(--color-gold)] transition-colors">Home</Link>
             <ChevronRight className="h-3 w-3" />
             <Link href="/products" className="hover:text-[var(--color-gold)] transition-colors">Products</Link>
@@ -57,7 +57,7 @@ export default async function CategoryPage({ params }: PageProps) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-gold)]">
             Collection
           </p>
-          <h1 className="text-4xl sm:text-5xl font-semibold text-white font-[var(--font-display)] mt-2">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-white font-[var(--font-display)] mt-2">
             {category.name}
           </h1>
           {category.description && (
@@ -69,7 +69,7 @@ export default async function CategoryPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-safe">
         <ProductGrid products={products} />
       </div>
     </div>

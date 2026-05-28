@@ -70,7 +70,7 @@ export function HeroSlider() {
 
   return (
     <section 
-      className="relative h-[65vh] md:h-[78vh] min-h-[460px] md:min-h-[580px] overflow-hidden bg-gray-950 group"
+      className="relative h-[52vh] sm:h-[60vh] md:h-[78vh] min-h-[360px] sm:min-h-[420px] md:min-h-[580px] overflow-hidden bg-gray-950 group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -115,7 +115,7 @@ export function HeroSlider() {
                   </div>
 
                   {/* Main Title */}
-                  <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight font-display tracking-wide mb-4">
+                  <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight font-display tracking-wide mb-3 sm:mb-4">
                     {slide.title}
                   </h1>
 
@@ -144,14 +144,14 @@ export function HeroSlider() {
       {/* Navigation Arrows (Glassmorphic, hover visible) */}
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full border border-white/10 bg-black/20 hover:bg-black/40 backdrop-blur-md text-white flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 hover:scale-105 active:scale-95"
+        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/10 bg-black/40 md:bg-black/20 hover:bg-black/50 backdrop-blur-md text-white flex items-center justify-center transition-all duration-300 opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:scale-105 active:scale-95"
         aria-label="Previous slide"
       >
-        <ChevronLeft className="h-6 w-6" />
+        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full border border-white/10 bg-black/20 hover:bg-black/40 backdrop-blur-md text-white flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 hover:scale-105 active:scale-95"
+        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/10 bg-black/40 md:bg-black/20 hover:bg-black/50 backdrop-blur-md text-white flex items-center justify-center transition-all duration-300 opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:scale-105 active:scale-95"
         aria-label="Next slide"
       >
         <ChevronRight className="h-6 w-6" />

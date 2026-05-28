@@ -37,25 +37,28 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const savings = product.base_price - finalPrice
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-[13px] text-neutral-400 mb-7">
-        <Link href="/" className="hover:text-brand transition-colors">Home</Link>
-        <ChevronRight className="h-3 w-3" />
-        <Link href="/products" className="hover:text-brand transition-colors">Products</Link>
+      <nav className="flex items-center gap-1 text-xs sm:text-[13px] text-neutral-400 mb-5 sm:mb-7 overflow-x-auto no-scrollbar">
+        <Link href="/" className="hover:text-brand transition-colors shrink-0">Home</Link>
+        <ChevronRight className="h-3 w-3 shrink-0" />
+        <Link href="/products" className="hover:text-brand transition-colors shrink-0">Products</Link>
         {product.category && (
           <>
-            <ChevronRight className="h-3 w-3" />
-            <Link href={`/category/${product.category.slug}`} className="hover:text-brand transition-colors">
+            <ChevronRight className="h-3 w-3 shrink-0 hidden sm:inline" />
+            <Link
+              href={`/category/${product.category.slug}`}
+              className="hover:text-brand transition-colors shrink-0 hidden sm:inline"
+            >
               {product.category.name}
             </Link>
           </>
         )}
-        <ChevronRight className="h-3 w-3" />
-        <span className="text-neutral-600 truncate max-w-[12rem]">{product.title}</span>
+        <ChevronRight className="h-3 w-3 shrink-0" />
+        <span className="text-neutral-600 truncate min-w-0">{product.title}</span>
       </nav>
 
-      <div className="grid lg:grid-cols-2 gap-10 lg:gap-14">
+      <div className="grid lg:grid-cols-2 gap-6 sm:gap-10 lg:gap-14">
         {/* Left: Images */}
         <div className="animate-fade-in">
           <ImageGallery images={product.images ?? []} title={product.title} />
@@ -68,7 +71,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             {product.category && (
               <p className="eyebrow">{product.category.name}</p>
             )}
-            <h1 className="text-3xl sm:text-[2.5rem] leading-tight font-semibold text-ink font-[var(--font-display)] mt-2">
+            <h1 className="text-2xl sm:text-3xl md:text-[2.5rem] leading-tight font-semibold text-ink font-[var(--font-display)] mt-2">
               {product.title}
             </h1>
           </div>
@@ -76,7 +79,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           {/* Pricing */}
           <div className="space-y-1.5">
             <div className="flex items-end gap-3 flex-wrap">
-              <span className="text-4xl font-bold text-ink">{formatPrice(finalPrice)}</span>
+              <span className="text-3xl sm:text-4xl font-bold text-ink">{formatPrice(finalPrice)}</span>
               {hasDiscount && (
                 <>
                   <span className="text-xl text-neutral-400 line-through mb-1">
@@ -118,12 +121,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <AddToCartSection product={product} />
 
           {/* Assurances */}
-          <div className="grid grid-cols-3 gap-3 pt-2">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-2">
             {ASSURANCES.map(({ icon: Icon, label, sub }) => (
-              <div key={label} className="text-center rounded-xl border border-neutral-200/70 py-3.5 px-2">
-                <Icon className="h-5 w-5 text-brand mx-auto mb-1.5" />
-                <p className="text-xs font-semibold text-ink">{label}</p>
-                <p className="text-[10px] text-neutral-400 mt-0.5 leading-tight">{sub}</p>
+              <div key={label} className="text-center rounded-xl border border-neutral-200/70 py-3 px-1.5 sm:py-3.5 sm:px-2">
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-brand mx-auto mb-1 sm:mb-1.5" />
+                <p className="text-[10px] sm:text-xs font-semibold text-ink leading-tight">{label}</p>
+                <p className="text-[9px] sm:text-[10px] text-neutral-400 mt-0.5 leading-tight hidden sm:block">{sub}</p>
               </div>
             ))}
           </div>
@@ -144,8 +147,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink mb-3">
                 Available Variants
               </h2>
-              <div className="overflow-hidden rounded-xl border border-neutral-200/70">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-xl border border-neutral-200/70 -mx-1 px-1 sm:mx-0 sm:px-0">
+                <table className="w-full text-sm min-w-[28rem]">
                   <thead>
                     <tr className="bg-neutral-50 text-left text-xs text-neutral-500">
                       <th className="py-2.5 px-4 font-medium">Colour</th>

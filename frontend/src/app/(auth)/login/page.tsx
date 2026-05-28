@@ -111,16 +111,16 @@ export default function LoginPage() {
       </div>
 
       {/* Form panel */}
-      <div className="flex items-center justify-center px-4 py-12 bg-cream">
+      <div className="flex items-center justify-center px-4 py-8 sm:py-12 bg-cream pb-safe">
         <div className="w-full max-w-md animate-fade-up">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-8">
             <p className="eyebrow">Welcome Back</p>
-            <h1 className="text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
               Sign in to your account
             </h1>
           </div>
 
-          <div className="bg-white rounded-2xl border border-neutral-200/70 p-8">
+          <div className="bg-white rounded-2xl border border-neutral-200/70 p-5 sm:p-8">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">

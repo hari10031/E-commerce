@@ -87,6 +87,7 @@ export function ProductCard({ product }: ProductCardProps) {
               alt={primaryImage.alt_text ?? product.title}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              quality={90}
               className="object-contain transition-transform duration-700 ease-out group-hover:scale-105"
             />
           ) : (
@@ -146,7 +147,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Info */}
-        <div className="p-4 bg-white">
+        <div className="p-3 sm:p-4 bg-white">
           {product.category && (
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand/75 mb-1.5 font-sans">
               {product.category.name}
