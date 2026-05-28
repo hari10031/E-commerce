@@ -193,7 +193,17 @@ export default function OrderDetailPage() {
             <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink mb-5">
               Order Status
             </h2>
-            <OrderTracking status={order.status} updatedAt={order.updated_at} />
+            <OrderTracking
+              status={order.status}
+              updatedAt={order.updated_at}
+              shipment={{
+                shiprocket_awb: order.shiprocket_awb,
+                shiprocket_courier_name: order.shiprocket_courier_name,
+                tracking_url: order.tracking_url,
+                shipment_status: order.shipment_status,
+                expected_delivery_date: order.expected_delivery_date,
+              }}
+            />
           </div>
 
           <div className="bg-white rounded-2xl border border-neutral-200/70 p-6">

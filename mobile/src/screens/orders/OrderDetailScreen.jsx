@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getOrder } from '../../lib/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import StatusUpdateSheet from '../../components/orders/StatusUpdateSheet';
+import ShipmentSheet from '../../components/orders/ShipmentSheet';
 import { formatPrice, formatDateTime, shortId } from '../../lib/utils';
 import { ORDER_STATUS_CONFIG, VALID_ORDER_TRANSITIONS } from '../../constants';
 
@@ -15,6 +16,7 @@ export default function OrderDetailScreen({ route, navigation }) {
   const { orderId } = route.params;
   const insets = useSafeAreaInsets();
   const [showSheet, setShowSheet] = useState(false);
+  const [showShipment, setShowShipment] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', orderId],
@@ -185,8 +187,18 @@ export default function OrderDetailScreen({ route, navigation }) {
       {/* Status update button */}
       <View
         style={{ paddingBottom: insets.bottom + 8 }}
-        className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3"
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 gap-2"
       >
+        {(['confirmed', 'processing'].includes(order.status) || order.shiprocket_awb) && (
+          <Pressable
+            onPress={() => setShowShipment(true)}
+            className="bg-white border border-amber-300 rounded-xl py-3.5 items-center active:bg-amber-50"
+          >
+            <Text className="text-amber-700 font-bold text-sm">
+              {order.shiprocket_awb ? 'View Shipment' : 'Create Shipment'}
+            </Text>
+          </Pressable>
+        )}
         <Pressable
           onPress={() => setShowSheet(true)}
           disabled={!hasTransitions}
@@ -204,6 +216,12 @@ export default function OrderDetailScreen({ route, navigation }) {
         onClose={() => setShowSheet(false)}
         orderId={orderId}
         currentStatus={order.status}
+      />
+
+      <ShipmentSheet
+        visible={showShipment}
+        onClose={() => setShowShipment(false)}
+        order={order}
       />
     </View>
   );

@@ -204,7 +204,21 @@ create table if not exists orders (
 alter table orders add column if not exists refund_status text;
 alter table orders add column if not exists refund_reason text;
 
+-- Shiprocket shipment fields
+alter table orders add column if not exists shiprocket_order_id     text;
+alter table orders add column if not exists shiprocket_shipment_id  text;
+alter table orders add column if not exists shiprocket_awb          text;
+alter table orders add column if not exists shiprocket_courier_id   int;
+alter table orders add column if not exists shiprocket_courier_name text;
+alter table orders add column if not exists tracking_url            text;
+alter table orders add column if not exists shipment_status         text;
+alter table orders add column if not exists expected_delivery_date  date;
+alter table orders add column if not exists label_url               text;
+alter table orders add column if not exists invoice_url             text;
+alter table orders add column if not exists manifest_url            text;
+
 create index if not exists idx_orders_user on orders(user_id);
+create index if not exists idx_orders_awb on orders(shiprocket_awb);
 create index if not exists idx_orders_status on orders(status);
 create index if not exists idx_orders_created_at on orders(created_at desc);
 

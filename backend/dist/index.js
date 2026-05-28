@@ -30,6 +30,7 @@ const coupons_1 = __importDefault(require("./routes/coupons"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
 const sales_1 = __importDefault(require("./routes/sales"));
 const users_1 = __importDefault(require("./routes/users"));
+const shipments_1 = __importDefault(require("./routes/shipments"));
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use((0, cors_1.default)({
@@ -63,6 +64,7 @@ app.use('/api/coupons', coupons_1.default);
 app.use('/api/notifications', notifications_1.default);
 app.use('/api/sales', sales_1.default);
 app.use('/api/users', users_1.default);
+app.use('/api/shipments', shipments_1.default);
 app.use(errorHandler_1.notFound);
 app.use(errorHandler_1.errorHandler);
 const PORT = Number.parseInt(process.env.PORT ?? '4000', 10);

@@ -76,6 +76,11 @@ export interface Order {
   coupon_applied?: string
   refund_status?: 'requested' | 'completed' | null
   refund_reason?: string | null
+  shiprocket_awb?: string
+  shiprocket_courier_name?: string
+  tracking_url?: string
+  shipment_status?: string
+  expected_delivery_date?: string
   created_at: string
   updated_at: string
   address?: {

@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { formatPrice, formatDateTime } from '@/lib/utils';
 import { StatusUpdateDropdown } from '@/components/orders/StatusUpdateDropdown';
+import { ShipmentPanel } from '@/components/orders/ShipmentPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, MapPin, Phone, Package } from 'lucide-react';
 import type { Order, OrderStatus } from '@/types';
@@ -134,6 +135,8 @@ export default function OrderDetailPage() {
           </div>
         )}
       </div>
+
+      <ShipmentPanel order={order} onOrderUpdated={setOrder} />
 
       {/* Order Items */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">

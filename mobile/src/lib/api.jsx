@@ -209,6 +209,34 @@ export const updateOrderStatus = (id, status) =>
     body: JSON.stringify({ status }),
   });
 
+// ─── Shiprocket shipments ────────────────────────────────────────────────────
+
+export const checkShipmentServiceability = (orderId, body = {}) =>
+  apiFetch('/shipments/serviceability', {
+    method: 'POST',
+    body: JSON.stringify({ orderId, ...body }),
+  });
+
+export const createShipment = (orderId, body) =>
+  apiFetch('/shipments/create', {
+    method: 'POST',
+    body: JSON.stringify({ orderId, ...body }),
+  });
+
+export const getShipmentLabel = (orderId) =>
+  apiFetch(`/shipments/${orderId}/label`, { method: 'POST', body: '{}' });
+
+export const getShipmentInvoice = (orderId) =>
+  apiFetch(`/shipments/${orderId}/invoice`, { method: 'POST', body: '{}' });
+
+export const getShipmentManifest = (orderId) =>
+  apiFetch(`/shipments/${orderId}/manifest`, { method: 'POST', body: '{}' });
+
+export const trackShipment = (orderId) => apiFetch(`/shipments/${orderId}/track`);
+
+export const cancelShipment = (orderId) =>
+  apiFetch(`/shipments/${orderId}/cancel`, { method: 'POST', body: '{}' });
+
 // ─── Employees ───────────────────────────────────────────────────────────────
 
 export const getEmployees = (params = {}) => {

@@ -93,6 +93,17 @@ export interface Order {
   coupon_applied?: string
   razorpay_order_id?: string
   razorpay_payment_id?: string
+  shiprocket_order_id?: string
+  shiprocket_shipment_id?: string
+  shiprocket_awb?: string
+  shiprocket_courier_id?: number
+  shiprocket_courier_name?: string
+  tracking_url?: string
+  shipment_status?: string
+  expected_delivery_date?: string
+  label_url?: string
+  invoice_url?: string
+  manifest_url?: string
   created_at: string
   updated_at: string
 }
