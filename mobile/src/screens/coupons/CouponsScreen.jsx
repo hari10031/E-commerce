@@ -251,7 +251,7 @@ export default function CouponsScreen({ navigation }) {
     staleTime: 60_000,
   });
 
-  useRefetchOnFocus(refetch);
+  useRefetchOnFocus(['coupons']);
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],

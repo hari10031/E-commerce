@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, Pressable, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { getEmployees, getUsers, approveEmployee } from '../../lib/api';
 import { initials } from '../../lib/utils';
 import { confirmDialog } from '../../lib/dialog';
 import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
+import { useHardwareBackHandler } from '../../hooks/useHardwareBackHandler';
 
 const TABS = [
   { key: 'active', label: 'Active' },
@@ -82,7 +83,7 @@ export default function TeamScreen({ navigation, route }) {
     staleTime: 30_000,
   });
 
-  useRefetchOnFocus(refetch);
+  useRefetchOnFocus(['team']);
 
   const approveMutation = useMutation({
     mutationFn: ({ id, action }) => approveEmployee(id, action),
@@ -124,6 +125,11 @@ export default function TeamScreen({ navigation, route }) {
       navigation.goBack();
     }
   };
+
+  useHardwareBackHandler(useCallback(() => {
+    handleBack();
+    return true;
+  }, [referrer, navigation]));
 
   return (
     <View className="flex-1 bg-gray-50">

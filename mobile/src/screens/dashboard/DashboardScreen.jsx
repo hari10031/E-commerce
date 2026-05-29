@@ -243,7 +243,7 @@ export default function DashboardScreen({ navigation }) {
     refetchCat();
   };
 
-  useRefetchOnFocus(onRefresh);
+  useRefetchOnFocus(['dashboard'], ['offline-sales'], ['category-inventory']);
 
   // Roll the per-category inventory up into the 3 main product types.
   const mainCategories = MAIN_CATS.map((m) => {
@@ -357,7 +357,7 @@ export default function DashboardScreen({ navigation }) {
         {/* Notification Banner (Admin only) */}
         {isAdmin && (stats?.pendingOrders ?? 0) > 0 && (
           <Pressable
-            onPress={() => navigateToTab('CustomersTab')}
+            onPress={() => navigateToTab('MoreTab', 'Orders', { initialStatus: 'placed' })}
             className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex-row items-center active:bg-amber-100"
           >
             <View className="w-8 h-8 rounded-full bg-amber-200 items-center justify-center mr-3">
@@ -365,7 +365,7 @@ export default function DashboardScreen({ navigation }) {
             </View>
             <View className="flex-1">
               <Text className="text-sm font-medium text-amber-900">
-                {stats?.pendingOrders ?? 2} sales need approval
+                {stats?.pendingOrders ?? 0} online order{(stats?.pendingOrders ?? 0) === 1 ? '' : 's'} to confirm
               </Text>
             </View>
             <Text className="text-sm font-semibold text-amber-600">Review ›</Text>
@@ -394,10 +394,10 @@ export default function DashboardScreen({ navigation }) {
                 />
                 <QuickActionCard
                   icon="checkmark-circle"
-                  label="Approvals"
+                  label="Orders"
                   bgColor="#0d9488"
                   iconColor="#ccfbf1"
-                  onPress={() => navigateToTab('CustomersTab')}
+                  onPress={() => navigateToTab('MoreTab', 'Orders', { initialStatus: 'placed' })}
                 />
                 <QuickActionCard
                   icon="bar-chart"
@@ -436,7 +436,7 @@ export default function DashboardScreen({ navigation }) {
                   label="Add Product"
                   bgColor="#0d9488"
                   iconColor="#ccfbf1"
-                  onPress={() => navigateToTab('CollectionsTab', 'ProductWizard', { mode: 'create' })}
+                  onPress={() => navigateToTab('CreateTab', 'AddProductType', { returnTab: 'DashboardTab' })}
                 />
               </>
             )}

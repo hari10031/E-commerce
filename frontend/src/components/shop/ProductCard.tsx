@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Heart, ShoppingBag, Check } from 'lucide-react'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { useCartStore, type CartItem } from '@/store/cartStore'
@@ -17,6 +18,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const router = useRouter()
+  const productHref = `/products/${product.id}`
   const { productIds, toggle } = useWishlistStore()
   const { setItems } = useCartStore()
   const { token } = useAuthStore()
@@ -77,7 +80,12 @@ export function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <Link href={`/products/${product.id}`} className="group block">
+    <Link
+      href={productHref}
+      prefetch
+      onMouseEnter={() => router.prefetch(productHref)}
+      className="group block"
+    >
       <article className="relative overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_48px_-12px_rgba(0,0,0,0.08)] transition-all duration-500 lift">
         {/* Image */}
         <div className="relative aspect-[3/4] overflow-hidden bg-neutral-50/50">

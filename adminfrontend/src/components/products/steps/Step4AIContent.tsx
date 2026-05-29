@@ -8,7 +8,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Sparkles } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import type { ColorImagePair } from '@/lib/productImages';
 import type { ProductType } from '@/types';
+
+function primaryPhotoForContent(images: ColorImagePair[]): { url: string; color?: string } | null {
+  const withUpload = images.find((i) => i.uploadedUrl);
+  if (withUpload?.uploadedUrl) {
+    return { url: withUpload.uploadedUrl, color: withUpload.color };
+  }
+  const withPreview = images.find((i) => i.imageUrl);
+  if (withPreview?.imageUrl) {
+    return { url: withPreview.imageUrl, color: withPreview.color };
+  }
+  return null;
+}
 
 interface Step4Data {
   title: string;
@@ -20,22 +33,37 @@ interface Step4Props {
   onChange: (data: Partial<Step4Data>) => void;
   productType: ProductType;
   categoryId: string;
-  colors: string[];
-  sizes: string[];
+  images: ColorImagePair[];
 }
 
-export function Step4AIContent({ data, onChange, productType, categoryId, colors, sizes }: Step4Props) {
+export function Step4AIContent({
+  data,
+  onChange,
+  productType,
+  categoryId,
+  images,
+}: Step4Props) {
   const token = useAuthStore((s) => s.token);
   const [generating, setGenerating] = useState(false);
   const MAX_TITLE = 80;
 
   const handleGenerate = async () => {
     if (!token) return;
+    const photo = primaryPhotoForContent(images);
+    if (!photo) {
+      toast.error('Upload a product photo in Step 2 first');
+      return;
+    }
     setGenerating(true);
     try {
       const res = await api.post<{ title: string; description: string }>(
         '/api/ai/generate-content',
-        { productType, category: categoryId, colors, sizes },
+        {
+          imageUrl: photo.url,
+          productType,
+          category: categoryId,
+          color: photo.color,
+        },
         token
       );
       onChange({ title: res.title?.slice(0, MAX_TITLE) ?? data.title, description: res.description ?? data.description });

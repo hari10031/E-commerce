@@ -21,10 +21,10 @@ export default function OrderDetailScreen({ route, navigation }) {
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', orderId],
     queryFn: () => getOrder(orderId),
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 
-  if (isLoading) return <LoadingSpinner message="Loading order…" />;
+  if (isLoading && !order) return <LoadingSpinner message="Loading order…" />;
   if (!order) return null;
 
   const cfg = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.placed;

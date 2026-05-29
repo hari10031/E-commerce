@@ -21,9 +21,9 @@ const STATUS_TABS = [
   { label: 'Cancelled', value: 'cancelled' },
 ];
 
-export default function OrdersScreen({ navigation }) {
+export default function OrdersScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const [activeStatus, setActiveStatus] = useState(null);
+  const [activeStatus, setActiveStatus] = useState(route?.params?.initialStatus ?? null);
   const [search, setSearch] = useState('');
 
   const {
@@ -37,7 +37,7 @@ export default function OrdersScreen({ navigation }) {
     staleTime: 30_000,
   });
 
-  useRefetchOnFocus(refetch);
+  useRefetchOnFocus(['orders']);
 
   const orders = data?.pages.flatMap((p) => p.data) ?? [];
 

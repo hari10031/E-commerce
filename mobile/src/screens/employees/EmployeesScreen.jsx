@@ -39,7 +39,7 @@ export default function EmployeesScreen({ navigation }) {
 
   // Reload whenever the admin opens this screen so newly registered
   // employees appear without needing a manual pull-to-refresh.
-  useRefetchOnFocus(refetch);
+  useRefetchOnFocus(['employees']);
 
   const approveMutation = useMutation({
     mutationFn: ({ id, action }) => approveEmployee(id, action),

@@ -1,11 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import TypeSelectorModal from '../components/products/TypeSelectorModal';
 import { navigationRef } from './navigationRef';
+import { STACK_SCREEN_OPTIONS, TAB_SCREEN_OPTIONS } from './navigationConfig';
 
 import useAuthStore from '../store/authStore';
 import { BRAND } from '../constants/brand';
@@ -14,6 +14,7 @@ import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import ProductsScreen from '../screens/products/ProductsScreen';
 import ProductDetailScreen from '../screens/products/ProductDetailScreen';
 import ProductWizardScreen from '../screens/products/wizard/ProductWizardScreen';
+import AddProductTypeScreen from '../screens/products/AddProductTypeScreen';
 import OrdersScreen from '../screens/orders/OrdersScreen';
 import OrderDetailScreen from '../screens/orders/OrderDetailScreen';
 import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
@@ -36,11 +37,12 @@ const OrdStack = createNativeStackNavigator();
 const MoreStk = createNativeStackNavigator();
 const CustStack = createNativeStackNavigator();
 const ProfStack = createNativeStackNavigator();
+const CreateStackNav = createNativeStackNavigator();
 
 const ACTIVE = BRAND.colors.maroon;
 const GRAY = '#9ca3af';
 
-const STACK_OPTS = { headerShown: false };
+const STACK_OPTS = STACK_SCREEN_OPTIONS;
 
 function DashboardStack() {
   return (
@@ -79,6 +81,8 @@ function MoreStack() {
       <MoreStk.Screen name="Employees" component={EmployeesScreen} />
       <MoreStk.Screen name="Coupons" component={CouponsScreen} />
       <MoreStk.Screen name="Profile" component={ProfileScreen} />
+      <MoreStk.Screen name="Orders" component={OrdersScreen} />
+      <MoreStk.Screen name="OrderDetail" component={OrderDetailScreen} />
       <MoreStk.Screen name="Team" component={TeamScreen} />
       <MoreStk.Screen name="EmployeeDetail" component={EmployeeDetailScreen} />
       <MoreStk.Screen name="CreateUser" component={CreateUserScreen} />
@@ -105,8 +109,13 @@ function ProfileStack() {
   );
 }
 
-function CreatePlaceholder() {
-  return null;
+function CreateStack() {
+  return (
+    <CreateStackNav.Navigator screenOptions={STACK_OPTS}>
+      <CreateStackNav.Screen name="AddProductType" component={AddProductTypeScreen} />
+      <CreateStackNav.Screen name="ProductWizard" component={ProductWizardScreen} />
+    </CreateStackNav.Navigator>
+  );
 }
 
 function CreateTabButton({ onPress }) {
@@ -164,6 +173,7 @@ function AdminTabs({ onCreatePress }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        ...TAB_SCREEN_OPTIONS,
         headerShown: false,
         tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: GRAY,
@@ -206,7 +216,7 @@ function AdminTabs({ onCreatePress }) {
       />
       <Tab.Screen
         name="CreateTab"
-        component={CreatePlaceholder}
+        component={CreateStack}
         options={{
           title: '',
           tabBarButton: (props) => <CreateTabButton onPress={props.onPress} />,
@@ -249,6 +259,7 @@ function EmployeeTabs({ onCreatePress }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        ...TAB_SCREEN_OPTIONS,
         headerShown: false,
         tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: GRAY,
@@ -290,7 +301,7 @@ function EmployeeTabs({ onCreatePress }) {
       />
       <Tab.Screen
         name="CreateTab"
-        component={CreatePlaceholder}
+        component={CreateStack}
         options={{
           title: '',
           tabBarButton: (props) => <CreateTabButton onPress={props.onPress} />,
@@ -322,6 +333,7 @@ function CustomerTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        ...TAB_SCREEN_OPTIONS,
         headerShown: false,
         tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: GRAY,
@@ -378,20 +390,16 @@ function CustomerTabs() {
 
 export default function MainTabs() {
   const { user, viewMode } = useAuthStore();
-  const [showTypeModal, setShowTypeModal] = useState(false);
 
   const handleCreatePress = useCallback(() => {
-    setShowTypeModal(true);
-  }, []);
-
-  const handleTypeSelect = useCallback((type) => {
-    setShowTypeModal(false);
-    if (navigationRef.isReady()) {
-      navigationRef.navigate('CollectionsTab', {
-        screen: 'ProductWizard',
-        params: { mode: 'create', type },
-      });
-    }
+    if (!navigationRef.isReady()) return;
+    const state = navigationRef.getRootState();
+    const currentTab = state?.routes?.[state.index]?.name;
+    const returnTab = currentTab && currentTab !== 'CreateTab' ? currentTab : 'DashboardTab';
+    navigationRef.navigate('CreateTab', {
+      screen: 'AddProductType',
+      params: { returnTab },
+    });
   }, []);
 
   if (viewMode === 'user') {
@@ -401,14 +409,5 @@ export default function MainTabs() {
   const role = user?.role;
   const TabsComponent = role === 'employee' ? EmployeeTabs : AdminTabs;
 
-  return (
-    <>
-      <TabsComponent onCreatePress={handleCreatePress} />
-      <TypeSelectorModal
-        visible={showTypeModal}
-        onClose={() => setShowTypeModal(false)}
-        onSelect={handleTypeSelect}
-      />
-    </>
-  );
+  return <TabsComponent onCreatePress={handleCreatePress} />;
 }

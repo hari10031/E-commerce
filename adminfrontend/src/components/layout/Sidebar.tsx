@@ -88,7 +88,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'flex flex-col h-full transition-all duration-300 ease-in-out',
+        'flex flex-col h-full transition-all duration-150 ease-in-out',
         'bg-[#1C1C1C] text-neutral-300',
         collapsed ? 'w-16' : 'w-60'
       )}
@@ -130,6 +130,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
                 active

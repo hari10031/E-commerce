@@ -19,6 +19,7 @@ import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { GOLD_PURITIES } from '../../../constants/categories';
 import { PRODUCT_SIZES, PRODUCT_TYPES } from '../../../constants';
 import { formatPrice, discountedPrice } from '../../../lib/utils';
+import { useHardwareBackHandler } from '../../../hooks/useHardwareBackHandler';
 
 const WARM_BG = '#fffaf5';
 const CARD_BG = '#ffffff';
@@ -39,6 +40,14 @@ const PHOTO_BLOCKS = {
   ],
   jewellery: ['Full Piece', 'Front Detail', 'Stone Setting', 'Hallmark'],
 };
+
+const HERO_SLOT_BY_TYPE = {
+  saree: 'Saree image',
+};
+
+function isHeroSlot(productType, label) {
+  return HERO_SLOT_BY_TYPE[productType] === label;
+}
 
 // Preset palette — picking a swatch guarantees the colour name maps to the
 // right shade (typing a free-text name can fall back to a neutral grey).
@@ -133,13 +142,24 @@ export default function ProductWizardScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     const referrer = route.params?.referrer;
-    // Always pop the wizard off the Collections stack first — otherwise tapping
-    // the Collections tab later reopens the wizard instead of the product list.
-    if (navigation.canGoBack()) navigation.goBack();
-    if (referrer) navigation.getParent()?.navigate(referrer);
-  };
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      if (referrer) {
+        navigation.getParent()?.navigate(referrer);
+      }
+      return;
+    }
+    if (referrer) {
+      navigation.getParent()?.navigate(referrer);
+    }
+  }, [navigation, route.params?.referrer]);
+
+  useHardwareBackHandler(useCallback(() => {
+    handleBack();
+    return true;
+  }, [handleBack]));
 
   const [wizardData, setWizardData] = useState({
     type,
@@ -168,11 +188,13 @@ export default function ProductWizardScreen({ route, navigation }) {
   const [newColorName, setNewColorName] = useState('');
   const [editLoaded, setEditLoaded] = useState(false);
   const [viewerImage, setViewerImage] = useState(null); // fullscreen AI image preview
+  const [photoPreview, setPhotoPreview] = useState(null); // hero slot optional crop (web)
 
   // Product-wide variant options
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [selectedWeights, setSelectedWeights] = useState([]);
   const [newWeightName, setNewWeightName] = useState('');
+  const [newPurityName, setNewPurityName] = useState('');
   const [goldPurity, setGoldPurity] = useState('22K');
 
   const update = useCallback((partial) => setWizardData((prev) => ({ ...prev, ...partial })), []);
@@ -351,7 +373,51 @@ export default function ProductWizardScreen({ route, navigation }) {
   const imageFor = (color, label) =>
     wizardData.images.find((i) => i.color === color && i.label === label);
 
-  const pickImage = async (color, label, source) => {
+  const finalizePhotoUpload = async (color, label, asset) => {
+    const existing = imageFor(color, label);
+    if (existing?.uri) revokeBlobUri(existing.uri);
+
+    const previewUri = Platform.OS === 'web' && asset.file
+      ? URL.createObjectURL(asset.file)
+      : asset.uri;
+    const uploadSource = Platform.OS === 'web' && asset.file
+      ? { file: asset.file, name: asset.file.name, uri: asset.uri }
+      : asset.uri;
+    setUploading(`${color}::${label}`);
+
+    try {
+      const { url } = await uploadImage(uploadSource);
+      const newImages = [
+        ...wizardData.images.filter((i) => !(i.color === color && i.label === label)),
+        { color, label, uri: previewUri, uploadedUrl: url, generatedUrl: null, existing: false },
+      ];
+      update({ images: newImages });
+      autoGenerateContent(color, url);
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const offerHeroCropChoice = (color, label, asset, source) => {
+    const previewUri = Platform.OS === 'web' && asset.file
+      ? URL.createObjectURL(asset.file)
+      : asset.uri;
+    if (Platform.OS === 'web') {
+      setPhotoPreview({ color, label, asset, source, previewUri });
+      return;
+    }
+    Alert.alert(
+      label,
+      'Use full photo or crop to 3:4 listing frame?',
+      [
+        { text: 'Use photo', onPress: () => finalizePhotoUpload(color, label, asset) },
+        { text: 'Crop 3:4', onPress: () => pickImage(color, label, source, { forceCrop: true }) },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const pickImage = async (color, label, source, { forceCrop = false } = {}) => {
     try {
       if (source === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -367,39 +433,27 @@ export default function ProductWizardScreen({ route, navigation }) {
         }
       }
 
-      // expo-image-picker v17 (SDK 54): mediaTypes is a string array now.
-      // Jewellery uploads skip the crop dialog — admin/employee want the
-      // original frame so the AI sees full context.
-      const options = t === 'jewellery'
-        ? { mediaTypes: ['images'], quality: 0.85 }
-        : { mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [3, 4] };
+      // Detail slots + jewellery: full frame for AI context. Hero saree slot:
+      // pick first, then optional 3:4 crop (never forced).
+      const baseOptions = { mediaTypes: ['images'], quality: 0.85 };
+      const options = forceCrop
+        ? { ...baseOptions, allowsEditing: true, aspect: [3, 4] }
+        : baseOptions;
       const result = source === 'camera'
         ? await ImagePicker.launchCameraAsync(options)
         : await ImagePicker.launchImageLibraryAsync(options);
 
       if (result.canceled) return;
       const asset = result.assets[0];
-      const existing = imageFor(color, label);
-      if (existing?.uri) revokeBlobUri(existing.uri);
 
-      const previewUri = Platform.OS === 'web' && asset.file
-        ? URL.createObjectURL(asset.file)
-        : asset.uri;
-      const uploadSource = Platform.OS === 'web' && asset.file
-        ? { file: asset.file, name: asset.file.name, uri: asset.uri }
-        : asset.uri;
-      setUploading(`${color}::${label}`);
+      if (!forceCrop && isHeroSlot(t, label)) {
+        offerHeroCropChoice(color, label, asset, source);
+        return;
+      }
 
-      const { url } = await uploadImage(uploadSource);
-      const newImages = [
-        ...wizardData.images.filter((i) => !(i.color === color && i.label === label)),
-        { color, label, uri: previewUri, uploadedUrl: url, generatedUrl: null, existing: false },
-      ];
-      update({ images: newImages });
+      await finalizePhotoUpload(color, label, asset);
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to pick image.');
-    } finally {
-      setUploading(null);
     }
   };
 
@@ -603,6 +657,13 @@ export default function ProductWizardScreen({ route, navigation }) {
     }
     setSelectedWeights((prev) => [...prev, name]);
     setNewWeightName('');
+  };
+
+  const addPurity = (raw) => {
+    const name = (raw || '').trim();
+    if (!name) return;
+    setGoldPurity(name);
+    setNewPurityName('');
   };
 
   const buildVariants = () => {
@@ -973,11 +1034,57 @@ export default function ProductWizardScreen({ route, navigation }) {
             )}
 
             <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#78350f' }}>Purity</Text>
-            <View className="flex-row flex-wrap">
+
+            {/* Custom purity entry — admin/employee can type any karat / fineness value */}
+            <View className="flex-row items-center gap-2 mb-2">
+              <TextInput
+                className="flex-1 rounded-xl px-3 py-2.5 text-sm"
+                style={{ backgroundColor: '#fef7f0', borderWidth: 1, borderColor: SECTION_BORDER, color: '#1f2937' }}
+                placeholder="Custom purity (e.g. 916 or 21K)"
+                placeholderTextColor="#a16207"
+                value={newPurityName}
+                onChangeText={setNewPurityName}
+                onSubmitEditing={() => addPurity(newPurityName)}
+                returnKeyType="done"
+              />
+              <Pressable
+                onPress={() => addPurity(newPurityName)}
+                className="px-4 py-2.5 rounded-xl flex-row items-center"
+                style={{ backgroundColor: AMBER_500 }}
+              >
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text className="text-white text-sm font-semibold ml-1">Purity</Text>
+              </Pressable>
+            </View>
+
+            {/* Preset purity chips — tap to select quickly */}
+            <Text className="text-[11px] font-medium mb-1.5" style={{ color: '#a16207' }}>
+              Or tap a preset:
+            </Text>
+            <View className="flex-row flex-wrap mb-2">
               {GOLD_PURITIES.map((p) => (
                 <Chip key={p} label={p} selected={goldPurity === p} onPress={() => setGoldPurity(p)} />
               ))}
             </View>
+
+            {/* Custom purity already set — show as removable chip */}
+            {goldPurity && !GOLD_PURITIES.includes(goldPurity) && (
+              <>
+                <Text className="text-[11px] font-medium mb-1.5 mt-1" style={{ color: '#a16207' }}>
+                  Custom purity:
+                </Text>
+                <View className="flex-row flex-wrap">
+                  <Pressable
+                    onPress={() => setGoldPurity('22K')}
+                    className="flex-row items-center px-3 py-2 rounded-full mr-2 mb-2"
+                    style={{ backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b' }}
+                  >
+                    <Text className="text-xs font-semibold" style={{ color: '#92400e' }}>{goldPurity}</Text>
+                    <Ionicons name="close-circle" size={14} color="#d97706" style={{ marginLeft: 4 }} />
+                  </Pressable>
+                </View>
+              </>
+            )}
           </SectionCard>
         )}
 
@@ -1387,6 +1494,85 @@ export default function ProductWizardScreen({ route, navigation }) {
                 </Text>
               </Pressable>
             ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Hero slot — optional crop before upload (web) */}
+      <Modal
+        visible={!!photoPreview}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (photoPreview?.previewUri?.startsWith('blob:')) {
+            revokeBlobUri(photoPreview.previewUri);
+          }
+          setPhotoPreview(null);
+        }}
+      >
+        <Pressable
+          className="flex-1 items-center justify-center px-6"
+          onPress={() => {
+            if (photoPreview?.previewUri?.startsWith('blob:')) {
+              revokeBlobUri(photoPreview.previewUri);
+            }
+            setPhotoPreview(null);
+          }}
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+        >
+          <Pressable className="w-full rounded-2xl p-4" style={{ backgroundColor: '#ffffff' }} onPress={() => {}}>
+            <Text className="text-base font-bold mb-1" style={{ color: '#78350f' }}>
+              {photoPreview?.label}
+            </Text>
+            <Text className="text-sm mb-3" style={{ color: '#6b7280' }}>
+              Use full photo or crop to 3:4 listing frame.
+            </Text>
+            {photoPreview?.previewUri && (
+              <View className="rounded-xl overflow-hidden mb-3" style={{ aspectRatio: 3 / 4, backgroundColor: '#fef7f0' }}>
+                <Image
+                  source={{ uri: photoPreview.previewUri }}
+                  className="w-full h-full"
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+            <Pressable
+              onPress={() => {
+                const { color, label, asset, previewUri } = photoPreview;
+                if (Platform.OS === 'web' && previewUri?.startsWith('blob:')) {
+                  revokeBlobUri(previewUri);
+                }
+                setPhotoPreview(null);
+                finalizePhotoUpload(color, label, asset);
+              }}
+              className="py-2.5"
+            >
+              <Text className="text-sm font-semibold" style={{ color: '#1f2937' }}>Use photo</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                const { color, label, source, previewUri } = photoPreview;
+                if (Platform.OS === 'web' && previewUri?.startsWith('blob:')) {
+                  revokeBlobUri(previewUri);
+                }
+                setPhotoPreview(null);
+                pickImage(color, label, source, { forceCrop: true });
+              }}
+              className="py-2.5"
+            >
+              <Text className="text-sm font-semibold" style={{ color: '#1f2937' }}>Crop 3:4</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                if (photoPreview?.previewUri?.startsWith('blob:')) {
+                  revokeBlobUri(photoPreview.previewUri);
+                }
+                setPhotoPreview(null);
+              }}
+              className="py-2.5"
+            >
+              <Text className="text-sm font-semibold" style={{ color: '#6b7280' }}>Cancel</Text>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>

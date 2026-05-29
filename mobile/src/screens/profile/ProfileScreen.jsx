@@ -12,10 +12,13 @@ import ScreenHeader from '../../components/ui/ScreenHeader';
 import { initials, formatPrice } from '../../lib/utils';
 import { confirmDialog } from '../../lib/dialog';
 import * as Haptics from 'expo-haptics';
+import { useRootTabBackToDashboard } from '../../hooks/useHardwareBackHandler';
 
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { user, setAuth, clearAuth, token, viewMode, setViewMode } = useAuthStore();
+
+  useRootTabBackToDashboard(navigation);
   const [name, setName] = useState(user?.name ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [editing, setEditing] = useState(false);

@@ -9,16 +9,19 @@ import useAuthStore from '../../store/authStore';
 import { getProducts, getCategories, getInventory } from '../../lib/api';
 import ProductCard from '../../components/products/ProductCard';
 import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
+import { prefetchProduct } from '../../lib/queryClient';
+import { PRODUCT_TYPE_CARDS } from '../../constants/productTypes';
+import { useHardwareBackHandler, navigateToDashboard } from '../../hooks/useHardwareBackHandler';
 
 const WARM_BG = '#fffaf5';
 const CARD_BG = '#ffffff';
 const SECTION_BORDER = '#fde8d0';
 const AMBER_500 = '#f59e0b';
 
-const TYPE_CARDS = [
-  { key: 'saree', label: 'Sarees', image: require('../../../assets/saree.jpg'), bgColor: '#fff1f2', textColor: '#9f1239', borderColor: '#fecdd3', icon: 'shirt-outline', iconColor: '#db2777' },
-  { key: 'jewellery', label: 'Gold & Jewellery', image: require('../../../assets/jewellery.jpg'), bgColor: '#fffbeb', textColor: '#92400e', borderColor: '#fde68a', icon: 'diamond-outline', iconColor: '#d97706' },
-];
+const TYPE_CARDS = PRODUCT_TYPE_CARDS.map((t) => ({
+  ...t,
+  iconColor: t.accentColor,
+}));
 
 function Divider() {
   return (
@@ -121,15 +124,32 @@ export default function ProductsScreen({ navigation, route }) {
   const query = searchText.trim();
   const isSearching = searchOpen && query.length > 0;
 
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchText('');
+  };
+
   const handleBack = () => {
     if (selectedCategory) setSelectedCategory(null);
     else if (selectedType) setSelectedType(null);
   };
 
-  const closeSearch = () => {
-    setSearchOpen(false);
-    setSearchText('');
-  };
+  useHardwareBackHandler(useCallback(() => {
+    if (searchOpen) {
+      closeSearch();
+      return true;
+    }
+    if (selectedCategory) {
+      setSelectedCategory(null);
+      return true;
+    }
+    if (selectedType) {
+      setSelectedType(null);
+      return true;
+    }
+    navigateToDashboard(navigation);
+    return true;
+  }, [searchOpen, selectedCategory, selectedType, navigation]));
 
   // ─── Level 3 product list ────────────────────────────────────────
   const {
@@ -157,7 +177,7 @@ export default function ProductsScreen({ navigation, route }) {
     staleTime: 30_000,
   });
 
-  useRefetchOnFocus(refetch);
+  useRefetchOnFocus(['products'], ['categories'], ['inventory']);
 
   const products = data?.pages.flatMap((p) => p.data) ?? [];
   const searchResults = searchData?.data ?? [];
@@ -166,7 +186,10 @@ export default function ProductsScreen({ navigation, route }) {
     <View className="flex-1 p-1.5 max-w-[50%]">
       <ProductCard
         product={item}
-        onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+        onPress={() => {
+          prefetchProduct(item.id);
+          navigation.navigate('ProductDetail', { productId: item.id });
+        }}
         showStock={canAdd}
       />
     </View>

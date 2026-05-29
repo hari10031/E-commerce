@@ -18,6 +18,16 @@ function pinchDistance(touches: React.TouchList) {
   return Math.hypot(dx, dy)
 }
 
+function clampOffset(offset: { x: number; y: number }, scale: number) {
+  if (scale <= 1) return { x: 0, y: 0 }
+  const maxX = Math.max(0, ((window.innerWidth * scale) - window.innerWidth) / 2)
+  const maxY = Math.max(0, ((window.innerHeight * 0.75 * scale) - window.innerHeight * 0.75) / 2)
+  return {
+    x: Math.max(-maxX, Math.min(maxX, offset.x)),
+    y: Math.max(-maxY, Math.min(maxY, offset.y)),
+  }
+}
+
 interface ProductImageLightboxProps {
   src: string
   alt: string
@@ -30,6 +40,7 @@ export function ProductImageLightbox({ src, alt, open, onClose }: ProductImageLi
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const pinchStartRef = useRef<{ distance: number; scale: number } | null>(null)
   const panStartRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
+  const mousePanRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
   const lastTapRef = useRef(0)
   const scaleRef = useRef(1)
   const offsetRef = useRef({ x: 0, y: 0 })
@@ -66,7 +77,11 @@ export function ProductImageLightbox({ src, alt, open, onClose }: ProductImageLi
   const adjustScale = (delta: number) => {
     setScale((s) => {
       const next = clampScale(Number((s + delta).toFixed(2)))
-      if (next <= 1) setOffset({ x: 0, y: 0 })
+      if (next <= 1) {
+        setOffset({ x: 0, y: 0 })
+      } else {
+        setOffset((o) => clampOffset(o, next))
+      }
       return next
     })
   }
@@ -111,23 +126,53 @@ export function ProductImageLightbox({ src, alt, open, onClose }: ProductImageLi
         pinchStartRef.current.scale * (distance / pinchStartRef.current.distance)
       )
       setScale(next)
-      if (next <= 1) setOffset({ x: 0, y: 0 })
+      if (next <= 1) {
+        setOffset({ x: 0, y: 0 })
+      } else {
+        setOffset((o) => clampOffset(o, next))
+      }
       return
     }
     if (e.touches.length === 1 && panStartRef.current && scaleRef.current > 1) {
       e.preventDefault()
       const dx = e.touches[0].clientX - panStartRef.current.x
       const dy = e.touches[0].clientY - panStartRef.current.y
-      setOffset({
+      setOffset(clampOffset({
         x: panStartRef.current.ox + dx,
         y: panStartRef.current.oy + dy,
-      })
+      }, scaleRef.current))
     }
   }
 
   const onTouchEnd = () => {
     pinchStartRef.current = null
     panStartRef.current = null
+  }
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (scaleRef.current <= 1 || e.button !== 0) return
+    e.preventDefault()
+    mousePanRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      ox: offsetRef.current.x,
+      oy: offsetRef.current.y,
+    }
+  }
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!mousePanRef.current || scaleRef.current <= 1) return
+    e.preventDefault()
+    const dx = e.clientX - mousePanRef.current.x
+    const dy = e.clientY - mousePanRef.current.y
+    setOffset(clampOffset({
+      x: mousePanRef.current.ox + dx,
+      y: mousePanRef.current.oy + dy,
+    }, scaleRef.current))
+  }
+
+  const endMousePan = () => {
+    mousePanRef.current = null
   }
 
   const onWheel = (e: React.WheelEvent) => {
@@ -146,7 +191,7 @@ export function ProductImageLightbox({ src, alt, open, onClose }: ProductImageLi
       aria-label="Product image zoom"
     >
       <div className="flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2">
-        <p className="text-white/60 text-xs">Pinch or use +/− to zoom · double-tap to toggle</p>
+        <p className="text-white/60 text-xs">Pinch or +/− to zoom · drag to pan · double-tap to toggle</p>
         <button
           type="button"
           onClick={onClose}
@@ -158,12 +203,19 @@ export function ProductImageLightbox({ src, alt, open, onClose }: ProductImageLi
       </div>
 
       <div
-        className="flex-1 relative overflow-hidden flex items-center justify-center"
+        className={cn(
+          'flex-1 relative overflow-hidden flex items-center justify-center',
+          scale > 1 && 'cursor-grab active:cursor-grabbing'
+        )}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
         onWheel={onWheel}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={endMousePan}
+        onMouseLeave={endMousePan}
         onClick={handleDoubleTap}
       >
         <div

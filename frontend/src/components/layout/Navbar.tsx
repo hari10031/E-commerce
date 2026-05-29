@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -29,6 +29,7 @@ const NAV_TYPES = [
 
 export function Navbar() {
   const router = useRouter()
+  const [, startTransition] = useTransition()
   const [categories, setCategories] = useState<Category[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -63,7 +64,8 @@ export function Navbar() {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     if (searchQuery.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
+      const href = `/products?search=${encodeURIComponent(searchQuery.trim())}`
+      startTransition(() => router.push(href))
       setMobileOpen(false)
     }
   }
@@ -81,7 +83,7 @@ export function Navbar() {
         <span className="text-white/50 hidden sm:inline"> · Handcrafted heritage weaves</span>
       </div>
 
-      <header className="sticky top-0 z-50 bg-[var(--color-background)]/85 backdrop-blur-md border-b border-brand-accent/15 transition-all duration-300 pt-safe">
+      <header className="sticky top-0 z-50 bg-[var(--color-background)]/85 backdrop-blur-md border-b border-brand-accent/15 transition-all duration-150 pt-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-[72px] gap-3 sm:gap-4">
             {/* Mobile menu toggle */}

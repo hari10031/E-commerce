@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../store/authStore';
 import { initials } from '../lib/utils';
+import { useRootTabBackToDashboard } from '../hooks/useHardwareBackHandler';
 
 function MenuSection({ title, children }) {
   return (
@@ -39,6 +40,8 @@ export default function MoreScreen({ navigation }) {
   const user = useAuthStore((s) => s.user);
   const viewMode = useAuthStore((s) => s.viewMode);
   const isAdmin = user?.role === 'admin';
+
+  useRootTabBackToDashboard(navigation);
 
   return (
     <ScrollView
@@ -84,6 +87,11 @@ export default function MoreScreen({ navigation }) {
       {/* Admin only */}
       {isAdmin && (
         <MenuSection title="Admin">
+          <MenuItem
+            icon="receipt"
+            label="Orders"
+            onPress={() => navigation.navigate('Orders', { initialStatus: 'placed' })}
+          />
           <MenuItem
             icon="bar-chart"
             label="Analytics"

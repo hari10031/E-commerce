@@ -1,18 +1,14 @@
 import { useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 
-// Re-run a react-query refetch whenever the screen regains focus. Screens in a
-// tab/stack navigator stay mounted, so `refetchOnMount` never fires on tab
-// switches — this keeps every page fresh when the user navigates back to it.
-// The first focus is skipped because mounting already triggers the initial fetch.
-//
-// The refetch fn is held in a ref so the focus callback stays referentially
-// stable: passing an inline/unmemoised fn would otherwise re-arm the effect on
-// every render and refetch in a loop.
-export function useRefetchOnFocus(refetch) {
+// Stale-only refetch when screen regains focus. Avoids blocking tab switches with
+// full network round-trips when data is still fresh (staleTime window).
+export function useRefetchOnFocus(...queryKeyPrefixes) {
+  const qc = useQueryClient();
   const isFirst = useRef(true);
-  const refetchRef = useRef(refetch);
-  refetchRef.current = refetch;
+  const keysRef = useRef(queryKeyPrefixes);
+  keysRef.current = queryKeyPrefixes;
 
   useFocusEffect(
     useCallback(() => {
@@ -20,8 +16,9 @@ export function useRefetchOnFocus(refetch) {
         isFirst.current = false;
         return;
       }
-      const fn = refetchRef.current;
-      if (typeof fn === 'function') fn();
-    }, [])
+      for (const key of keysRef.current) {
+        qc.refetchQueries({ queryKey: key, stale: true });
+      }
+    }, [qc])
   );
 }

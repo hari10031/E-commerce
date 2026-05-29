@@ -131,7 +131,7 @@ export default function CategoriesScreen({ navigation }) {
     staleTime: 120_000,
   });
 
-  useRefetchOnFocus(refetch);
+  useRefetchOnFocus(['categories']);
 
   const all = categories ?? [];
   const topLevel = all.filter((c) => !c.parent_id);

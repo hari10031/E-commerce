@@ -101,8 +101,15 @@ Mobile API URL: set `EXPO_PUBLIC_API_URL` in `mobile/.env` (see `.env.example`).
 
 ---
 
+## Navigation performance (2026-05-29)
+
+Faster page/tab transitions on mobile app, customer website, and admin website. See [`NAVIGATION_PERFORMANCE.md`](NAVIGATION_PERFORMANCE.md) for causes and estimated gains.
+
+---
+
 ## Documentation
 
 - [`mobile/CHANGES.md`](mobile/CHANGES.md) — Full mobile redesign report
+- [`NAVIGATION_PERFORMANCE.md`](NAVIGATION_PERFORMANCE.md) — Route transition tuning
 - [`PROJECT_STATUS.md`](PROJECT_STATUS.md) — Build status and feature coverage
 - [`CLAUDE.md`](CLAUDE.md) — Project architecture reference

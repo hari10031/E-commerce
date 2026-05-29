@@ -16,7 +16,20 @@ import useAuthStore from '../../store/authStore';
 import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const IMAGE_HEIGHT = 320;
+// Myntra-style portrait frame — 3:4 width:height across app + web
+const IMAGE_HEIGHT = Math.round(SCREEN_WIDTH * (4 / 3));
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 4;
+
+function clampZoomOffset(offset, scale) {
+  if (scale <= 1) return { x: 0, y: 0 };
+  const maxX = Math.max(0, (SCREEN_WIDTH * scale - SCREEN_WIDTH) / 2);
+  const maxY = Math.max(0, (SCREEN_HEIGHT * scale - SCREEN_HEIGHT) / 2);
+  return {
+    x: Math.max(-maxX, Math.min(maxX, offset.x)),
+    y: Math.max(-maxY, Math.min(maxY, offset.y)),
+  };
+}
 
 const COLOR_MAP = {
   red: '#ef4444', blue: '#3b82f6', green: '#22c55e', yellow: '#eab308',
@@ -43,6 +56,9 @@ export default function ProductDetailScreen({ route, navigation }) {
   const pinchStartDistanceRef = useRef(null);
   const pinchStartScaleRef = useRef(1);
   const zoomScaleRef = useRef(1);
+  const zoomOffsetRef = useRef({ x: 0, y: 0 });
+  const panStartRef = useRef(null);
+  const isPinchingRef = useRef(false);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [sellVariant, setSellVariant] = useState(null);
   const [sellQty, setSellQty] = useState(1);
@@ -50,7 +66,11 @@ export default function ProductDetailScreen({ route, navigation }) {
   const [selectedColor, setSelectedColor] = useState(null);
   const [zoomUrl, setZoomUrl] = useState(null);
   const [zoomScale, setZoomScale] = useState(1);
+  const [zoomOffset, setZoomOffset] = useState({ x: 0, y: 0 });
+  const zoomUrlRef = useRef(null);
   zoomScaleRef.current = zoomScale;
+  zoomOffsetRef.current = zoomOffset;
+  zoomUrlRef.current = zoomUrl;
   const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, actions, dismissible }
 
   const isAdmin = user?.role === 'admin';
@@ -60,6 +80,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', productId],
     queryFn: () => getProduct(productId),
+    staleTime: 60_000,
   });
 
   const openConfirm = (title, message, actions, dismissible = true) => {
@@ -185,17 +206,33 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const openZoom = (url) => {
     setZoomScale(1);
+    setZoomOffset({ x: 0, y: 0 });
     setZoomUrl(url);
   };
   const closeZoom = () => {
     setZoomUrl(null);
     setZoomScale(1);
+    setZoomOffset({ x: 0, y: 0 });
+  };
+  const setZoomScaleClamped = (nextScale) => {
+    const scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Number(nextScale.toFixed(3))));
+    setZoomScale(scale);
+    if (scale <= 1) {
+      setZoomOffset({ x: 0, y: 0 });
+    } else {
+      setZoomOffset((o) => clampZoomOffset(o, scale));
+    }
   };
   // Double-tap toggles between fit (1x) and 2.5x.
   const handleZoomTap = () => {
     const now = Date.now();
     if (now - lastTapRef.current < 300) {
-      setZoomScale((s) => (s > 1 ? 1 : 2.5));
+      if (zoomScaleRef.current > 1) {
+        setZoomScale(1);
+        setZoomOffset({ x: 0, y: 0 });
+      } else {
+        setZoomScaleClamped(2.5);
+      }
     }
     lastTapRef.current = now;
   };
@@ -210,33 +247,67 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const zoomPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponderCapture: (evt) => evt.nativeEvent.touches.length === 2,
-      onMoveShouldSetPanResponderCapture: (evt) => evt.nativeEvent.touches.length === 2,
+      onStartShouldSetPanResponder: () => !!zoomUrlRef.current,
+      onMoveShouldSetPanResponder: () => !!zoomUrlRef.current,
       onPanResponderGrant: (evt) => {
-        if (evt.nativeEvent.touches.length !== 2) return;
-        const distance = pinchDistance(evt.nativeEvent.touches);
-        if (!distance) return;
-        pinchStartDistanceRef.current = distance;
-        pinchStartScaleRef.current = zoomScaleRef.current;
+        const touches = evt.nativeEvent.touches;
+        if (touches.length === 2) {
+          isPinchingRef.current = true;
+          const distance = pinchDistance(touches);
+          if (!distance) return;
+          pinchStartDistanceRef.current = distance;
+          pinchStartScaleRef.current = zoomScaleRef.current;
+          panStartRef.current = null;
+          return;
+        }
+        if (touches.length === 1 && zoomScaleRef.current > 1) {
+          isPinchingRef.current = false;
+          panStartRef.current = {
+            x: touches[0].pageX,
+            y: touches[0].pageY,
+            ox: zoomOffsetRef.current.x,
+            oy: zoomOffsetRef.current.y,
+          };
+        }
       },
       onPanResponderMove: (evt) => {
-        if (evt.nativeEvent.touches.length !== 2) return;
-        const distance = pinchDistance(evt.nativeEvent.touches);
-        const startDistance = pinchStartDistanceRef.current;
-        if (!distance || !startDistance) return;
-        const next = pinchStartScaleRef.current * (distance / startDistance);
-        setZoomScale(Math.max(1, Math.min(4, Number(next.toFixed(3)))));
+        const touches = evt.nativeEvent.touches;
+        if (touches.length === 2) {
+          isPinchingRef.current = true;
+          const distance = pinchDistance(touches);
+          const startDistance = pinchStartDistanceRef.current;
+          if (!distance || !startDistance) return;
+          setZoomScaleClamped(pinchStartScaleRef.current * (distance / startDistance));
+          return;
+        }
+        if (
+          touches.length === 1
+          && panStartRef.current
+          && zoomScaleRef.current > 1
+          && !isPinchingRef.current
+        ) {
+          const dx = touches[0].pageX - panStartRef.current.x;
+          const dy = touches[0].pageY - panStartRef.current.y;
+          setZoomOffset(clampZoomOffset({
+            x: panStartRef.current.ox + dx,
+            y: panStartRef.current.oy + dy,
+          }, zoomScaleRef.current));
+        }
       },
       onPanResponderRelease: () => {
         pinchStartDistanceRef.current = null;
+        panStartRef.current = null;
+        isPinchingRef.current = false;
       },
       onPanResponderTerminate: () => {
         pinchStartDistanceRef.current = null;
+        panStartRef.current = null;
+        isPinchingRef.current = false;
       },
     })
   ).current;
 
-  if (isLoading) return <LoadingSpinner message="Loading product…" />;
+  if (isLoading && !product) return <LoadingSpinner message="Loading product…" />;
   if (!product) return null;
 
   const typeConfig = PRODUCT_TYPES.find((t) => t.value === product.type);
@@ -741,7 +812,11 @@ export default function ProductDetailScreen({ route, navigation }) {
                   style={{
                     width: SCREEN_WIDTH,
                     height: SCREEN_HEIGHT,
-                    transform: [{ scale: zoomScale }],
+                    transform: [
+                      { translateX: zoomOffset.x },
+                      { translateY: zoomOffset.y },
+                      { scale: zoomScale },
+                    ],
                   }}
                   resizeMode="contain"
                 />
@@ -763,10 +838,10 @@ export default function ProductDetailScreen({ route, navigation }) {
             className="items-center"
             pointerEvents="box-none"
           >
-            <Text className="text-white/50 text-xs mb-2">Double-tap image or use − / + to zoom</Text>
+            <Text className="text-white/50 text-xs mb-2">Pinch or − / + to zoom · drag to pan · double-tap to toggle</Text>
             <View className="flex-row justify-center items-center">
               <Pressable
-                onPress={() => setZoomScale((s) => Math.max(1, Math.round((s - 0.5) * 10) / 10))}
+                onPress={() => setZoomScaleClamped(zoomScale - 0.5)}
                 className="w-12 h-12 bg-white/20 rounded-full items-center justify-center"
               >
                 <Ionicons name="remove" size={24} color="#fff" />
@@ -775,7 +850,7 @@ export default function ProductDetailScreen({ route, navigation }) {
                 <Text className="text-white text-sm font-semibold">{Math.round(zoomScale * 100)}%</Text>
               </View>
               <Pressable
-                onPress={() => setZoomScale((s) => Math.min(4, Math.round((s + 0.5) * 10) / 10))}
+                onPress={() => setZoomScaleClamped(zoomScale + 0.5)}
                 className="w-12 h-12 bg-white/20 rounded-full items-center justify-center"
               >
                 <Ionicons name="add" size={24} color="#fff" />

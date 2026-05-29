@@ -10,6 +10,7 @@ const auth_1 = require("../middleware/auth");
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const storageService_1 = require("../services/storageService");
 const geminiService_1 = require("../services/geminiService");
+const imagePrep_1 = require("../services/imagePrep");
 const router = (0, express_1.Router)();
 const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 // Writes a product title + description from the product photo, via Gemini.
@@ -59,8 +60,11 @@ router.post('/generate-image', rateLimiter_1.aiLimiter, auth_1.authenticate, aut
         return res.status(400).json({ error: 'Provide an image file, imageUrl, or imageUrls' });
     }
     const { productType, color, category } = req.body;
+    const t0 = Date.now();
+    const timing = { prepareMs: 0, geminiMs: 0, uploadMs: 0, totalMs: 0 };
     try {
         if (imageUrls.length > 0) {
+            const prepStart = Date.now();
             const urls = imageUrls.slice(0, 7);
             const buffers = await Promise.all(urls.map(async (url) => {
                 const resp = await fetch(url);
@@ -70,8 +74,8 @@ router.post('/generate-image', rateLimiter_1.aiLimiter, auth_1.authenticate, aut
             }));
             const cols = urls.length <= 1 ? 1 : urls.length <= 4 ? 2 : 3;
             const rows = Math.ceil(urls.length / cols);
-            const cellWidth = 600;
-            const cellHeight = 800;
+            const cellWidth = 480;
+            const cellHeight = 640;
             const base = (0, sharp_1.default)({
                 create: {
                     width: cols * cellWidth,
@@ -88,20 +92,36 @@ router.post('/generate-image', rateLimiter_1.aiLimiter, auth_1.authenticate, aut
                 left: (idx % cols) * cellWidth,
                 top: Math.floor(idx / cols) * cellHeight,
             })));
-            sourceBuffer = await base.composite(composites).jpeg({ quality: 90 }).toBuffer();
+            sourceBuffer = await base.composite(composites).jpeg({ quality: 85 }).toBuffer();
             mimeType = 'image/jpeg';
+            timing.prepareMs = Date.now() - prepStart;
         }
         else if (req.file) {
-            sourceBuffer = req.file.buffer;
-            mimeType = req.file.mimetype;
+            const prepStart = Date.now();
+            const optimized = await (0, imagePrep_1.optimizeSourceImage)(req.file.buffer);
+            sourceBuffer = optimized.buffer;
+            mimeType = optimized.mimeType;
+            timing.prepareMs = Date.now() - prepStart;
         }
         else {
+            const prepStart = Date.now();
             const resp = await fetch(req.body.imageUrl);
             if (!resp.ok)
                 return res.status(400).json({ error: 'Could not fetch the source image' });
-            sourceBuffer = Buffer.from(await resp.arrayBuffer());
-            mimeType = resp.headers.get('content-type') || 'image/jpeg';
+            const raw = Buffer.from(await resp.arrayBuffer());
+            const optimized = await (0, imagePrep_1.optimizeSourceImage)(raw);
+            sourceBuffer = optimized.buffer;
+            mimeType = optimized.mimeType;
+            timing.prepareMs = Date.now() - prepStart;
         }
+        if (imageUrls.length > 0) {
+            const optStart = Date.now();
+            const optimized = await (0, imagePrep_1.optimizeSourceImage)(sourceBuffer);
+            sourceBuffer = optimized.buffer;
+            mimeType = optimized.mimeType;
+            timing.prepareMs += Date.now() - optStart;
+        }
+        const geminiStart = Date.now();
         const generated = await (0, geminiService_1.generateProductImage)({
             imageBase64: sourceBuffer.toString('base64'),
             mimeType,
@@ -109,9 +129,13 @@ router.post('/generate-image', rateLimiter_1.aiLimiter, auth_1.authenticate, aut
             color,
             category,
         });
+        timing.geminiMs = Date.now() - geminiStart;
+        const uploadStart = Date.now();
         const safeColor = (color || 'product').toString().replace(/\s+/g, '-');
         const url = await (0, storageService_1.uploadImage)(generated, `ai-${safeColor}.png`, 'product-images');
-        res.json({ url });
+        timing.uploadMs = Date.now() - uploadStart;
+        timing.totalMs = Date.now() - t0;
+        res.json({ url, timing, productType: productType || 'saree' });
     }
     catch (err) {
         res.status(502).json({ error: err instanceof Error ? err.message : 'Image generation failed' });

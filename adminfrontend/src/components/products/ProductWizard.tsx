@@ -172,8 +172,7 @@ export function ProductWizard({ editId, initialData, existingImages = [] }: Prod
             onChange={(content) => update('content', { ...data.content, ...content })}
             productType={data.type}
             categoryId={data.categoryId}
-            colors={colors}
-            sizes={sizes}
+            images={data.images}
           />
         )}
         {currentStep === 4 && (

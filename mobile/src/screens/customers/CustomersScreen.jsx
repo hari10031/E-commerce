@@ -10,6 +10,7 @@ import { getCustomers } from '../../lib/api';
 import { formatPrice, initials } from '../../lib/utils';
 import EmptyState from '../../components/ui/EmptyState';
 import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
+import { useRootTabBackToDashboard } from '../../hooks/useHardwareBackHandler';
 
 const AVATAR_COLORS = ['#ec4899', '#8b5cf6', '#f59e0b', '#14b8a6', '#881337'];
 
@@ -22,13 +23,15 @@ export default function CustomersScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
 
+  useRootTabBackToDashboard(navigation);
+
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['customers', search.trim()],
     queryFn: () => getCustomers({ search: search.trim() || undefined, limit: 100 }),
     staleTime: 30_000,
   });
 
-  useRefetchOnFocus(refetch);
+  useRefetchOnFocus(['customers']);
 
   const customers = data?.data ?? [];
 

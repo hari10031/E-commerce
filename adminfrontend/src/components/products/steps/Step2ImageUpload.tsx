@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, Trash2, Sparkles, Plus, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
-import { JEWELLERY_PSEUDO_COLOR, photoBlocksFor } from '@/lib/photoBlocks';
+import { HeroPhotoReviewModal } from '@/components/products/HeroPhotoReviewModal';
+import { JEWELLERY_PSEUDO_COLOR, isHeroPhotoSlot, photoBlocksFor } from '@/lib/photoBlocks';
 import { slotKey, type ColorImagePair } from '@/lib/productImages';
 import type { ProductType } from '@/types';
 
@@ -35,6 +36,11 @@ export function Step2ImageUpload({
   const [uploadingKey, setUploadingKey] = useState('');
   const [generatingKey, setGeneratingKey] = useState('');
   const [newColor, setNewColor] = useState('');
+  const [heroReview, setHeroReview] = useState<{
+    color: string;
+    slot: string;
+    file: File;
+  } | null>(null);
 
   const blocks = photoBlocksFor(productType);
   const isJewellery = productType === 'jewellery';
@@ -93,7 +99,7 @@ export function Step2ImageUpload({
     onChange(data.filter((i) => i.color !== color));
   };
 
-  const handleFile = async (color: string, slot: string, file: File) => {
+  const uploadFile = async (color: string, slot: string, file: File) => {
     if (!token) {
       toast.error('Session expired', 'Please log in again.');
       return;
@@ -114,6 +120,14 @@ export function Step2ImageUpload({
     } finally {
       setUploadingKey('');
     }
+  };
+
+  const handleFile = async (color: string, slot: string, file: File) => {
+    if (isHeroPhotoSlot(productType, slot)) {
+      setHeroReview({ color, slot, file });
+      return;
+    }
+    await uploadFile(color, slot, file);
   };
 
   const generateImage = async (color: string, slot: string) => {
@@ -154,7 +168,7 @@ export function Step2ImageUpload({
     return (
       <div key={key} className="w-[48%] mb-3">
         <div
-          className="relative rounded-xl border overflow-hidden aspect-square bg-[#fef7f0] cursor-pointer hover:border-amber-400 transition-colors"
+          className="relative rounded-xl border overflow-hidden aspect-[3/4] bg-[#fef7f0] cursor-pointer hover:border-amber-400 transition-colors"
           style={{ borderColor: img ? '#f59e0b' : '#e5e7eb' }}
           onClick={() => !isUp && fileRefs.current[key]?.click()}
         >
@@ -221,6 +235,24 @@ export function Step2ImageUpload({
 
   return (
     <div className="space-y-6">
+      <HeroPhotoReviewModal
+        open={!!heroReview}
+        file={heroReview?.file ?? null}
+        slotLabel={heroReview?.slot ?? ''}
+        onClose={() => {
+          if (heroReview) {
+            const ref = fileRefs.current[slotKey(heroReview.color, heroReview.slot)];
+            if (ref) ref.value = '';
+          }
+          setHeroReview(null);
+        }}
+        onConfirm={async (file) => {
+          if (!heroReview) return;
+          const { color, slot } = heroReview;
+          setHeroReview(null);
+          await uploadFile(color, slot, file);
+        }}
+      />
       <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
         {isJewellery
           ? `Up to ${blocks.length} optional photo slots. Upload any angles you have, then use AI for a clean studio shot.`

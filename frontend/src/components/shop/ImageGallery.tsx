@@ -76,7 +76,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
 
   if (!activeImage) {
     return (
-      <div className="aspect-square bg-neutral-100 rounded-2xl sm:rounded-3xl flex items-center justify-center">
+      <div className="aspect-[3/4] bg-neutral-100 rounded-2xl sm:rounded-3xl flex items-center justify-center">
         <span className="text-6xl opacity-40">🌸</span>
       </div>
     )
@@ -88,7 +88,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
         type="button"
         onClick={openLightbox}
         className={cn(
-          'relative w-full aspect-square rounded-2xl sm:rounded-3xl overflow-hidden bg-neutral-50 border border-neutral-200/70 group text-left',
+          'relative w-full aspect-[3/4] rounded-2xl sm:rounded-3xl overflow-hidden bg-neutral-50 border border-neutral-200/70 group text-left',
           isTouch ? 'cursor-pointer active:opacity-95' : 'cursor-zoom-in'
         )}
         onMouseMove={handleMouseMove}
@@ -147,7 +147,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
               type="button"
               onClick={() => setActiveIndex(idx)}
               className={cn(
-                'relative h-[4.5rem] w-[4.5rem] sm:h-16 sm:w-16 shrink-0 rounded-xl overflow-hidden border-2 bg-neutral-50 transition-colors snap-start',
+                'relative w-12 sm:w-14 shrink-0 aspect-[3/4] rounded-xl overflow-hidden border-2 bg-neutral-50 transition-colors snap-start',
                 idx === activeIndex
                   ? 'border-brand'
                   : 'border-neutral-200 hover:border-neutral-300'

@@ -6,6 +6,13 @@ import { generateProductImage } from '../../../lib/api';
 export default function StepAIGenerate({ wizardData, update }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState(null);
+  const [lastTiming, setLastTiming] = useState(null);
+
+  const etaHint = wizardData.type === 'saree'
+    ? 'Usually 15–35 sec (full-body shot)'
+    : wizardData.type === 'jewellery'
+      ? 'Usually 10–25 sec'
+      : 'Usually 15–30 sec';
 
   const primaryImage = wizardData.images.find((img) => img.uploadedUrl);
   const primaryColor = primaryImage?.label || primaryImage?.color || '';
@@ -28,6 +35,7 @@ export default function StepAIGenerate({ wizardData, update }) {
     }
     setIsGenerating(true);
     setGeneratedUrl(null);
+    setLastTiming(null);
     try {
       const result = await generateProductImage({
         imageUrl: primaryImage.uploadedUrl,
@@ -36,6 +44,7 @@ export default function StepAIGenerate({ wizardData, update }) {
         category: wizardData.categoryName,
       });
       setGeneratedUrl(result.url);
+      if (result.timing) setLastTiming(result.timing);
     } catch (err) {
       Alert.alert('Generation Failed', err.message);
     } finally {
@@ -72,8 +81,8 @@ export default function StepAIGenerate({ wizardData, update }) {
         <View className="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden mb-4">
           <Image
             source={{ uri: primaryImage.uploadedUrl }}
-            className="w-full aspect-square"
-            resizeMode="cover"
+            className="w-full aspect-[3/4]"
+            resizeMode="contain"
           />
           <View className="px-4 py-3 bg-white border-t border-gray-100">
             <Text className="text-xs text-gray-500 font-medium">SOURCE IMAGE</Text>
@@ -127,7 +136,7 @@ export default function StepAIGenerate({ wizardData, update }) {
         <View className="items-center justify-center py-8">
           <ActivityIndicator size="large" color="#f59e0b" />
           <Text className="text-sm text-gray-500 mt-3">Creating your studio shot…</Text>
-          <Text className="text-xs text-gray-400 mt-1">This may take 10–20 seconds</Text>
+          <Text className="text-xs text-gray-400 mt-1">{etaHint}</Text>
         </View>
       )}
 
@@ -136,13 +145,19 @@ export default function StepAIGenerate({ wizardData, update }) {
           <View className="bg-green-50 rounded-2xl border border-green-200 overflow-hidden mb-4">
             <Image
               source={{ uri: generatedUrl }}
-              className="w-full aspect-square"
-              resizeMode="cover"
+              className="w-full aspect-[3/4]"
+              resizeMode="contain"
             />
             <View className="px-4 py-3 bg-white border-t border-green-100">
-              <View className="flex-row items-center">
+              <View className="flex-row items-center flex-wrap">
                 <Ionicons name="checkmark-circle" size={14} color="#16a34a" />
                 <Text className="text-xs text-green-700 font-medium ml-1">AI GENERATED</Text>
+                {lastTiming?.totalMs ? (
+                  <Text className="text-xs text-green-600 ml-2">
+                    {(lastTiming.totalMs / 1000).toFixed(1)}s total
+                    {lastTiming.geminiMs ? ` · AI ${(lastTiming.geminiMs / 1000).toFixed(1)}s` : ''}
+                  </Text>
+                ) : null}
               </View>
             </View>
           </View>
