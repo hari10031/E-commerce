@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "NanaBanana",
-    "slug": "nanabanana-mobile",
+    "name": "Yuvarani Silks Mobile",
+    "slug": "Yuvarani Silks Mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -53,7 +53,7 @@
       "expo-font"
     ],
     "extra": {
-      "apiUrl": "http://192.168.31.166:4000/api"
+      "apiUrl": "https://api.yuvaranisilks.com/api"
     }
   }
 }
