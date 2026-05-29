@@ -187,7 +187,7 @@ export default function RegisterScreen({ navigation }) {
           <Pressable
             onPress={handleSubmit(onSubmit)}
             disabled={isSubmitting}
-            className="bg-amber-500 rounded-xl py-4 items-center mt-2 active:bg-amber-600"
+            className="bg-[#6B1A1A] rounded-xl py-4 items-center mt-2 active:opacity-90"
             style={{ opacity: isSubmitting ? 0.7 : 1 }}
           >
             {isSubmitting ? (
@@ -200,7 +200,7 @@ export default function RegisterScreen({ navigation }) {
           <View className="flex-row justify-center mt-6">
             <Text className="text-gray-500">Already have an account? </Text>
             <Pressable onPress={() => navigation.navigate('Login')}>
-              <Text className="text-amber-600 font-semibold">Sign in</Text>
+              <Text className="text-[#6B1A1A] font-semibold">Sign in</Text>
             </Pressable>
           </View>
         </View>

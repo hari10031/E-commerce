@@ -92,7 +92,7 @@ export function RazorpayButton({ addressData, totalAmount, coupon, onSuccess }: 
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
         amount: orderData.amount,
         currency: orderData.currency ?? 'INR',
-        name: 'NanaBanana',
+        name: 'Yuvarani Silks',
         description: 'Your saree & jewellery order',
         order_id: orderData.razorpay_order_id,
         prefill: {

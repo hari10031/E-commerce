@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()(
       setHasHydrated: (v) => set({ hasHydrated: v }),
     }),
     {
-      name: 'nanabanana-auth',
+      name: 'yuvarani-auth',
       partialize: (s) => ({ token: s.token, refreshToken: s.refreshToken, user: s.user }),
       onRehydrateStorage: () => (state) => state?.setHasHydrated(true),
     }

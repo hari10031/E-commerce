@@ -11,6 +11,8 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import { toast } from '@/components/ui/Toaster'
 import { cn } from '@/lib/utils'
+import { BRAND } from '@/lib/brand'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -51,7 +53,7 @@ export default function LoginPage() {
       if (res.user.role !== 'customer') {
         toast({
           title: 'Staff accounts can’t sign in here',
-          description: 'This store is for shopping. Please use the NanaBanana admin app.',
+          description: `This store is for shopping. Please use the ${BRAND.name} admin app.`,
           variant: 'destructive',
         })
         return
@@ -82,8 +84,8 @@ export default function LoginPage() {
         <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
         <div className="absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-[var(--color-gold)]/10 blur-3xl" />
         <div className="relative">
-          <span className="text-2xl font-bold text-brand font-[var(--font-display)]">NanaBanana</span>
-          <p className="text-[10px] tracking-[0.32em] uppercase text-white/40 mt-1">Heritage Couture</p>
+          <BrandLogo href={undefined} showTagline={false} imageClassName="h-11 brightness-110" />
+          <p className="text-[10px] tracking-[0.32em] uppercase text-white/40 mt-2">{BRAND.tagline}</p>
         </div>
         <div className="relative">
           <h2 className="text-4xl font-semibold font-[var(--font-display)] leading-tight">
@@ -106,7 +108,7 @@ export default function LoginPage() {
           </ul>
         </div>
         <p className="relative text-xs text-white/30">
-          &copy; {new Date().getFullYear()} NanaBanana
+          &copy; {new Date().getFullYear()} {BRAND.name}
         </p>
       </div>
 

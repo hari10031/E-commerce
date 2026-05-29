@@ -27,7 +27,7 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () => set({ token: null, user: null }),
     }),
     {
-      name: 'nb-admin-auth',
+      name: 'yuvarani-admin-auth',
     }
   )
 );

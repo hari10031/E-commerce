@@ -65,7 +65,7 @@ export default async function HomePage() {
         <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-[var(--color-gold)]/10 blur-3xl" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-gold)]">
-            The NanaBanana Edit
+            The Yuvarani Silks Edit
           </p>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold font-[var(--font-display)] mt-3 mb-4">
             Explore Our Full Heritage Collection

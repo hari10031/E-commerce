@@ -36,7 +36,7 @@ export const supabase = createClient(
     auth: { autoRefreshToken: false, persistSession: false },
     db: { schema: 'public' },
     global: {
-      headers: { 'x-application-name': 'nanabanana-backend' },
+      headers: { 'x-application-name': 'yuvarani-backend' },
     },
   }
 )

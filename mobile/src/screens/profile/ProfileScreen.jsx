@@ -167,7 +167,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
           <View className="flex-row items-center justify-between py-1">
             <Text className="text-sm text-gray-600">Platform</Text>
-            <Text className="text-sm font-medium text-gray-800">NanaBanana Mobile</Text>
+            <Text className="text-sm font-medium text-gray-800">Yuvarani Silks Mobile</Text>
           </View>
         </View>
 

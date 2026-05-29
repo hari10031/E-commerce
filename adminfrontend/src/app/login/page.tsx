@@ -10,7 +10,9 @@ import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Banana, Eye, EyeOff } from 'lucide-react';
+import Image from 'next/image';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { BRAND } from '@/lib/brand';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -64,17 +66,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1C1C1C] via-[#2a1818] to-[#1C1C1C]">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
-              <Banana className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-gray-900">NanaBanana</span>
-          </div>
-          <p className="text-gray-500 text-sm">Admin Dashboard</p>
+          <Image
+            src={BRAND.logoPath}
+            alt={BRAND.name}
+            width={280}
+            height={72}
+            className="h-14 w-auto object-contain mb-3"
+            priority
+          />
+          <p className="text-[#C9A227]/80 text-sm tracking-widest uppercase">{BRAND.tagline}</p>
         </div>
 
         {/* Card */}
@@ -94,7 +98,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@nanabanana.com"
+                placeholder={BRAND.adminEmail}
                 autoComplete="email"
                 {...register('email')}
               />

@@ -1,6 +1,8 @@
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Mail, Phone, MapPin, Truck, ShieldCheck, RotateCcw } from 'lucide-react'
+import { BRAND } from '@/lib/brand'
 
 const SHOP_LINKS = [
   { href: '/products?type=saree', label: 'Sarees' },
@@ -40,9 +42,13 @@ export function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-8 sm:gap-10">
           {/* Brand */}
           <div className="sm:col-span-2 md:col-span-5">
-            <h2 className="text-2xl font-bold text-white font-[var(--font-display)]">
-              NanaBanana
-            </h2>
+            <Image
+              src={BRAND.logoPath}
+              alt={BRAND.name}
+              width={200}
+              height={48}
+              className="h-10 w-auto object-contain object-left brightness-110"
+            />
             <div className="gold-rule w-16 my-4" />
             <p className="text-sm leading-relaxed text-neutral-400 max-w-sm">
               Celebrating India&apos;s textile heritage — handwoven sarees, designer
@@ -91,7 +97,7 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2.5">
                 <Mail className="h-4 w-4 text-[var(--color-gold)] shrink-0" />
-                care@nanabanana.in
+                {BRAND.email}
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="h-4 w-4 text-[var(--color-gold)] shrink-0" />
@@ -107,7 +113,7 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p className="text-xs text-neutral-500">
-            &copy; {new Date().getFullYear()} NanaBanana. All rights reserved.
+            &copy; {new Date().getFullYear()} {BRAND.name}. All rights reserved.
           </p>
           <p className="text-xs text-neutral-500">
             Crafted with care for India&apos;s artisans.

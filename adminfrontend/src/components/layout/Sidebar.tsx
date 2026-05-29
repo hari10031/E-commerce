@@ -11,12 +11,12 @@ import {
   Ticket,
   BarChart3,
   LogOut,
-  Banana,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useState } from 'react';
 
 const navItems = [
@@ -89,25 +89,18 @@ export function Sidebar() {
     <aside
       className={cn(
         'flex flex-col h-full transition-all duration-300 ease-in-out',
-        'bg-[oklch(0.16_0.02_260)] text-[oklch(0.80_0.02_260)]',
+        'bg-[#1C1C1C] text-neutral-300',
         collapsed ? 'w-16' : 'w-60'
       )}
     >
       {/* Logo */}
       <div
         className={cn(
-          'flex items-center h-16 px-4 border-b border-[oklch(0.22_0.03_260)]',
+          'flex items-center h-16 px-4 border-b border-white/10',
           collapsed ? 'justify-center' : 'justify-between'
         )}
       >
-        <div className={cn('flex items-center gap-2', collapsed && 'justify-center')}>
-          <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0">
-            <Banana className="w-5 h-5 text-white" />
-          </div>
-          {!collapsed && (
-            <span className="font-bold text-white text-sm">NanaBanana</span>
-          )}
-        </div>
+        <BrandLogo collapsed={collapsed} showName={!collapsed} />
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={cn(

@@ -1,0 +1,12 @@
+feat: rebrand to Yuvarani Silks and fix Next.js dev servers
+
+Replace NanaBanana branding across the storefront, admin dashboard, mobile
+app, and backend with Yuvarani Silks — shared brand config, logo assets,
+maroon/gold theme, Razorpay/checkout copy, and a mobile splash animation.
+
+Fix local dev crashes caused by a stray root package-lock.json confusing
+Next.js workspace detection, Turbopack heap OOM on Node 24, and corrupted
+admin node_modules. Dev scripts now use a 4GB heap and webpack; both apps
+set outputFileTracingRoot to their own directory.
+
+Also rebuild backend dist and sync package names to yuvarani-*.

@@ -1,9 +1,9 @@
 {
-  "name": "nanabanana-frontend",
+  "name": "yuvarani-frontend",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

@@ -8,7 +8,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 });
 
 async function createAdmin() {
-  const email = 'admin@nanabanana.com';
+  const email = 'admin@yuvaranisilks.com';
   const password = 'admin123';
   const name = 'Admin';
 

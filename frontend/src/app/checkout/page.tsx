@@ -238,7 +238,7 @@ export default function CheckoutPage() {
                 Order Confirmed
               </h2>
               <p className="text-neutral-500 mb-2 text-sm">
-                Thank you for shopping with NanaBanana. A confirmation will reach you shortly.
+                Thank you for shopping with Yuvarani Silks. A confirmation will reach you shortly.
               </p>
               {successOrderId && (
                 <p className="text-sm text-neutral-600 mb-7">

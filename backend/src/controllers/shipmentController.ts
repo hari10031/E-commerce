@@ -54,7 +54,7 @@ async function loadOrderForShipment(orderId: string, userId?: string) {
 
 async function getCustomerEmail(userId: string): Promise<string> {
   const { data, error } = await supabase.auth.admin.getUserById(userId)
-  if (error || !data.user?.email) return 'customer@nanabanana.in'
+  if (error || !data.user?.email) return 'customer@yuvaranisilks.in'
   return data.user.email
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Image } from 'react-native';
 import useAuthStore from '../store/authStore';
+import { BRAND } from '../constants/brand';
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
 
@@ -9,8 +10,16 @@ export default function AppNavigator() {
 
   if (!_hasHydrated) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fffbeb' }}>
-        <ActivityIndicator size="large" color="#f59e0b" />
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: BRAND.colors.charcoal,
+        }}
+      >
+        <Image source={BRAND.logo} style={{ width: 220, height: 64 }} resizeMode="contain" />
+        <ActivityIndicator size="large" color={BRAND.colors.gold} style={{ marginTop: 28 }} />
       </View>
     );
   }

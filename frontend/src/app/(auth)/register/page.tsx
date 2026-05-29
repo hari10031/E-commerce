@@ -11,6 +11,8 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import { toast } from '@/components/ui/Toaster'
 import { cn } from '@/lib/utils'
+import { BRAND } from '@/lib/brand'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -57,7 +59,7 @@ export default function RegisterPage() {
           email: data.email,
           role: 'customer',
         })
-        toast({ title: `Welcome to NanaBanana, ${data.name.split(' ')[0]}!` })
+        toast({ title: `Welcome to ${BRAND.name}, ${data.name.split(' ')[0]}!` })
         router.push('/')
       } else {
         // No session — Supabase requires email confirmation before sign-in.
@@ -90,8 +92,8 @@ export default function RegisterPage() {
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
         <div className="absolute -bottom-32 -right-16 h-80 w-80 rounded-full bg-[var(--color-gold)]/10 blur-3xl" />
         <div className="relative">
-          <span className="text-2xl font-bold text-brand font-[var(--font-display)]">NanaBanana</span>
-          <p className="text-[10px] tracking-[0.32em] uppercase text-white/40 mt-1">Heritage Couture</p>
+          <BrandLogo href={undefined} showTagline={false} imageClassName="h-11 brightness-110" />
+          <p className="text-[10px] tracking-[0.32em] uppercase text-white/40 mt-2">{BRAND.tagline}</p>
         </div>
         <div className="relative">
           <h2 className="text-4xl font-semibold font-[var(--font-display)] leading-tight">
@@ -114,7 +116,7 @@ export default function RegisterPage() {
           </ul>
         </div>
         <p className="relative text-xs text-white/30">
-          &copy; {new Date().getFullYear()} NanaBanana
+          &copy; {new Date().getFullYear()} {BRAND.name}
         </p>
       </div>
 

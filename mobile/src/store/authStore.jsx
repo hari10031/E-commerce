@@ -40,7 +40,7 @@ const useAuthStore = create(
       setViewMode: (mode) => set({ viewMode: mode }),
     }),
     {
-      name: 'nb-auth',
+      name: 'yuvarani-auth',
       storage: createJSONStorage(() => storage),
       partialize: (state) => ({
         token: state.token,

@@ -30,7 +30,7 @@ exports.supabase = (0, supabase_js_1.createClient)(process.env.SUPABASE_URL, pro
     auth: { autoRefreshToken: false, persistSession: false },
     db: { schema: 'public' },
     global: {
-        headers: { 'x-application-name': 'nanabanana-backend' },
+        headers: { 'x-application-name': 'yuvarani-backend' },
     },
 });
 // Dedicated client for user sign-in / sign-up only. Kept separate so user sessions

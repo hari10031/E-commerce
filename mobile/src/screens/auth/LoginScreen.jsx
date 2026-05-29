@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Image,
 } from 'react-native';
+import { BRAND } from '../../constants/brand';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -72,7 +73,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white"
+      className="flex-1 bg-[#1C1C1C]"
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }}
@@ -81,13 +82,17 @@ export default function LoginScreen({ navigation }) {
         <View className="flex-1 px-6">
           {/* Logo area */}
           <View className="items-center mb-10">
-            <View className="w-20 h-20 bg-amber-500 rounded-2xl items-center justify-center mb-4">
-              <Text className="text-4xl">🍌</Text>
-            </View>
-            <Text className="text-3xl font-bold text-gray-900">NanaBanana</Text>
-            <Text className="text-sm text-gray-500 mt-1">Admin & Employee Portal</Text>
+            <Image
+              source={BRAND.logo}
+              style={{ width: 280, height: 72 }}
+              resizeMode="contain"
+            />
+            <Text className="text-sm text-[#C9A227]/80 mt-3 tracking-widest uppercase">
+              {BRAND.tagline}
+            </Text>
           </View>
 
+          <View className="bg-white rounded-3xl p-6 shadow-lg">
           <Text className="text-2xl font-bold text-gray-900 mb-1">Welcome back</Text>
           <Text className="text-gray-500 mb-8">Sign in to your account</Text>
 
@@ -159,7 +164,7 @@ export default function LoginScreen({ navigation }) {
           <Pressable
             onPress={handleSubmit(onSubmit)}
             disabled={isSubmitting}
-            className="bg-amber-500 rounded-xl py-4 items-center active:bg-amber-600"
+            className="bg-[#6B1A1A] rounded-xl py-4 items-center active:opacity-90"
             style={{ opacity: isSubmitting ? 0.7 : 1 }}
           >
             {isSubmitting ? (
@@ -173,8 +178,9 @@ export default function LoginScreen({ navigation }) {
           <View className="flex-row justify-center mt-6">
             <Text className="text-gray-500">New employee? </Text>
             <Pressable onPress={() => navigation.navigate('Register')}>
-              <Text className="text-amber-600 font-semibold">Register here</Text>
+              <Text className="text-[#6B1A1A] font-semibold">Register here</Text>
             </Pressable>
+          </View>
           </View>
         </View>
       </ScrollView>

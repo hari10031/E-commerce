@@ -8,6 +8,7 @@ import TypeSelectorModal from '../components/products/TypeSelectorModal';
 import { navigationRef } from './navigationRef';
 
 import useAuthStore from '../store/authStore';
+import { BRAND } from '../constants/brand';
 
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import ProductsScreen from '../screens/products/ProductsScreen';
@@ -36,7 +37,7 @@ const MoreStk = createNativeStackNavigator();
 const CustStack = createNativeStackNavigator();
 const ProfStack = createNativeStackNavigator();
 
-const AMBER = '#f59e0b';
+const ACTIVE = BRAND.colors.maroon;
 const GRAY = '#9ca3af';
 
 const STACK_OPTS = { headerShown: false };
@@ -120,10 +121,10 @@ function CreateTabButton({ onPress }) {
           width: 58,
           height: 58,
           borderRadius: 29,
-          backgroundColor: AMBER,
+          backgroundColor: ACTIVE,
           alignItems: 'center',
           justifyContent: 'center',
-          shadowColor: AMBER,
+          shadowColor: ACTIVE,
           shadowOpacity: 0.45,
           shadowRadius: 8,
           shadowOffset: { width: 0, height: 4 },
@@ -164,7 +165,7 @@ function AdminTabs({ onCreatePress }) {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: AMBER,
+        tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: GRAY,
         tabBarStyle,
         tabBarLabelStyle: TAB_LABEL_STYLE,
@@ -249,7 +250,7 @@ function EmployeeTabs({ onCreatePress }) {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: AMBER,
+        tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: GRAY,
         tabBarStyle,
         tabBarLabelStyle: TAB_LABEL_STYLE,
@@ -322,7 +323,7 @@ function CustomerTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: AMBER,
+        tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: GRAY,
         tabBarStyle,
         tabBarLabelStyle: TAB_LABEL_STYLE,

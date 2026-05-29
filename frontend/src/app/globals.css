@@ -27,11 +27,11 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* NanaBanana brand tokens */
-  --color-brand: oklch(0.42 0.14 25);
-  --color-brand-dark: oklch(0.32 0.11 25);
+  /* Yuvarani Silks brand tokens — maroon + gold */
+  --color-brand: oklch(0.38 0.13 25);
+  --color-brand-dark: oklch(0.28 0.11 25);
   --color-brand-soft: oklch(0.97 0.012 25);
-  --color-brand-accent: oklch(0.72 0.09 85);
+  --color-brand-accent: oklch(0.72 0.11 85);
 
   /* Luxe accents */
   --color-gold: oklch(0.72 0.09 85);
@@ -51,8 +51,8 @@
   --card-foreground: oklch(0.20 0.01 40);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.20 0.01 40);
-  /* NanaBanana crimson as primary */
-  --primary: oklch(0.42 0.14 25);
+  /* Yuvarani Silks maroon as primary */
+  --primary: oklch(0.38 0.13 25);
   --primary-foreground: oklch(0.99 0.005 75);
   --secondary: oklch(0.975 0.006 70);
   --secondary-foreground: oklch(0.20 0.01 40);
@@ -64,7 +64,7 @@
   --destructive-foreground: oklch(0.984 0.003 247.858);
   --border: oklch(0.94 0.006 75);
   --input: oklch(0.94 0.006 75);
-  --ring: oklch(0.42 0.14 25);
+  --ring: oklch(0.38 0.13 25);
 }
 
 .dark {

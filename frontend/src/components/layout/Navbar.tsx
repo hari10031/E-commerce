@@ -20,6 +20,7 @@ import { useWishlistStore } from '@/store/wishlistStore'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import type { Category } from '@/types'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 const NAV_TYPES = [
   { slug: 'saree', label: 'Sarees' },
@@ -93,14 +94,7 @@ export function Navbar() {
             </button>
 
             {/* Logo */}
-            <Link href="/" className="flex flex-col items-center md:items-start shrink-0 leading-none group">
-              <span className="text-xl sm:text-[1.65rem] font-medium tracking-[0.06em] text-brand font-[var(--font-display)] transition-colors duration-300 group-hover:text-brand-dark">
-                NanaBanana
-              </span>
-              <span className="hidden md:block text-[8px] tracking-[0.38em] uppercase text-gold-dark mt-1 font-semibold">
-                Heritage Couture
-              </span>
-            </Link>
+            <BrandLogo showTagline={false} className="shrink-0" />
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-8 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/80">

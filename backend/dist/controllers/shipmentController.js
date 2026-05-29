@@ -45,7 +45,7 @@ async function loadOrderForShipment(orderId, userId) {
 async function getCustomerEmail(userId) {
     const { data, error } = await supabase_1.supabase.auth.admin.getUserById(userId);
     if (error || !data.user?.email)
-        return 'customer@nanabanana.in';
+        return 'customer@yuvaranisilks.in';
     return data.user.email;
 }
 function buildAdhocPayload(order, email, weight) {
