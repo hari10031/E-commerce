@@ -57,7 +57,7 @@ export default function ProductCard({ product, onPress, showStock = false }) {
           <Image
             source={{ uri: primaryImage.url }}
             className="w-full h-full"
-            resizeMode="contain"
+            resizeMode="cover"
           />
         ) : (
           <View className="flex-1 items-center justify-center">

@@ -109,7 +109,7 @@ export default function CartPage() {
   const itemCount = items.reduce((s, i) => s + i.quantity, 0)
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe">
+    <div className="page-container max-w-6xl py-6 sm:py-10 pb-safe min-w-0">
       <div className="mb-6 sm:mb-8">
         <p className="eyebrow">Shopping Bag</p>
         <h1 className="text-2xl sm:text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
@@ -132,14 +132,14 @@ export default function CartPage() {
                 {/* Image */}
                 <Link
                   href={`/products/${item.product_id}`}
-                  className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-xl overflow-hidden bg-neutral-50 shrink-0"
+                  className="relative w-[4.5rem] sm:w-28 aspect-[3/4] rounded-xl overflow-hidden bg-neutral-50 shrink-0"
                 >
                   {primaryImage ? (
                     <Image
                       src={primaryImage.url}
                       alt={item.product.title}
                       fill
-                      className="object-contain"
+                      className="object-cover object-center"
                       sizes="128px"
                       quality={90}
                     />

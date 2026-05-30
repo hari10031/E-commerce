@@ -83,20 +83,22 @@ export function Navbar() {
         <span className="text-white/50 hidden sm:inline"> · Handcrafted heritage weaves</span>
       </div>
 
-      <header className="sticky top-0 z-50 bg-[var(--color-background)]/85 backdrop-blur-md border-b border-brand-accent/15 transition-all duration-150 pt-safe">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 sm:h-[72px] gap-3 sm:gap-4">
+      <header className="sticky top-0 z-50 w-full min-w-0 bg-[var(--color-background)]/85 backdrop-blur-md border-b border-brand-accent/15 transition-all duration-150 pt-safe">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-w-0">
+          <div className="relative flex items-center justify-between h-16 sm:h-[72px] gap-2 sm:gap-4 min-w-0">
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="md:hidden p-2.5 -ml-1 text-ink hover:text-brand transition-colors touch-target"
+              className="md:hidden p-2.5 -ml-1 text-ink hover:text-brand transition-colors touch-target shrink-0 z-10"
               aria-label="Menu"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
 
-            {/* Logo */}
-            <BrandLogo showTagline={false} className="shrink-0" />
+            {/* Logo — centered on mobile */}
+            <div className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0 md:left-auto min-w-0 max-w-[calc(100%-7rem)] md:max-w-none">
+              <BrandLogo showTagline={false} className="shrink min-w-0" imageClassName="h-7 sm:h-9 max-w-[7.5rem] sm:max-w-none" />
+            </div>
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-8 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/80">
@@ -153,7 +155,7 @@ export function Navbar() {
             </form>
 
             {/* Icons */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 z-10 ml-auto">
               <Link
                 href="/wishlist"
                 className="relative p-2.5 text-ink/80 hover:text-brand transition-colors"

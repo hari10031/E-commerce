@@ -56,7 +56,7 @@ export default function StepPhotos({ wizardData, update }) {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.85,
       allowsEditing: true,
-      aspect: [1, 1],
+      aspect: [3, 4],
     };
 
     const result = isCamera
@@ -124,7 +124,7 @@ export default function StepPhotos({ wizardData, update }) {
               key={label}
               onPress={() => !isUploading && showPicker(label)}
               className="mb-4 rounded-2xl overflow-hidden"
-              style={{ width: '48%', aspectRatio: 1 }}
+              style={{ width: '48%', aspectRatio: 3 / 4 }}
             >
               {img ? (
                 <View className="flex-1 relative">

@@ -70,7 +70,7 @@ export function HeroSlider() {
 
   return (
     <section 
-      className="relative h-[52vh] sm:h-[60vh] md:h-[78vh] min-h-[360px] sm:min-h-[420px] md:min-h-[580px] overflow-hidden bg-gray-950 group"
+      className="relative w-full min-w-0 h-[52vh] sm:h-[60vh] md:h-[78vh] min-h-[320px] sm:min-h-[420px] md:min-h-[580px] overflow-hidden bg-gray-950 group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -92,8 +92,8 @@ export function HeroSlider() {
                   alt={slide.title}
                   fill
                   priority={idx === 0}
-                  className={`object-contain object-center w-full h-full transition-transform duration-[4500ms] ease-out ${
-                    isActive ? 'scale-105' : 'scale-100'
+                  className={`object-cover object-center w-full h-full transition-transform duration-[4500ms] ease-out ${
+                    isActive ? 'sm:scale-105 scale-100' : 'scale-100'
                   }`}
                 />
                 {/* Modern luxury gradient mask */}
@@ -102,33 +102,33 @@ export function HeroSlider() {
               </div>
 
               {/* Slide Content */}
-              <div className="relative max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center">
+              <div className="relative w-full min-w-0 max-w-7xl mx-auto h-full px-4 pr-14 sm:px-6 sm:pr-6 lg:px-8 flex items-center">
                 <div 
-                  className={`max-w-2xl text-white transition-all duration-700 delay-300 transform ${
+                  className={`w-full min-w-0 max-w-2xl text-white transition-all duration-700 delay-300 transform ${
                     isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                   }`}
                 >
                   {/* Accent Pill */}
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold uppercase tracking-widest mb-4 backdrop-blur-md ${slide.accent}`}>
-                    <Sparkles className="h-3 w-3" />
-                    <span>{slide.subtitle}</span>
+                  <div className={`inline-flex flex-wrap items-center gap-1.5 max-w-full px-3 py-1.5 rounded-full border text-[10px] sm:text-xs font-semibold uppercase tracking-[0.12em] sm:tracking-widest mb-3 sm:mb-4 backdrop-blur-md ${slide.accent}`}>
+                    <Sparkles className="h-3 w-3 shrink-0" />
+                    <span className="break-words">{slide.subtitle}</span>
                   </div>
 
                   {/* Main Title */}
-                  <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight font-display tracking-wide mb-3 sm:mb-4">
+                  <h1 className="text-xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight font-display tracking-wide mb-2 sm:mb-4 break-words">
                     {slide.title}
                   </h1>
 
                   {/* Description */}
-                  <p className="text-gray-200 text-sm sm:text-base md:text-lg mb-8 max-w-xl font-sans font-light leading-relaxed">
+                  <p className="text-gray-200 text-sm sm:text-base md:text-lg mb-5 sm:mb-8 max-w-xl font-sans font-light leading-relaxed break-words">
                     {slide.description}
                   </p>
 
                   {/* CTA Button */}
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-3 sm:gap-4">
                     <Link
                       href={slide.href}
-                      className="px-8 py-3.5 bg-brand hover:bg-brand-dark text-cream font-bold text-xs tracking-wider uppercase rounded-full shadow-lg shadow-brand/20 transition-all duration-300 flex items-center gap-2 hover:scale-[1.02]"
+                      className="px-6 sm:px-8 py-3 sm:py-3.5 bg-brand hover:bg-brand-dark text-cream font-bold text-xs tracking-wider uppercase rounded-full shadow-lg shadow-brand/20 transition-all duration-300 inline-flex items-center gap-2 hover:scale-[1.02]"
                     >
                       {slide.cta}
                       <ChevronRight className="h-4 w-4" />

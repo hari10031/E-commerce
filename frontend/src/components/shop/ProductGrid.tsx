@@ -25,9 +25,11 @@ function SkeletonCard() {
 export function ProductGrid({ products, loading = false }: ProductGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div className="product-grid">
         {Array.from({ length: 8 }).map((_, i) => (
-          <SkeletonCard key={i} />
+          <div key={i} className="min-w-0">
+            <SkeletonCard />
+          </div>
         ))}
       </div>
     )
@@ -54,9 +56,13 @@ export function ProductGrid({ products, loading = false }: ProductGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+    <div className="product-grid">
       {products.map((product, i) => (
-        <div key={product.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i * 30, 120)}ms` }}>
+        <div
+          key={product.id}
+          className="min-w-0 animate-fade-up"
+          style={{ animationDelay: `${Math.min(i * 30, 120)}ms` }}
+        >
           <ProductCard product={product} />
         </div>
       ))}

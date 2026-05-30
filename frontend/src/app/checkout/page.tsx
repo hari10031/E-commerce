@@ -90,7 +90,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe">
+    <div className="page-container max-w-5xl py-6 sm:py-10 pb-safe min-w-0">
       <div className="text-center mb-6 sm:mb-9">
         <p className="eyebrow">Secure Checkout</p>
         <h1 className="text-2xl sm:text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">

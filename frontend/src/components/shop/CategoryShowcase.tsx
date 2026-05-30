@@ -50,7 +50,7 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
   ) {
     return (
       <section className="py-10 sm:py-14 lg:py-16 border-b border-gray-100 last:border-b-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="page-container">
           
           {/* Section Header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
@@ -80,7 +80,7 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
 
           {/* Subcategory Slider — horizontal scroll, one row */}
           {subCats.length > 0 ? (
-            <div className="flex gap-5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1 snap-x snap-mandatory">
+            <div className="flex gap-5 overflow-x-auto no-scrollbar pb-3 snap-x snap-mandatory min-w-0">
               {subCats.map((cat) => {
                 const coverImage = getSubcategoryImage(cat.id, typeKey)
                 return (

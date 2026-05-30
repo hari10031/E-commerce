@@ -137,8 +137,74 @@ export default function ProductsPage() {
         </select>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Mobile cards */}
+      <div className="lg:hidden space-y-3">
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border p-4">
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ))
+          : products.map((product) => {
+              const primaryImage = product.images?.find((img) => img.is_primary);
+              return (
+                <div
+                  key={product.id}
+                  className="bg-white rounded-xl border border-gray-100 p-4 flex gap-3 min-w-0"
+                >
+                  <div className="relative w-14 aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                    {primaryImage ? (
+                      <Image
+                        src={primaryImage.url}
+                        alt={product.title}
+                        fill
+                        className="object-cover"
+                        sizes="56px"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{product.title}</p>
+                    <p className="text-xs text-gray-500 capitalize mt-0.5">
+                      {product.type} · {product.category?.name ?? '—'}
+                    </p>
+                    <p className="text-sm font-semibold text-amber-700 mt-1">
+                      {formatPrice(discountedPrice(product.base_price, product.discount_pct))}
+                    </p>
+                    <Badge
+                      variant={product.published ? 'success' : 'secondary'}
+                      className="mt-2"
+                    >
+                      {product.published ? 'Published' : 'Draft'}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => router.push(`/dashboard/products/${product.id}/edit`)}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-500"
+                      onClick={() => handleDelete(product.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+        {!loading && products.length === 0 && (
+          <p className="text-center py-12 text-gray-400">No products found</p>
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden lg:block bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -170,15 +236,17 @@ export default function ProductsPage() {
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-3">
                             {primaryImage ? (
-                              <Image
-                                src={primaryImage.url}
-                                alt={product.title}
-                                width={36}
-                                height={36}
-                                className="rounded-lg object-contain flex-shrink-0"
-                              />
+                              <div className="relative w-9 aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                                <Image
+                                  src={primaryImage.url}
+                                  alt={product.title}
+                                  fill
+                                  className="object-cover"
+                                  sizes="36px"
+                                />
+                              </div>
                             ) : (
-                              <div className="w-9 h-9 rounded-lg bg-gray-100 flex-shrink-0" />
+                              <div className="w-9 aspect-[3/4] rounded-lg bg-gray-100 shrink-0" />
                             )}
                             <span className="font-medium text-gray-900 truncate max-w-[200px]">
                               {product.title}

@@ -25,7 +25,7 @@ const ASSURANCES = [
 
 export function Footer() {
   return (
-    <footer className="bg-[var(--color-ink)] text-neutral-400 mt-12 sm:mt-20 pb-safe">
+    <footer className="bg-[var(--color-ink)] text-neutral-400 mt-12 sm:mt-20 pb-safe w-full min-w-0 overflow-x-hidden">
       {/* Assurance bar */}
       <div className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 sm:grid-cols-3 gap-4">

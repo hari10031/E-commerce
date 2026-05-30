@@ -20,6 +20,7 @@ import { GOLD_PURITIES } from '../../../constants/categories';
 import { PRODUCT_SIZES, PRODUCT_TYPES } from '../../../constants';
 import { formatPrice, discountedPrice } from '../../../lib/utils';
 import { useHardwareBackHandler } from '../../../hooks/useHardwareBackHandler';
+import { resolveColorHex } from '../../../lib/colors';
 
 const WARM_BG = '#fffaf5';
 const CARD_BG = '#ffffff';
@@ -81,14 +82,9 @@ const COLOR_PALETTE = [
   { name: 'Black', hex: '#1f2937' },
   { name: 'White', hex: '#f3f4f6' },
 ];
-const COLOR_MAP = COLOR_PALETTE.reduce((m, c) => {
-  m[c.name.toLowerCase()] = c.hex;
-  return m;
-}, {});
 
 function colorHex(name) {
-  if (!name) return '#d1d5db';
-  return COLOR_MAP[name.toLowerCase().trim()] || '#d1d5db';
+  return resolveColorHex(name);
 }
 
 function revokeBlobUri(uri) {
@@ -817,7 +813,7 @@ export default function ProductWizardScreen({ route, navigation }) {
                 <Pressable
                   onPress={() => !isUp && showPhotoPicker(color, label)}
                   className="rounded-xl overflow-hidden"
-                  style={{ aspectRatio: 1, borderWidth: 1, borderColor: img ? '#f59e0b' : '#e5e7eb' }}
+                  style={{ aspectRatio: 3 / 4, borderWidth: 1, borderColor: img ? '#f59e0b' : '#e5e7eb' }}
                 >
                   {uploadedUri ? (
                     <View className="flex-1 relative">

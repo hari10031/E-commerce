@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { generateSKU } from '@/lib/utils';
+import { resolveColorHex } from '@/lib/colors';
 import type { ProductType } from '@/types';
 
 export interface VariantCell {
@@ -90,7 +91,15 @@ export function Step3Variants({ productType, colors, variants, onChange }: Step3
             <tbody>
               {colors.map((color) => (
                 <tr key={color} className="border-t border-gray-100">
-                  <td className="p-3 font-medium text-gray-800">{color}</td>
+                  <td className="p-3 font-medium text-gray-800">
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        className="h-4 w-4 rounded-full ring-1 ring-inset ring-black/10 shrink-0"
+                        style={{ backgroundColor: resolveColorHex(color) }}
+                      />
+                      {color}
+                    </span>
+                  </td>
                   {sizes.map((size) => {
                     const cell = grid[color]?.[size];
                     return (
@@ -121,7 +130,13 @@ export function Step3Variants({ productType, colors, variants, onChange }: Step3
             const cell = grid[color]?.[''];
             return (
               <div key={color} className="flex items-center gap-4 p-3 border border-gray-100 rounded-lg">
-                <span className="font-medium text-gray-800 w-32">{color}</span>
+                <span className="inline-flex items-center gap-2 font-medium text-gray-800 w-32 min-w-0">
+                  <span
+                    className="h-4 w-4 rounded-full ring-1 ring-inset ring-black/10 shrink-0"
+                    style={{ backgroundColor: resolveColorHex(color) }}
+                  />
+                  <span className="truncate">{color}</span>
+                </span>
                 <div className="space-y-1">
                   <Input
                     type="number"

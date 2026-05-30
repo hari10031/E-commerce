@@ -91,7 +91,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe">
+    <div className="page-container max-w-4xl py-6 sm:py-10 pb-safe min-w-0">
       <div className="mb-6 sm:mb-8">
         <p className="eyebrow">Order History</p>
         <h1 className="text-2xl sm:text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">

@@ -11,6 +11,7 @@ import { toast } from '@/components/ui/toast';
 import { buildImageUploadPayloads } from '@/lib/productImages';
 import type { WizardData } from '../ProductWizard';
 import type { ProductImage } from '@/types';
+import { resolveColorHex } from '@/lib/colors';
 
 interface Step6Props {
   data: WizardData;
@@ -112,7 +113,21 @@ export function Step6Review({ data, editId, existingImages = [] }: Step6Props) {
           <h4 className="font-semibold text-gray-700 text-sm uppercase tracking-wide">Product Info</h4>
           <p className="font-medium text-gray-900">{data.content.title || <em className="text-gray-400">No title</em>}</p>
           <p className="text-sm text-gray-500 capitalize">Type: {data.type}</p>
-          <p className="text-sm text-gray-500">Colours: {data.colors.join(', ') || '—'}</p>
+          <div className="flex flex-wrap gap-2">
+            {data.colors.length === 0 ? (
+              <p className="text-sm text-gray-500">Colours: —</p>
+            ) : (
+              data.colors.map((c) => (
+                <span key={c} className="inline-flex items-center gap-1.5 text-sm text-gray-600">
+                  <span
+                    className="h-3.5 w-3.5 rounded-full ring-1 ring-inset ring-black/10"
+                    style={{ backgroundColor: resolveColorHex(c) }}
+                  />
+                  {c}
+                </span>
+              ))
+            )}
+          </div>
         </div>
 
         <div className="bg-gray-50 rounded-xl p-4 space-y-2">
@@ -133,13 +148,13 @@ export function Step6Review({ data, editId, existingImages = [] }: Step6Props) {
           </h4>
           <div className="flex flex-wrap gap-2">
             {filledImages.map((img, i) => (
-              <div key={i} className="relative">
+              <div key={i} className="relative w-12 aspect-[3/4] rounded-lg overflow-hidden bg-gray-100">
                 <Image
                   src={img.imageUrl}
                   alt={img.slot}
-                  width={48}
-                  height={48}
-                  className="rounded-lg object-contain"
+                  fill
+                  className="object-cover"
+                  sizes="48px"
                 />
                 <span className="absolute -bottom-1 left-0 right-0 text-center text-[10px] text-gray-600 leading-none truncate">
                   {img.slot.slice(0, 8)}
@@ -158,9 +173,17 @@ export function Step6Review({ data, editId, existingImages = [] }: Step6Props) {
             {data.variants
               .filter((v) => v.quantity > 0)
               .map((v, i) => (
-                <div key={i} className="flex justify-between text-xs text-gray-600">
-                  <span>
-                    {v.color || '—'} / {v.size || 'STD'}
+                <div key={i} className="flex justify-between items-center text-xs text-gray-600 gap-2">
+                  <span className="inline-flex items-center gap-1.5 min-w-0">
+                    {v.color && (
+                      <span
+                        className="h-3 w-3 rounded-full shrink-0 ring-1 ring-inset ring-black/10"
+                        style={{ backgroundColor: resolveColorHex(v.color) }}
+                      />
+                    )}
+                    <span className="truncate">
+                      {v.color || '—'} / {v.size || 'STD'}
+                    </span>
                   </span>
                   <span className="font-medium">Qty: {v.quantity}</span>
                 </div>

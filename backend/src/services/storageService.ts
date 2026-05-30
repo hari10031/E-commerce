@@ -8,10 +8,19 @@ export async function uploadImage(
 ): Promise<string> {
   const filename = `${Date.now()}-${originalName.replace(/\s+/g, '-').replace(/\.[^.]+$/, '')}.webp`
 
-  const optimized = await sharp(buffer)
-    .resize({ width: 1200, withoutEnlargement: true })
-    .webp({ quality: 85 })
-    .toBuffer()
+  const pipeline = sharp(buffer)
+
+  // Product catalog: center-crop to 3:4 portrait (Myntra-style consistency)
+  const optimized =
+    bucket === 'product-images'
+      ? await pipeline
+          .resize(1200, 1600, { fit: 'cover', position: 'centre' })
+          .webp({ quality: 85 })
+          .toBuffer()
+      : await pipeline
+          .resize({ width: 1200, withoutEnlargement: true })
+          .webp({ quality: 85 })
+          .toBuffer()
 
   const { error } = await supabase.storage
     .from(bucket)

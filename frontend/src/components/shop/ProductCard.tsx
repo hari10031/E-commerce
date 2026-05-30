@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Heart, ShoppingBag, Check } from 'lucide-react'
@@ -11,6 +10,7 @@ import { useAuthStore } from '@/store/authStore'
 import { formatPrice, discountedPrice, cn } from '@/lib/utils'
 import { toast } from '@/components/ui/Toaster'
 import { api } from '@/lib/api'
+import { ProductImageFrame } from './ProductImageFrame'
 import type { Product } from '@/types'
 
 interface ProductCardProps {
@@ -35,6 +35,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   async function handleWishlistToggle(e: React.MouseEvent) {
     e.preventDefault()
+    e.stopPropagation()
     if (!token) {
       toast({ title: 'Please sign in', description: 'Sign in to save items to your wishlist', variant: 'destructive' })
       return
@@ -53,6 +54,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   async function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
+    e.stopPropagation()
     if (!token) {
       toast({ title: 'Please sign in', description: 'Sign in to add items to your bag', variant: 'destructive' })
       return
@@ -84,64 +86,73 @@ export function ProductCard({ product }: ProductCardProps) {
       href={productHref}
       prefetch
       onMouseEnter={() => router.prefetch(productHref)}
-      className="group block"
+      className="group block min-w-0"
     >
-      <article className="relative overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_48px_-12px_rgba(0,0,0,0.08)] transition-all duration-500 lift">
-        {/* Image */}
-        <div className="relative aspect-[3/4] overflow-hidden bg-neutral-50/50">
+      <article className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-white border border-neutral-200/80 sm:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] sm:hover:shadow-[0_20px_48px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 sm:lift">
+        <div className="relative">
           {primaryImage ? (
-            <Image
+            <ProductImageFrame
               src={primaryImage.url}
               alt={primaryImage.alt_text ?? product.title}
-              fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              quality={90}
-              className="object-contain transition-transform duration-700 ease-out group-hover:scale-105"
+              fit="cover"
+              className="rounded-t-xl sm:rounded-t-2xl"
             />
           ) : (
-            <div className="h-full w-full bg-gradient-to-br from-brand-soft to-amber-50 flex items-center justify-center">
+            <div className="aspect-[3/4] bg-gradient-to-br from-brand-soft to-amber-50 flex items-center justify-center rounded-t-xl sm:rounded-t-2xl">
               <span className="text-4xl opacity-40">🌸</span>
             </div>
           )}
 
-          {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-wrap gap-1 max-w-[70%] z-10">
             {hasDiscount && (
-              <span className="bg-brand text-white text-[9px] font-bold tracking-widest px-2.5 py-0.5 rounded-full border border-brand-accent/20 shadow-sm uppercase">
+              <span className="bg-brand text-white text-[9px] font-bold tracking-widest px-2 py-0.5 rounded-full uppercase">
                 {product.discount_pct}% OFF
               </span>
             )}
             {!inStock && (
-              <span className="bg-neutral-900 text-[var(--color-cream)] text-[9px] font-semibold tracking-widest px-2.5 py-0.5 rounded-full border border-neutral-700/30 uppercase">
+              <span className="bg-neutral-900 text-[var(--color-cream)] text-[9px] font-semibold tracking-widest px-2 py-0.5 rounded-full uppercase">
                 SOLD OUT
               </span>
             )}
           </div>
 
-          {/* Wishlist */}
           <button
             onClick={handleWishlistToggle}
             aria-label="Toggle wishlist"
             className={cn(
-              'absolute top-3 right-3 h-9 w-9 rounded-full flex items-center justify-center backdrop-blur-md shadow-sm transition-all duration-300 z-10 md:opacity-0 md:scale-90 md:group-hover:opacity-100 md:group-hover:scale-100',
+              'absolute top-2 right-2 sm:top-3 sm:right-3 h-9 w-9 rounded-full flex items-center justify-center backdrop-blur-md shadow-sm transition-all duration-300 z-10 touch-target',
               isWishlisted
-                ? 'bg-brand text-white border border-brand/20'
-                : 'bg-white/90 border border-brand-accent/15 text-neutral-600 hover:text-brand hover:bg-white hover:scale-105'
+                ? 'bg-brand text-white'
+                : 'bg-white/90 border border-neutral-200/80 text-neutral-600 hover:text-brand md:opacity-0 md:group-hover:opacity-100'
             )}
           >
-            <Heart className={cn('h-4 w-4 transition-transform duration-300', isWishlisted && 'fill-current scale-105')} />
+            <Heart className={cn('h-4 w-4', isWishlisted && 'fill-current')} />
           </button>
 
-          {/* Add to bag — always visible on touch, slides up flush from bottom on hover (desktop) */}
-          <div className="absolute inset-x-0 bottom-0 transition-all duration-300 ease-out translate-y-0 md:translate-y-full md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 z-10">
+          {/* Mobile: icon FAB; desktop: full bar on hover */}
+          <button
+            onClick={handleAddToCart}
+            disabled={addingToCart || !firstVariant || !inStock}
+            className={cn(
+              'absolute z-10 touch-target transition-all duration-300',
+              'bottom-2 right-2 h-10 w-10 rounded-full flex items-center justify-center shadow-md',
+              'md:hidden',
+              justAdded ? 'bg-brand-accent text-white' : 'bg-neutral-900 text-white',
+              'disabled:opacity-50 disabled:cursor-not-allowed'
+            )}
+            aria-label={justAdded ? 'Added to bag' : 'Add to bag'}
+          >
+            {justAdded ? <Check className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
+          </button>
+
+          <div className="absolute inset-x-0 bottom-0 hidden md:block translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 z-10">
             <button
               onClick={handleAddToCart}
               disabled={addingToCart || !firstVariant || !inStock}
               className={cn(
-                'w-full flex items-center justify-center gap-2 py-3.5 text-xs font-semibold tracking-widest uppercase transition-all duration-300',
-                justAdded
-                  ? 'bg-brand-accent text-white'
-                  : 'bg-neutral-900 text-white hover:bg-brand',
+                'w-full flex items-center justify-center gap-2 py-3.5 text-xs font-semibold tracking-widest uppercase',
+                justAdded ? 'bg-brand-accent text-white' : 'bg-neutral-900 text-white hover:bg-brand',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
             >
@@ -154,20 +165,19 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        {/* Info */}
-        <div className="p-3 sm:p-4 bg-white">
+        <div className="p-2.5 sm:p-4 bg-white">
           {product.category && (
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand/75 mb-1.5 font-sans">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand/75 mb-1 font-sans line-clamp-1">
               {product.category.name}
             </p>
           )}
-          <h3 className="text-sm font-semibold text-neutral-800 leading-snug line-clamp-1 group-hover:text-brand transition-colors duration-300 font-sans">
+          <h3 className="text-sm font-semibold text-neutral-800 leading-snug line-clamp-2 group-hover:text-brand transition-colors font-sans">
             {product.title}
           </h3>
-          <div className="flex items-baseline gap-2 mt-2.5">
-            <span className="text-[15px] font-bold text-neutral-900 font-sans">{formatPrice(finalPrice)}</span>
+          <div className="flex items-baseline gap-2 mt-2">
+            <span className="text-[15px] font-bold text-neutral-900">{formatPrice(finalPrice)}</span>
             {hasDiscount && (
-              <span className="text-xs text-neutral-400 line-through font-light">{formatPrice(product.base_price)}</span>
+              <span className="text-xs text-neutral-400 line-through">{formatPrice(product.base_price)}</span>
             )}
           </div>
         </div>

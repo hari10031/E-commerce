@@ -37,10 +37,10 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${plusJakartaSans.variable} ${poppins.variable}`}>
-      <body>
+      <body className="w-full min-w-0 overflow-x-hidden">
         <Providers>
           <Navbar />
-          <main className="min-h-screen min-w-0 overflow-x-hidden">{children}</main>
+          <main className="min-h-screen w-full min-w-0 overflow-x-hidden">{children}</main>
           <Footer />
           <Toaster />
         </Providers>

@@ -10,7 +10,7 @@ import { useWishlistStore } from '@/store/wishlistStore'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { toast } from '@/components/ui/Toaster'
-import { cn } from '@/lib/utils'
+import { cn, formatPrice, discountedPrice } from '@/lib/utils'
 import type { Variant, Product } from '@/types'
 
 interface AddToCartSectionProps {
@@ -29,6 +29,9 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
 
   const isWishlisted = productIds.includes(product.id)
   const selectedColor = selectedVariant?.color ?? null
+  const finalPrice = discountedPrice(product.base_price, product.discount_pct)
+  const canAdd =
+    !addingToCart && selectedVariant && (selectedVariant.quantity ?? 0) > 0
 
   function selectVariant(variant: Variant) {
     setSelectedVariant(variant)
@@ -87,7 +90,8 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
   }
 
   return (
-    <div className="space-y-5">
+    <>
+    <div className="space-y-5 pb-24 lg:pb-0">
       {/* Color selector */}
       {product.variants && product.variants.length > 0 && (
         <ColorSwatchSelector
@@ -169,5 +173,41 @@ export function AddToCartSection({ product }: AddToCartSectionProps) {
         </button>
       </div>
     </div>
+
+    {/* Myntra-style sticky bar — mobile only */}
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-neutral-200 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+      <div className="flex items-center gap-3 max-w-7xl mx-auto">
+        <div className="shrink-0">
+          <p className="text-lg font-bold text-ink">{formatPrice(finalPrice)}</p>
+          {product.discount_pct > 0 && (
+            <p className="text-xs text-neutral-400 line-through">{formatPrice(product.base_price)}</p>
+          )}
+        </div>
+        <button
+          onClick={handleAddToCart}
+          disabled={!canAdd}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2 py-3.5 min-h-[48px] rounded-full text-sm font-bold text-white',
+            'bg-ink hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
+        >
+          <ShoppingCart className="h-4 w-4" />
+          {addingToCart ? 'Adding...' : 'Add to Bag'}
+        </button>
+        <button
+          onClick={handleWishlistToggle}
+          aria-label="Toggle wishlist"
+          className={cn(
+            'h-12 w-12 flex items-center justify-center rounded-full border shrink-0 touch-target',
+            isWishlisted
+              ? 'border-red-500 text-red-500 bg-red-50'
+              : 'border-neutral-300 text-neutral-400'
+          )}
+        >
+          <Heart className={cn('h-5 w-5', isWishlisted && 'fill-current')} />
+        </button>
+      </div>
+    </div>
+    </>
   )
 }

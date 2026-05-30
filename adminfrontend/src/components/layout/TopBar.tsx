@@ -2,7 +2,7 @@
 
 import { useAuthStore } from '@/store/authStore';
 import { useRouter, usePathname } from 'next/navigation';
-import { LogOut, User, ChevronDown } from 'lucide-react';
+import { LogOut, User, ChevronDown, Menu } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,11 @@ function getPageTitle(pathname: string): string {
   return titles[last] || last.charAt(0).toUpperCase() + last.slice(1);
 }
 
-export function TopBar() {
+interface TopBarProps {
+  onMenuClick?: () => void;
+}
+
+export function TopBar({ onMenuClick }: TopBarProps) {
   const { user, clearAuth } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
@@ -41,8 +45,20 @@ export function TopBar() {
   const title = getPageTitle(pathname);
 
   return (
-    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 flex-shrink-0">
-      <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
+    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 flex-shrink-0 min-w-0 gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        {onMenuClick && (
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 text-gray-700"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{title}</h1>
+      </div>
 
       <div className="relative">
         <button

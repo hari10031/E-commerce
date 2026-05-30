@@ -14,6 +14,7 @@ import { formatPrice, discountedPrice, formatDate } from '../../lib/utils';
 import { PRODUCT_TYPES } from '../../constants';
 import useAuthStore from '../../store/authStore';
 import * as Haptics from 'expo-haptics';
+import { resolveColorHex } from '../../lib/colors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Myntra-style portrait frame — 3:4 width:height across app + web
@@ -29,20 +30,6 @@ function clampZoomOffset(offset, scale) {
     x: Math.max(-maxX, Math.min(maxX, offset.x)),
     y: Math.max(-maxY, Math.min(maxY, offset.y)),
   };
-}
-
-const COLOR_MAP = {
-  red: '#ef4444', blue: '#3b82f6', green: '#22c55e', yellow: '#eab308',
-  pink: '#ec4899', purple: '#a855f7', orange: '#f97316', black: '#1f2937',
-  white: '#f9fafb', gold: '#d97706', silver: '#9ca3af', brown: '#92400e',
-  maroon: '#881337', navy: '#1e3a5a', teal: '#14b8a6', beige: '#d4c5a9',
-  cream: '#fffdd0', magenta: '#d946ef', coral: '#f87171', peach: '#fdba74',
-};
-
-function getColorHex(name) {
-  if (!name) return '#d1d5db';
-  const lower = name.toLowerCase().trim();
-  return COLOR_MAP[lower] || '#d1d5db';
 }
 
 export default function ProductDetailScreen({ route, navigation }) {
@@ -198,7 +185,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         <Image
           source={{ uri: item.url }}
           style={{ width: SCREEN_WIDTH, height: IMAGE_HEIGHT }}
-          resizeMode="contain"
+          resizeMode="cover"
         />
       </Pressable>
     );
@@ -478,7 +465,7 @@ export default function ProductDetailScreen({ route, navigation }) {
                       <View
                         className="w-9 h-9 rounded-full border-2"
                         style={{
-                          backgroundColor: getColorHex(color),
+                          backgroundColor: resolveColorHex(color),
                           borderColor: isActive ? '#f59e0b' : '#e5e7eb',
                         }}
                       />
@@ -527,7 +514,7 @@ export default function ProductDetailScreen({ route, navigation }) {
                     {v.color && (
                       <View
                         className="w-5 h-5 rounded-full mr-2 border border-gray-200"
-                        style={{ backgroundColor: getColorHex(v.color) }}
+                        style={{ backgroundColor: resolveColorHex(v.color) }}
                       />
                     )}
                     <View className="flex-1">
@@ -706,7 +693,7 @@ export default function ProductDetailScreen({ route, navigation }) {
               <View className="flex-row items-center mb-4">
                 <View
                   className="w-5 h-5 rounded-full mr-2 border border-gray-200"
-                  style={{ backgroundColor: getColorHex(sellVariant.color) }}
+                  style={{ backgroundColor: resolveColorHex(sellVariant.color) }}
                 />
                 <Text className="text-sm text-gray-700 capitalize">{sellVariant.color}</Text>
                 {sellVariant.size && (

@@ -8,37 +8,7 @@ import useAuthStore from '../../store/authStore';
 import { getDashboard, getOfflineSales, getCategoryInventory, getProducts } from '../../lib/api';
 import { formatPrice } from '../../lib/utils';
 import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
-
-const COLOR_MAP = {
-  red: '#dc2626',
-  blue: '#2563eb',
-  green: '#16a34a',
-  pink: '#db2777',
-  gold: '#d97706',
-  yellow: '#eab308',
-  orange: '#ea580c',
-  black: '#1f2937',
-  white: '#ffffff',
-  grey: '#4b5563',
-  gray: '#4b5563',
-  purple: '#9333ea',
-  violet: '#7c3aed',
-  magenta: '#d946ef',
-  teal: '#0d9488',
-  silver: '#cbd5e1',
-  cream: '#fef08a',
-  beige: '#f5f5dc',
-  peach: '#ffdab9',
-  maroon: '#800000',
-  navy: '#000080',
-  turquoise: '#40e0d0',
-};
-
-const getColorHex = (name) => {
-  if (!name) return '#9ca3af';
-  const clean = name.toLowerCase().trim();
-  return COLOR_MAP[clean] || '#6b7280';
-};
+import { resolveColorHex } from '../../lib/colors';
 
 function SubCategoryDetailProducts({ subCategoryId }) {
   const { data, isLoading } = useQuery({
@@ -107,7 +77,7 @@ function SubCategoryDetailProducts({ subCategoryId }) {
                 {variants.map((v, idx) => (
                   <View key={v.id ?? idx} className="flex-row items-center justify-between py-1 border-b border-gray-100/50 last:border-b-0">
                     <View className="flex-row items-center">
-                      <View className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: getColorHex(v.color) }} />
+                      <View className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: resolveColorHex(v.color) }} />
                       <Text className="text-xs text-gray-700 font-medium">
                         {[v.color, v.size].filter(Boolean).join(' · ')}
                       </Text>
@@ -638,7 +608,7 @@ export default function DashboardScreen({ navigation }) {
                       <View className="mt-3 pt-3 border-t border-gray-100 flex-row flex-wrap">
                         {sub.colors.map(({ color, qty }) => (
                           <View key={color} className="flex-row items-center mr-3 mb-1.5 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
-                            <View className="w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: getColorHex(color) }} />
+                            <View className="w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: resolveColorHex(color) }} />
                             <Text className="text-[10px] font-semibold text-gray-600">{color}: {qty}</Text>
                           </View>
                         ))}

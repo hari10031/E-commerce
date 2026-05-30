@@ -145,7 +145,7 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe">
+    <div className="page-container py-6 sm:py-10 pb-safe min-w-0">
       <div className="mb-6 sm:mb-8">
         <p className="eyebrow">Saved For Later</p>
         <h1 className="text-2xl sm:text-3xl font-semibold text-ink font-[var(--font-display)] mt-1.5">
@@ -154,7 +154,7 @@ export default function WishlistPage() {
         </h1>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div className="product-grid">
         {products.map((product, i) => {
           const primaryImage = product.images?.find((img) => img.is_primary) ?? product.images?.[0]
           const finalPrice = discountedPrice(product.base_price, product.discount_pct)
@@ -163,7 +163,7 @@ export default function WishlistPage() {
           return (
             <article
               key={product.id}
-              className="relative rounded-2xl overflow-hidden border border-neutral-200/70 bg-white lift animate-fade-up"
+              className="relative min-w-0 rounded-2xl overflow-hidden border border-neutral-200/70 bg-white sm:lift animate-fade-up"
               style={{ animationDelay: `${Math.min(i * 50, 400)}ms` }}
             >
               <Link href={`/products/${product.id}`} className="group block">
@@ -174,7 +174,7 @@ export default function WishlistPage() {
                       alt={product.title}
                       fill
                       sizes="(max-width: 640px) 50vw, 25vw"
-                      className="object-contain group-hover:scale-105 transition-transform duration-700"
+                      className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-4xl opacity-40">🌸</div>

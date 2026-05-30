@@ -46,7 +46,7 @@ export default async function CategoryPage({ params }: PageProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-ink)] via-[var(--color-ink)]/70 to-[var(--color-ink)]/40" />
         <div className="absolute -top-20 -right-20 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20">
+        <div className="relative page-container py-12 sm:py-16 md:py-20">
           <nav className="flex items-center gap-1 text-xs sm:text-[13px] text-white/50 mb-4 sm:mb-5 overflow-x-auto no-scrollbar">
             <Link href="/" className="hover:text-[var(--color-gold)] transition-colors">Home</Link>
             <ChevronRight className="h-3 w-3" />
@@ -69,7 +69,7 @@ export default async function CategoryPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-safe">
+      <div className="page-container py-8 sm:py-12 pb-safe min-w-0">
         <ProductGrid products={products} />
       </div>
     </div>

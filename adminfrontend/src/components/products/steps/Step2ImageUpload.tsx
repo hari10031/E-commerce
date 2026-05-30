@@ -45,6 +45,9 @@ export function Step2ImageUpload({
   const blocks = photoBlocksFor(productType);
   const isJewellery = productType === 'jewellery';
 
+  const photoHint =
+    'Use clean product photos (3:4 portrait). Avoid WhatsApp or screenshot images with UI overlays.';
+
   useEffect(() => {
     if (isJewellery && colors.length === 0) {
       onColorsChange([JEWELLERY_PSEUDO_COLOR]);
@@ -258,6 +261,7 @@ export function Step2ImageUpload({
           ? `Up to ${blocks.length} optional photo slots. Upload any angles you have, then use AI for a clean studio shot.`
           : `Add each colour, then up to ${blocks.length} optional photos per colour — fill only the slots you have.`}
       </p>
+      <p className="text-xs text-gray-500">{photoHint}</p>
 
       {!isJewellery && (
         <div className="flex gap-2">

@@ -104,7 +104,7 @@ export default function OrderDetailPage() {
   const statusColor = STATUS_COLORS[order.status] ?? 'bg-neutral-100 text-neutral-700'
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-safe min-w-0">
+    <div className="page-container max-w-4xl py-6 sm:py-10 pb-safe min-w-0">
       <Link
         href="/orders"
         className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-brand mb-6 transition-colors"
@@ -143,10 +143,10 @@ export default function OrderDetailPage() {
                   <div key={item.id} className="flex gap-4 items-start">
                     <Link
                       href={`/products/${item.product.id}`}
-                      className="relative h-[5.5rem] w-[5.5rem] rounded-xl overflow-hidden bg-neutral-50 shrink-0"
+                      className="relative w-[4.5rem] aspect-[3/4] rounded-xl overflow-hidden bg-neutral-50 shrink-0"
                     >
                       {primaryImage ? (
-                        <Image src={primaryImage.url} alt={item.product.title} fill className="object-contain" />
+                        <Image src={primaryImage.url} alt={item.product.title} fill className="object-cover object-center" sizes="80px" />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-2xl opacity-40">🌸</div>
                       )}

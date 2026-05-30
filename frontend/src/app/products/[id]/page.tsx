@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation'
 import { api } from '@/lib/api'
 import { ImageGallery } from '@/components/shop/ImageGallery'
 import { AddToCartSection } from './AddToCartSection'
-import { formatPrice, discountedPrice } from '@/lib/utils'
+import { formatPrice, discountedPrice, cn } from '@/lib/utils'
+import { resolveColorHex } from '@/lib/colors'
 import type { Product } from '@/types'
 import Link from 'next/link'
 import { ChevronRight, Tag, Truck, ShieldCheck, RotateCcw } from 'lucide-react'
@@ -37,7 +38,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const savings = product.base_price - finalPrice
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
+    <div className="page-container py-5 sm:py-8 min-w-0">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-xs sm:text-[13px] text-neutral-400 mb-5 sm:mb-7 overflow-x-auto no-scrollbar">
         <Link href="/" className="hover:text-brand transition-colors shrink-0">Home</Link>
@@ -141,14 +142,41 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Variants table */}
+          {/* Variants — cards on mobile, table on desktop */}
           {product.variants && product.variants.length > 0 && (
-            <div className="pt-2">
+            <div className="pt-2 min-w-0">
               <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink mb-3">
                 Available Variants
               </h2>
-              <div className="overflow-x-auto rounded-xl border border-neutral-200/70 -mx-1 px-1 sm:mx-0 sm:px-0">
-                <table className="w-full text-sm min-w-[28rem]">
+              <div className="lg:hidden space-y-2">
+                {product.variants.map((v) => (
+                  <div
+                    key={v.id}
+                    className="flex items-center gap-3 rounded-xl border border-neutral-200/70 bg-white p-3 min-w-0"
+                  >
+                    <span
+                      className="h-8 w-8 rounded-full shrink-0 ring-1 ring-inset ring-black/10"
+                      style={{ backgroundColor: resolveColorHex(v.color) }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-neutral-800 capitalize truncate">
+                        {v.color} · {v.size}
+                      </p>
+                      <p className="text-xs text-neutral-400 font-mono truncate">{v.sku}</p>
+                    </div>
+                    <span
+                      className={cn(
+                        'text-xs font-semibold shrink-0',
+                        v.quantity > 0 ? 'text-brand-accent' : 'text-red-500'
+                      )}
+                    >
+                      {v.quantity > 0 ? 'In stock' : 'Out of stock'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden lg:block overflow-x-auto rounded-xl border border-neutral-200/70">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-neutral-50 text-left text-xs text-neutral-500">
                       <th className="py-2.5 px-4 font-medium">Colour</th>
