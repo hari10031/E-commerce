@@ -390,7 +390,7 @@ export default function DashboardScreen({ navigation }) {
                   label="Sales History"
                   bgColor="#0e7490"
                   iconColor="#cffafe"
-                  onPress={() => navigation.navigate('MySales')}
+                  onPress={() => navigateToTab('MoreTab', 'SalesHistory')}
                 />
                 <QuickActionCard
                   icon="checkmark-circle"
@@ -519,7 +519,13 @@ export default function DashboardScreen({ navigation }) {
           <View className="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
             <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
               <Text className="text-sm font-semibold text-gray-900">Recent Sales</Text>
-              <Pressable onPress={() => navigateToTab('MoreTab')}>
+              <Pressable
+                onPress={() =>
+                  isAdmin
+                    ? navigateToTab('MoreTab', 'SalesHistory')
+                    : navigation.navigate('MySales')
+                }
+              >
                 <Text className="text-xs font-medium text-amber-600">View all</Text>
               </Pressable>
             </View>

@@ -88,6 +88,11 @@ export default function MoreScreen({ navigation }) {
       {isAdmin && (
         <MenuSection title="Admin">
           <MenuItem
+            icon="cash"
+            label="Sales History"
+            onPress={() => navigation.navigate('SalesHistory')}
+          />
+          <MenuItem
             icon="receipt"
             label="Orders"
             onPress={() => navigation.navigate('Orders', { initialStatus: 'placed' })}

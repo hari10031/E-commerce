@@ -86,6 +86,7 @@ function MoreStack() {
       <MoreStk.Screen name="Team" component={TeamScreen} />
       <MoreStk.Screen name="EmployeeDetail" component={EmployeeDetailScreen} />
       <MoreStk.Screen name="CreateUser" component={CreateUserScreen} />
+      <MoreStk.Screen name="SalesHistory" component={MySalesScreen} />
     </MoreStk.Navigator>
   );
 }

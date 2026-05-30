@@ -227,7 +227,11 @@ export default function ProfileScreen({ navigation }) {
               </View>
             </View>
             <Pressable
-              onPress={() => navigation.navigate('DashboardTab', { screen: 'MySales' })}
+              onPress={() =>
+                isAdmin
+                  ? navigation.navigate('SalesHistory')
+                  : navigation.navigate('DashboardTab', { screen: 'MySales' })
+              }
               className="mt-3 py-2 rounded-xl items-center active:bg-amber-50"
             >
               <Text className="text-xs font-semibold text-amber-700">View detailed sales →</Text>
