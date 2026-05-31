@@ -101,11 +101,11 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="h-4 w-4 text-[var(--color-gold)] shrink-0" />
-                +91 98765 43210
+                {BRAND.phone}
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin className="h-4 w-4 text-[var(--color-gold)] shrink-0 mt-0.5" />
-                <span>Kanchipuram, Tamil Nadu, India</span>
+                <span>{BRAND.address}</span>
               </li>
             </ul>
           </div>
