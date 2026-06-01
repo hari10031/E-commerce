@@ -1,6 +1,15 @@
+/** Top-level collection slugs — fixed bundled photos, no user upload. */
+export const COLLECTION_ROOT_SLUGS = ['saree', 'jewellery'];
+
+export function isCollectionRoot(category) {
+  if (!category) return false;
+  return !category.parent_id && COLLECTION_ROOT_SLUGS.includes(category.slug);
+}
+
 export const PRODUCT_TYPE_CARDS = [
   {
     key: 'saree',
+    slug: 'saree',
     label: 'Sarees',
     subtitle: 'Silks, cottons & handloom weaves',
     image: require('../../assets/saree.jpg'),
@@ -12,6 +21,7 @@ export const PRODUCT_TYPE_CARDS = [
   },
   {
     key: 'jewellery',
+    slug: 'jewellery',
     label: 'Gold & Jewellery',
     subtitle: 'Necklaces, bangles & temple gold',
     image: require('../../assets/jewellery.jpg'),

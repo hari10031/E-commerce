@@ -22,8 +22,8 @@ export const PRODUCT_SIZES = {
 };
 
 export const PRODUCT_TYPES = [
-  { value: 'saree', label: 'Saree', emoji: '🥻', color: 'bg-pink-100 text-pink-700' },
-  { value: 'jewellery', label: 'Jewellery', emoji: '💎', color: 'bg-amber-100 text-amber-700' },
+  { value: 'saree', label: 'Saree', icon: 'shirt-outline', color: 'bg-pink-100 text-pink-700' },
+  { value: 'jewellery', label: 'Jewellery', icon: 'diamond-outline', color: 'bg-amber-100 text-amber-700' },
 ];
 
 export const ORDER_STATUS_CONFIG = {

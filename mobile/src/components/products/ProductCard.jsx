@@ -2,17 +2,10 @@ import React from 'react';
 import { View, Text, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatPrice, discountedPrice } from '../../lib/utils';
-import { PRODUCT_TYPES } from '../../constants';
-
-const PLACEHOLDER_STYLES = {
-  saree: { bg: '#fce7f3', text: '#9f1239', emoji: '🥻' },
-  jewellery: { bg: '#fef3c7', text: '#92400e', emoji: '💎' },
-};
+import TypeBadge from './TypeBadge';
 
 export default function ProductCard({ product, onPress, showStock = false }) {
   const primaryImage = product.images?.find((i) => i.is_primary) || product.images?.[0];
-  const typeConfig = PRODUCT_TYPES.find((t) => t.value === product.type);
-
   const finalPrice = discountedPrice(product.base_price, product.discount_pct);
   const hasDiscount = product.discount_pct > 0;
   const variants = Array.isArray(product.variants) ? product.variants : [];
@@ -29,8 +22,7 @@ export default function ProductCard({ product, onPress, showStock = false }) {
   }, {});
   const colorEntries = Object.entries(colorTotals).sort((a, b) => b[1] - a[1]);
 
-  const isPlaceholder = !primaryImage?.url || primaryImage?.placeholder;
-  const placeholderStyle = PLACEHOLDER_STYLES[product.type] || PLACEHOLDER_STYLES.saree;
+  const hasPhoto = Boolean(primaryImage?.url && !primaryImage?.placeholder);
 
   return (
     <Pressable
@@ -39,29 +31,18 @@ export default function ProductCard({ product, onPress, showStock = false }) {
     >
       {/* Image — 3:4 portrait, full image shown (no crop) */}
       <View className="bg-white" style={{ aspectRatio: 3 / 4 }}>
-        {isPlaceholder ? (
-          <View
-            className="flex-1 items-center justify-center px-3"
-            style={{ backgroundColor: placeholderStyle.bg }}
-          >
-            <Text className="absolute top-2 left-2 text-lg">{placeholderStyle.emoji}</Text>
-            <Text
-              className="text-center font-semibold text-sm leading-5"
-              style={{ color: placeholderStyle.text }}
-              numberOfLines={2}
-            >
-              {product.title}
-            </Text>
-          </View>
-        ) : primaryImage ? (
+        {hasPhoto ? (
           <Image
             source={{ uri: primaryImage.url }}
             className="w-full h-full"
             resizeMode="cover"
           />
         ) : (
-          <View className="flex-1 items-center justify-center">
+          <View className="flex-1 items-center justify-center bg-gray-100 px-3">
             <Ionicons name="image-outline" size={32} color="#d1d5db" />
+            <Text className="text-center text-xs text-gray-500 mt-2 font-medium" numberOfLines={2}>
+              {product.title}
+            </Text>
           </View>
         )}
         {/* Published badge */}
@@ -84,8 +65,7 @@ export default function ProductCard({ product, onPress, showStock = false }) {
       <View className="p-3">
         {/* Type badge */}
         <View className="flex-row items-center mb-1.5">
-          <Text className="text-xs mr-1">{typeConfig?.emoji}</Text>
-          <Text className="text-xs text-gray-500 font-medium capitalize">{product.type}</Text>
+          <TypeBadge type={product.type} />
           {product.category && (
             <Text className="text-xs text-gray-400 ml-1">· {product.category.name}</Text>
           )}

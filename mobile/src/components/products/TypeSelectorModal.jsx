@@ -1,27 +1,16 @@
 import React from 'react';
-import { View, Text, Pressable, Modal } from 'react-native';
+import { View, Text, Pressable, Modal, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { PRODUCT_TYPE_CARDS } from '../../constants/productTypes';
 
-const TYPES = [
-  {
-    key: 'saree',
-    label: 'Sarees',
-    emoji: '🥻',
-    icon: 'shirt-outline',
-    bgColor: '#fff1f2',
-    borderColor: '#be185d',
-    iconColor: '#db2777',
-  },
-  {
-    key: 'jewellery',
-    label: 'Gold',
-    emoji: '💎',
-    icon: 'diamond-outline',
-    bgColor: '#fffbeb',
-    borderColor: '#b45309',
-    iconColor: '#d97706',
-  },
-];
+const TYPES = PRODUCT_TYPE_CARDS.map((t) => ({
+  key: t.key,
+  label: t.key === 'saree' ? 'Sarees' : 'Gold',
+  image: t.image,
+  icon: t.icon,
+  bgColor: t.bgColor,
+  iconColor: t.accentColor,
+}));
 
 function Divider() {
   return (
@@ -74,8 +63,10 @@ export default function TypeSelectorModal({ visible, onClose, onSelect }) {
                     borderColor: 'transparent',
                   }}
                 >
-                  <Text className="text-4xl mb-2">{t.emoji}</Text>
-                  <Ionicons name={t.icon} size={26} color={t.iconColor} />
+                  <View className="w-20 h-20 rounded-xl overflow-hidden mb-2 bg-white">
+                    <Image source={t.image} className="w-full h-full" resizeMode="cover" />
+                  </View>
+                  <Ionicons name={t.icon} size={22} color={t.iconColor} />
                   <Text className="text-sm font-bold mt-2" style={{ color: '#1f2937' }}>
                     {t.label}
                   </Text>

@@ -1,13 +1,15 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, ScrollView, TextInput, Image,
+  View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, ScrollView, TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/authStore';
-import { getProducts, getCategories, getInventory } from '../../lib/api';
+import { getProducts, getCategories, getInventory, updateCategory } from '../../lib/api';
 import ProductCard from '../../components/products/ProductCard';
+import CollectionCategoryCard from '../../components/categories/CollectionCategoryCard';
+import { pickImageFromGallery, appendImageFile } from '../../lib/pickImage';
 import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 import { prefetchProduct } from '../../lib/queryClient';
 import { PRODUCT_TYPE_CARDS } from '../../constants/productTypes';
@@ -35,6 +37,7 @@ function Divider() {
 
 export default function ProductsScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const viewMode = useAuthStore((s) => s.viewMode);
 
@@ -52,8 +55,42 @@ export default function ProductsScreen({ navigation, route }) {
       setSelectedCategory(null);
     }
   }, [route?.params?.initialType]);
+
+  // Collections tab press → back to type cards (Sarees / Gold, etc.)
+  useEffect(() => {
+    if (route.params?.resetRoot == null) return;
+    setSelectedType(route.params?.initialType ?? null);
+    setSelectedCategory(null);
+    setSearchOpen(false);
+    setSearchText('');
+    navigation.setParams({ resetRoot: undefined });
+  }, [route.params?.resetRoot, route.params?.initialType, navigation]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [uploadingCategoryId, setUploadingCategoryId] = useState(null);
+
+  const uploadCategoryImageMutation = useMutation({
+    mutationFn: async ({ categoryId, uri }) => {
+      const fd = new FormData();
+      appendImageFile(fd, uri);
+      return updateCategory(categoryId, fd);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+
+  const handleCategoryPhoto = async (category) => {
+    if (!category?.id || !canAdd) return;
+    const uri = await pickImageFromGallery();
+    if (!uri) return;
+    setUploadingCategoryId(category.id);
+    try {
+      await uploadCategoryImageMutation.mutateAsync({ categoryId: category.id, uri });
+    } catch (err) {
+      Alert.alert('Upload failed', err?.message ?? 'Could not save photo');
+    } finally {
+      setUploadingCategoryId(null);
+    }
+  };
 
   // All categories — type roots + their sub-categories — fetched live.
   const { data: categories = [], isLoading: catLoading } = useQuery({
@@ -226,49 +263,35 @@ export default function ProductsScreen({ navigation, route }) {
 
   // ─── Level 1: type selection ─────────────────────────────────────
   const renderTypeSelection = () => (
-    <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 80 }} showsVerticalScrollIndicator={false}>
-      <Text className="text-center text-sm mb-2" style={{ color: '#a16207' }}>
+    <View
+      className="flex-1 px-4"
+      style={{ paddingBottom: insets.bottom + 12 }}
+    >
+      <Text className="text-center text-xs py-2" style={{ color: '#a16207' }}>
         Browse our handpicked collections
       </Text>
-      <Divider />
-      <View className="px-2">
+      <View className="flex-1 justify-center" style={{ gap: 10, paddingBottom: 8 }}>
         {TYPE_CARDS.map((tc) => {
           const count = childrenOf(tc.key).length;
           return (
-            <Pressable
+            <CollectionCategoryCard
               key={tc.key}
+              compact
+              useFixedImage
+              title={tc.label}
+              fallbackSource={tc.image}
+              fallbackIcon={tc.icon}
+              fallbackIconColor={tc.iconColor}
+              stats={{ subtitle: `${count} categories` }}
               onPress={() => setSelectedType(tc.key)}
-              className="rounded-2xl overflow-hidden mb-4 shadow-sm"
-              style={{ backgroundColor: tc.bgColor, borderWidth: 1.5, borderColor: tc.borderColor }}
-            >
-              <View className="flex-row items-center p-3">
-                <View className="w-24 h-24 rounded-xl overflow-hidden bg-white border border-gray-100 flex items-center justify-center p-1">
-                  <Image
-                    source={tc.image}
-                    style={{ width: '100%', height: '100%' }}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View className="flex-1 ml-4 justify-center">
-                  <View className="flex-row items-center">
-                    <Ionicons name={tc.icon} size={20} color={tc.iconColor} style={{ marginRight: 6 }} />
-                    <Text className="text-lg font-bold" style={{ color: tc.textColor }}>{tc.label}</Text>
-                  </View>
-                  <Text className="text-xs mt-1 font-medium" style={{ color: tc.textColor + 'cc' }}>{count} categories</Text>
-                </View>
-                <View className="p-2 rounded-full mr-1" style={{ backgroundColor: tc.textColor + '15' }}>
-                  <Ionicons name="chevron-forward" size={18} color={tc.textColor} />
-                </View>
-              </View>
-            </Pressable>
+            />
           );
         })}
       </View>
-      <Divider />
-      <Text className="text-center text-xs" style={{ color: '#92400e' }}>
-        Finest Indian textiles & jewellery, curated for you
+      <Text className="text-center text-[10px] pb-1" style={{ color: '#b45309' }}>
+        Finest Indian textiles & jewellery
       </Text>
-    </ScrollView>
+    </View>
   );
 
   // ─── Level 2: category selection ─────────────────────────────────
@@ -285,50 +308,23 @@ export default function ProductsScreen({ navigation, route }) {
         <View className="flex-row flex-wrap justify-between px-1">
           {visibleSubCats.map((cat) => {
             const stats = categoryStats[cat.id];
-            const colors = stats?.colors ?? [];
             return (
-            <Pressable
-              key={cat.id}
-              onPress={() => setSelectedCategory(cat.id)}
-              className="mb-3 rounded-2xl overflow-hidden"
-              style={{ width: '48%', backgroundColor: CARD_BG, borderWidth: 1.5, borderColor: SECTION_BORDER }}
-            >
-              <View className="p-4 items-center" style={{ minHeight: 100 }}>
-                <View className="w-10 h-10 rounded-full items-center justify-center mb-2" style={{ backgroundColor: currentTypeCard?.bgColor || '#fef7f0' }}>
-                  <Ionicons name={currentTypeCard?.icon || 'layers'} size={18} color={currentTypeCard?.iconColor || '#d97706'} />
-                </View>
-                <Text className="text-sm font-bold text-center" style={{ color: '#78350f' }}>{cat.name}</Text>
-                {categoryStockReady && (
-                  <>
-                    <Text className="text-[10px] mt-1" style={{ color: '#a16207' }}>
-                      {stats?.productCount ?? 0} {typeLabel}
-                    </Text>
-                    <Text className="text-[10px]" style={{ color: '#a16207' }}>
-                      {stats?.totalStock ?? 0} in stock
-                    </Text>
-                  </>
-                )}
-              </View>
-              {categoryStockReady && colors.length > 0 && (
-                <View className="px-3 pb-2">
-                  <View className="flex-row flex-wrap justify-center">
-                    {colors.map(([color, qty]) => (
-                      <View key={color} className="px-1.5 py-0.5 rounded-full bg-amber-50 mr-1 mb-1">
-                        <Text className="text-[9px]" style={{ color: '#b45309' }}>
-                          {color} {qty}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-              <View className="px-3 py-2 items-center" style={{ backgroundColor: '#fef7f0' }}>
-                <Text className="text-[10px] font-semibold" style={{ color: '#b45309' }}>
-                  View <Ionicons name="arrow-forward" size={8} color="#b45309" />
-                </Text>
-              </View>
-            </Pressable>
-          )})}
+              <CollectionCategoryCard
+                key={cat.id}
+                title={cat.name}
+                imageUrl={cat.image_url}
+                fallbackIcon={currentTypeCard?.icon || 'layers'}
+                fallbackIconColor={currentTypeCard?.iconColor || '#d97706'}
+                stats={stats}
+                typeLabel={typeLabel}
+                stockReady={categoryStockReady}
+                onPress={() => setSelectedCategory(cat.id)}
+                canAddImage={canAdd}
+                onAddImage={() => handleCategoryPhoto(cat)}
+                uploading={uploadingCategoryId === cat.id}
+              />
+            );
+          })}
         </View>
       )}
 

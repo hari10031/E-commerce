@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { PRODUCT_TYPE_CARDS } from '../../../constants/productTypes';
 import { useQuery } from '@tanstack/react-query';
 import { getCategories } from '../../../lib/api';
 import { PRODUCT_TYPES } from '../../../constants';
@@ -25,22 +27,28 @@ export default function Step1TypeCategory({ wizardData, update }) {
       {/* Product type */}
       <Text className="text-base font-semibold text-gray-800 mb-4">What type of product?</Text>
       <View className="flex-row gap-3 mb-8">
-        {PRODUCT_TYPES.map((t) => (
+        {PRODUCT_TYPES.map((t) => {
+          const card = PRODUCT_TYPE_CARDS.find((c) => c.key === t.value);
+          return (
           <Pressable
             key={t.value}
             onPress={() => update({ type: t.value })}
-            className={`flex-1 rounded-2xl py-5 items-center border-2 ${
+            className={`flex-1 rounded-2xl py-4 items-center border-2 overflow-hidden ${
               wizardData.type === t.value
                 ? 'border-amber-500 bg-amber-50'
                 : 'border-gray-200 bg-white'
             }`}
           >
-            <Text className="text-3xl mb-2">{t.emoji}</Text>
+            {card?.image ? (
+              <Image source={card.image} className="w-16 h-16 rounded-xl mb-2" resizeMode="cover" />
+            ) : (
+              <Ionicons name={t.icon} size={28} color="#d97706" style={{ marginBottom: 8 }} />
+            )}
             <Text className={`text-sm font-semibold ${wizardData.type === t.value ? 'text-amber-700' : 'text-gray-700'}`}>
               {t.label}
             </Text>
           </Pressable>
-        ))}
+        );})}
       </View>
 
       {/* Category */}

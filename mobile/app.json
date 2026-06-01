@@ -31,7 +31,8 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -45,7 +46,10 @@
       "expo-font"
     ],
     "extra": {
-      "apiUrl": "https://api.yuvaranisilks.com/api"
+      "apiUrl": "https://api.yuvaranisilks.com/api",
+      "eas": {
+        "projectId": "2fe2ae1e-142f-4955-8312-288d2d58ccb0"
+      }
     }
   }
 }

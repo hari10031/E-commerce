@@ -11,6 +11,7 @@ import useAuthStore from '../store/authStore';
 import { BRAND } from '../constants/brand';
 
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
+import InventoryListScreen from '../screens/dashboard/InventoryListScreen';
 import ProductsScreen from '../screens/products/ProductsScreen';
 import ProductDetailScreen from '../screens/products/ProductDetailScreen';
 import ProductWizardScreen from '../screens/products/wizard/ProductWizardScreen';
@@ -48,6 +49,7 @@ function DashboardStack() {
   return (
     <DashStack.Navigator screenOptions={STACK_OPTS}>
       <DashStack.Screen name="Dashboard" component={DashboardScreen} />
+      <DashStack.Screen name="InventoryList" component={InventoryListScreen} />
       <DashStack.Screen name="MySales" component={MySalesScreen} />
     </DashStack.Navigator>
   );
@@ -211,7 +213,10 @@ function AdminTabs({ onCreatePress }) {
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault();
-            navigation.navigate('CollectionsTab', { screen: 'Products' });
+            navigation.navigate('CollectionsTab', {
+              screen: 'Products',
+              params: { resetRoot: Date.now() },
+            });
           },
         })}
       />
@@ -296,7 +301,10 @@ function EmployeeTabs({ onCreatePress }) {
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault();
-            navigation.navigate('CollectionsTab', { screen: 'Products' });
+            navigation.navigate('CollectionsTab', {
+              screen: 'Products',
+              params: { resetRoot: Date.now() },
+            });
           },
         })}
       />
@@ -370,7 +378,10 @@ function CustomerTabs() {
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault();
-            navigation.navigate('CollectionsTab', { screen: 'Products' });
+            navigation.navigate('CollectionsTab', {
+              screen: 'Products',
+              params: { resetRoot: Date.now() },
+            });
           },
         })}
       />

@@ -11,7 +11,7 @@ import {
 } from '../../lib/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { formatPrice, discountedPrice, formatDate } from '../../lib/utils';
-import { PRODUCT_TYPES } from '../../constants';
+import TypeBadge from '../../components/products/TypeBadge';
 import useAuthStore from '../../store/authStore';
 import * as Haptics from 'expo-haptics';
 import { resolveColorHex } from '../../lib/colors';
@@ -297,7 +297,6 @@ export default function ProductDetailScreen({ route, navigation }) {
   if (isLoading && !product) return <LoadingSpinner message="Loading product…" />;
   if (!product) return null;
 
-  const typeConfig = PRODUCT_TYPES.find((t) => t.value === product.type);
   const finalPrice = discountedPrice(product.base_price, product.discount_pct);
   const images = product.images ?? [];
   const variants = product.variants ?? [];
@@ -408,9 +407,8 @@ export default function ProductDetailScreen({ route, navigation }) {
                 </Text>
               </View>
             )}
-            <View className="flex-row items-center bg-amber-50 px-2.5 py-1 rounded-full">
-              <Text className="text-xs mr-1">{typeConfig?.emoji}</Text>
-              <Text className="text-xs font-semibold text-amber-700 capitalize">{product.type}</Text>
+            <View className="bg-amber-50 px-2.5 py-1 rounded-full">
+              <TypeBadge type={product.type} />
             </View>
             {product.category && (
               <View className="bg-indigo-50 px-2.5 py-1 rounded-full">

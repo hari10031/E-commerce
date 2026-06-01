@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator } from 'react-native';
 import { formatPrice, discountedPrice } from '../../../lib/utils';
 import { PRODUCT_TYPES } from '../../../constants';
+import TypeBadge from '../../../components/products/TypeBadge';
 
 function ReviewRow({ label, value }) {
   return (
@@ -30,9 +31,8 @@ export default function Step6Review({ wizardData, onSaveDraft, onPublish, isSavi
         )}
         <View className="p-4">
           <View className="flex-row items-center mb-2 gap-2">
-            <View className="flex-row items-center bg-amber-50 px-2.5 py-1 rounded-full">
-              <Text className="text-xs mr-1">{typeConfig?.emoji}</Text>
-              <Text className="text-xs font-semibold text-amber-700 capitalize">{type}</Text>
+            <View className="bg-amber-50 px-2.5 py-1 rounded-full">
+              <TypeBadge type={type} />
             </View>
           </View>
           <Text className="text-base font-bold text-gray-900 mb-1">{content.title || 'Untitled product'}</Text>
@@ -48,7 +48,7 @@ export default function Step6Review({ wizardData, onSaveDraft, onPublish, isSavi
       {/* Details */}
       <View className="bg-white rounded-2xl p-4 shadow-sm mb-4">
         <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Details</Text>
-        <ReviewRow label="Type" value={`${typeConfig?.emoji} ${type}`} />
+        <ReviewRow label="Type" value={typeConfig?.label ?? type} />
         <ReviewRow label="Images" value={`${images.length} color(s)`} />
         <ReviewRow label="Variants" value={`${variants.filter((v) => v.quantity > 0).length} active, ${totalStock} total units`} />
         <ReviewRow label="Price" value={formatPrice(finalPrice)} />

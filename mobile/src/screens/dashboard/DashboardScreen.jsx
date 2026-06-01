@@ -129,12 +129,16 @@ function QuickActionCard({ icon, label, bgColor, iconColor, onPress }) {
   );
 }
 
-function MetricCard({ label, value }) {
+function MetricCard({ label, value, onPress }) {
+  const Wrapper = onPress ? Pressable : View;
   return (
-    <View className="flex-1 bg-white rounded-xl p-3 mx-1 items-center shadow-sm">
+    <Wrapper
+      onPress={onPress}
+      className={`flex-1 bg-white rounded-xl p-3 mx-1 items-center shadow-sm${onPress ? ' active:opacity-80' : ''}`}
+    >
       <Text className="text-lg font-bold text-gray-900">{value ?? '—'}</Text>
       <Text className="text-[10px] text-gray-500 mt-1 text-center">{label}</Text>
-    </View>
+    </Wrapper>
   );
 }
 
@@ -427,10 +431,26 @@ export default function DashboardScreen({ navigation }) {
           <View className="mb-4">
             <Text className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Inventory</Text>
             <View className="flex-row">
-              <MetricCard label="Products" value={stats.totalProducts ?? 0} />
-              <MetricCard label="Low Stock" value={stats.lowStockVariants ?? 0} />
-              <MetricCard label="Out of Stock" value={stats.outOfStockVariants ?? 0} />
-              <MetricCard label="Team" value={stats.totalEmployees ?? 0} />
+              <MetricCard
+                label="Products"
+                value={stats.totalProducts ?? 0}
+                onPress={() => navigation.navigate('InventoryList', { filter: 'products' })}
+              />
+              <MetricCard
+                label="Low Stock"
+                value={stats.lowStockVariants ?? 0}
+                onPress={() => navigation.navigate('InventoryList', { filter: 'low_stock' })}
+              />
+              <MetricCard
+                label="Out of Stock"
+                value={stats.outOfStockVariants ?? 0}
+                onPress={() => navigation.navigate('InventoryList', { filter: 'out_of_stock' })}
+              />
+              <MetricCard
+                label="Team"
+                value={stats.totalEmployees ?? 0}
+                onPress={() => navigateToTab('MoreTab', 'Team')}
+              />
             </View>
           </View>
         )}

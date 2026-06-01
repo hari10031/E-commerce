@@ -6,7 +6,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { getCategories, createCategory, deleteCategory } from '../../lib/api';
+import { getCategories, createCategory, updateCategory, deleteCategory } from '../../lib/api';
+import { pickImageFromGallery, appendImageFile } from '../../lib/pickImage';
+import { isCollectionRoot, PRODUCT_TYPE_MAP } from '../../constants/productTypes';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ScreenHeader from '../../components/ui/ScreenHeader';
@@ -14,19 +16,37 @@ import { confirmDialog } from '../../lib/dialog';
 import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 import * as Haptics from 'expo-haptics';
 
-function CategoryModal({ visible, onClose, onSave, isSaving, parents }) {
+function CategoryModal({ visible, onClose, onSave, isSaving, parents, editing }) {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [parentId, setParentId] = useState('');
+  const [imageUri, setImageUri] = useState(null);
+  const [existingImageUrl, setExistingImageUrl] = useState(null);
 
-  // Fresh fields every time the sheet opens.
   useEffect(() => {
     if (visible) {
-      setName('');
-      setSlug('');
-      setParentId('');
+      if (editing) {
+        setName(editing.name ?? '');
+        setSlug(editing.slug ?? '');
+        setParentId(editing.parent_id ?? '');
+        setExistingImageUrl(editing.image_url ?? null);
+        setImageUri(null);
+      } else {
+        setName('');
+        setSlug('');
+        setParentId('');
+        setExistingImageUrl(null);
+        setImageUri(null);
+      }
     }
-  }, [visible]);
+  }, [visible, editing]);
+
+  const handlePickImage = async () => {
+    const uri = await pickImageFromGallery();
+    if (uri) setImageUri(uri);
+  };
+
+  const showPhotoPicker = editing ? !isCollectionRoot(editing) : Boolean(parentId);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -34,17 +54,47 @@ function CategoryModal({ visible, onClose, onSave, isSaving, parents }) {
       return;
     }
     onSave({
+      id: editing?.id,
       name: name.trim(),
       slug: slug.trim() || name.trim().toLowerCase().replace(/\s+/g, '-'),
       parent_id: parentId || undefined,
+      imageUri: showPhotoPicker ? imageUri : undefined,
+      skipImage: !showPhotoPicker,
     });
   };
+
+  const previewUri = imageUri || existingImageUrl;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable className="flex-1 bg-black/40" onPress={onClose}>
         <Pressable className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl px-5 pt-5 pb-8">
-          <Text className="text-lg font-bold text-gray-900 mb-5">New Category</Text>
+          <Text className="text-lg font-bold text-gray-900 mb-5">
+            {editing ? 'Edit Category' : 'New Category'}
+          </Text>
+
+          {showPhotoPicker ? (
+            <Pressable
+              onPress={handlePickImage}
+              className="mb-5 rounded-2xl overflow-hidden border border-gray-200"
+              style={{ aspectRatio: 4 / 3, backgroundColor: '#f9fafb' }}
+            >
+              {previewUri ? (
+                <Image source={{ uri: previewUri }} className="w-full h-full" resizeMode="cover" />
+              ) : (
+                <View className="flex-1 items-center justify-center">
+                  <Ionicons name="camera-outline" size={32} color="#9ca3af" />
+                  <Text className="text-sm text-gray-500 mt-2">Add sub-category photo</Text>
+                </View>
+              )}
+              <View className="absolute bottom-2 right-2 flex-row items-center px-2.5 py-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+                <Ionicons name="camera" size={14} color="#fff" />
+                <Text className="text-[10px] text-white font-semibold ml-1">
+                  {previewUri ? 'Change' : 'Add photo'}
+                </Text>
+              </View>
+            </Pressable>
+          ) : null}
 
           <View className="mb-4">
             <Text className="text-sm font-medium text-gray-700 mb-1.5">Name *</Text>
@@ -111,7 +161,11 @@ function CategoryModal({ visible, onClose, onSave, isSaving, parents }) {
               disabled={isSaving}
               className="flex-1 bg-amber-500 rounded-xl py-3.5 items-center active:bg-amber-600"
             >
-              {isSaving ? <ActivityIndicator color="#ffffff" /> : <Text className="text-white font-semibold">Create</Text>}
+              {isSaving ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text className="text-white font-semibold">{editing ? 'Save' : 'Create'}</Text>
+              )}
             </Pressable>
           </View>
         </Pressable>
@@ -124,6 +178,8 @@ export default function CategoriesScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [uploadingId, setUploadingId] = useState(null);
 
   const { data: categories, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['categories'],
@@ -137,21 +193,59 @@ export default function CategoriesScreen({ navigation }) {
   const topLevel = all.filter((c) => !c.parent_id);
   const childrenOf = (id) => all.filter((c) => c.parent_id === id);
 
-  const createMutation = useMutation({
-    mutationFn: (payload) => {
+  const saveMutation = useMutation({
+    mutationFn: async (payload) => {
       const fd = new FormData();
       fd.append('name', payload.name);
       fd.append('slug', payload.slug);
       if (payload.parent_id) fd.append('parent_id', payload.parent_id);
+      if (payload.imageUri && !payload.skipImage) appendImageFile(fd, payload.imageUri);
+      if (payload.id) return updateCategory(payload.id, fd);
       return createCategory(fd);
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ['categories'] });
       setShowModal(false);
+      setEditingCategory(null);
     },
     onError: (err) => Alert.alert('Error', err.message),
   });
+
+  const quickPhotoMutation = useMutation({
+    mutationFn: async ({ id, uri }) => {
+      const fd = new FormData();
+      appendImageFile(fd, uri);
+      return updateCategory(id, fd);
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      qc.invalidateQueries({ queryKey: ['categories'] });
+    },
+    onError: (err) => Alert.alert('Error', err.message),
+  });
+
+  const handleQuickPhoto = async (cat) => {
+    if (isCollectionRoot(cat)) return;
+    const uri = await pickImageFromGallery();
+    if (!uri) return;
+    setUploadingId(cat.id);
+    try {
+      await quickPhotoMutation.mutateAsync({ id: cat.id, uri });
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const openEdit = (cat) => {
+    setEditingCategory(cat);
+    setShowModal(true);
+  };
+
+  const openNew = () => {
+    setEditingCategory(null);
+    setShowModal(true);
+  };
 
   const deleteMutation = useMutation({
     mutationFn: deleteCategory,
@@ -185,7 +279,7 @@ export default function CategoriesScreen({ navigation }) {
         navigation={navigation}
         rightElement={
           <Pressable
-            onPress={() => setShowModal(true)}
+            onPress={openNew}
             className="w-9 h-9 bg-amber-500 rounded-full items-center justify-center active:bg-amber-600"
           >
             <Ionicons name="add" size={20} color="#ffffff" />
@@ -199,23 +293,46 @@ export default function CategoriesScreen({ navigation }) {
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16 }}
         renderItem={({ item }) => {
           const kids = childrenOf(item.id);
+          const rootTypeCard = PRODUCT_TYPE_MAP[item.slug];
+          const fixedRoot = isCollectionRoot(item) && rootTypeCard;
           return (
             <View className="bg-white rounded-2xl shadow-sm mb-3 overflow-hidden">
               {/* Parent */}
               <View className="flex-row items-center">
-                <View className="w-16 h-16 bg-gray-100">
-                  {item.image_url ? (
-                    <Image source={{ uri: item.image_url }} className="w-full h-full" resizeMode="cover" />
-                  ) : (
-                    <View className="flex-1 items-center justify-center">
-                      <Ionicons name="folder" size={24} color="#d1d5db" />
-                    </View>
-                  )}
-                </View>
-                <View className="flex-1 px-4">
+                {fixedRoot ? (
+                  <View className="w-16 h-16 overflow-hidden bg-gray-100">
+                    <Image source={rootTypeCard.image} className="w-full h-full" resizeMode="cover" />
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={() => handleQuickPhoto(item)}
+                    disabled={uploadingId === item.id}
+                    className="w-16 h-16 bg-gray-100"
+                  >
+                    {item.image_url ? (
+                      <Image source={{ uri: item.image_url }} className="w-full h-full" resizeMode="cover" />
+                    ) : (
+                      <View className="flex-1 items-center justify-center">
+                        <Ionicons name="camera-outline" size={22} color="#9ca3af" />
+                      </View>
+                    )}
+                    {uploadingId === item.id && (
+                      <View className="absolute inset-0 items-center justify-center bg-black/30">
+                        <ActivityIndicator color="#fff" size="small" />
+                      </View>
+                    )}
+                  </Pressable>
+                )}
+                <Pressable onPress={() => openEdit(item)} className="flex-1 px-4 py-3">
                   <Text className="text-sm font-semibold text-gray-900">{item.name}</Text>
                   <Text className="text-xs text-gray-400 font-mono mt-0.5">/{item.slug}</Text>
-                </View>
+                </Pressable>
+                <Pressable
+                  onPress={() => openEdit(item)}
+                  className="w-10 h-16 items-center justify-center active:bg-amber-50"
+                >
+                  <Ionicons name="create-outline" size={18} color="#f59e0b" />
+                </Pressable>
                 <Pressable
                   onPress={() => confirmDelete(item)}
                   disabled={deleteMutation.isPending}
@@ -230,8 +347,28 @@ export default function CategoriesScreen({ navigation }) {
                 <View className="border-t border-gray-50 px-4 py-2">
                   {kids.map((kid) => (
                     <View key={kid.id} className="flex-row items-center py-2">
-                      <Ionicons name="git-branch-outline" size={14} color="#f59e0b" />
-                      <Text className="flex-1 text-sm text-gray-700 ml-2">{kid.name}</Text>
+                      <Pressable
+                        onPress={() => handleQuickPhoto(kid)}
+                        disabled={uploadingId === kid.id}
+                        className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 mr-2"
+                      >
+                        {kid.image_url ? (
+                          <Image source={{ uri: kid.image_url }} className="w-full h-full" resizeMode="cover" />
+                        ) : (
+                          <View className="flex-1 items-center justify-center">
+                            <Ionicons name="camera-outline" size={16} color="#9ca3af" />
+                          </View>
+                        )}
+                      </Pressable>
+                      <Pressable onPress={() => openEdit(kid)} className="flex-1">
+                        <Text className="text-sm text-gray-700">{kid.name}</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => openEdit(kid)}
+                        className="p-1.5 active:bg-amber-50 rounded"
+                      >
+                        <Ionicons name="create-outline" size={15} color="#f59e0b" />
+                      </Pressable>
                       <Pressable
                         onPress={() => confirmDelete(kid)}
                         disabled={deleteMutation.isPending}
@@ -252,7 +389,7 @@ export default function CategoriesScreen({ navigation }) {
             title="No categories yet"
             message="Create categories to organize your products"
             action="Add Category"
-            onAction={() => setShowModal(true)}
+            onAction={openNew}
           />
         }
         refreshControl={
@@ -262,10 +399,14 @@ export default function CategoriesScreen({ navigation }) {
 
       <CategoryModal
         visible={showModal}
-        onClose={() => setShowModal(false)}
-        onSave={(payload) => createMutation.mutate(payload)}
-        isSaving={createMutation.isPending}
+        onClose={() => {
+          setShowModal(false);
+          setEditingCategory(null);
+        }}
+        onSave={(payload) => saveMutation.mutate(payload)}
+        isSaving={saveMutation.isPending}
         parents={topLevel}
+        editing={editingCategory}
       />
     </View>
   );

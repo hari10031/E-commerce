@@ -18,6 +18,7 @@ import {
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { GOLD_PURITIES } from '../../../constants/categories';
 import { PRODUCT_SIZES, PRODUCT_TYPES } from '../../../constants';
+import TypeBadge from '../../../components/products/TypeBadge';
 import { formatPrice, discountedPrice } from '../../../lib/utils';
 import { useHardwareBackHandler } from '../../../hooks/useHardwareBackHandler';
 import { resolveColorHex } from '../../../lib/colors';
@@ -774,7 +775,6 @@ export default function ProductWizardScreen({ route, navigation }) {
     }
   };
 
-  const typeConfig = PRODUCT_TYPES.find((x) => x.value === t);
   const finalPrice = discountedPrice(Number(wizardData.pricing.basePrice) || 0, Number(wizardData.pricing.discountPct) || 0);
   const savings = (Number(wizardData.pricing.basePrice) || 0) - finalPrice;
   const parsedTags = tagInput.split(',').map((x) => x.trim()).filter(Boolean);
@@ -947,9 +947,9 @@ export default function ProductWizardScreen({ route, navigation }) {
           <Text className="text-lg font-bold" style={{ color: '#78350f' }}>
             {mode === 'edit' ? 'Edit Product' : 'New Product'}
           </Text>
-          <Text className="text-xs" style={{ color: '#a16207' }}>
-            {typeConfig?.emoji} {typeConfig?.label}
-          </Text>
+          <View className="mt-0.5">
+            <TypeBadge type={t} />
+          </View>
         </View>
         <Pressable
           onPress={() => openConfirm('Discard?', 'You will lose unsaved changes.', [
