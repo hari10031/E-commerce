@@ -366,6 +366,8 @@ returns void as $$
   update coupons set used_count = used_count + 1 where coupons.code = increment_coupon_usage.code;
 $$ language sql security definer;
 
+-- Super admin + AI quota: see supabase_migrations/superadmin_ai_quota.sql
+
 -- ============================================================
 -- Optional clean slate — DESTRUCTIVE, deletes ALL data.
 -- Only run this block (then re-run the schema above) if you want a

@@ -27,10 +27,24 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     .eq('id', user.id)
     .single()
 
+  const metadataRole =
+    typeof user.user_metadata?.role === 'string' ? user.user_metadata.role : undefined
+  let role = profile?.role ?? metadataRole ?? 'customer'
+
+  if (metadataRole === 'superadmin') {
+    role = 'superadmin'
+    if (profile?.role !== 'superadmin') {
+      await supabase
+        .from('profiles')
+        .update({ role: 'superadmin', employee_status: null, updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+    }
+  }
+
   req.user = {
     id: user.id,
     email: user.email!,
-    role: profile?.role ?? 'customer',
+    role,
     employeeStatus: profile?.employee_status,
   }
   next()
@@ -47,7 +61,15 @@ export function requireRole(...roles: string[]) {
 
 export function requireApprovedEmployee(req: AuthRequest, res: Response, next: NextFunction) {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' })
+  if (req.user.role === 'superadmin') return res.status(403).json({ error: 'Forbidden' })
   if (req.user.role === 'admin') return next()
   if (req.user.role === 'employee' && req.user.employeeStatus === 'approved') return next()
   return res.status(403).json({ error: 'Employee account pending approval' })
+}
+
+export function requireSuperAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.user || req.user.role !== 'superadmin') {
+    return res.status(403).json({ error: 'Forbidden' })
+  }
+  next()
 }

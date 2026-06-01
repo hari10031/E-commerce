@@ -29,6 +29,7 @@ import notificationRoutes from './routes/notifications'
 import salesRoutes from './routes/sales'
 import userRoutes from './routes/users'
 import shipmentRoutes from './routes/shipments'
+import superadminRoutes from './routes/superadmin'
 
 const app = express()
 
@@ -73,6 +74,7 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/sales', salesRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/shipments', shipmentRoutes)
+app.use('/api/superadmin', superadminRoutes)
 
 app.use(notFound)
 app.use(errorHandler)

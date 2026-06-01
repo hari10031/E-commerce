@@ -33,6 +33,7 @@ export function Navbar() {
   const [categories, setCategories] = useState<Category[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchMounted, setSearchMounted] = useState(false)
 
   const { items } = useCartStore()
   const { productIds } = useWishlistStore()
@@ -42,6 +43,10 @@ export function Navbar() {
     api.get<Category[]>('/api/categories')
       .then(setCategories)
       .catch((err) => console.error('Failed to load categories', err))
+  }, [])
+
+  useEffect(() => {
+    setSearchMounted(true)
   }, [])
 
   useEffect(() => {
@@ -141,11 +146,13 @@ export function Navbar() {
             </nav>
 
             {/* Search */}
-            <form onSubmit={handleSearch} className="flex-1 max-w-xs hidden lg:flex">
+            {searchMounted ? (
+            <form onSubmit={handleSearch} className="flex-1 max-w-xs hidden lg:flex" suppressHydrationWarning>
               <div className="relative w-full border-b border-neutral-300/60 focus-within:border-brand transition-colors duration-300 py-1">
                 <Search className="absolute left-1 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
                 <input
                   type="text"
+                  suppressHydrationWarning
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search sarees, jewellery..."
@@ -153,6 +160,9 @@ export function Navbar() {
                 />
               </div>
             </form>
+            ) : (
+              <div className="flex-1 max-w-xs hidden lg:block h-8" aria-hidden />
+            )}
 
             {/* Icons */}
             <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 z-10 ml-auto">
@@ -251,11 +261,13 @@ export function Navbar() {
         {mobileOpen && (
           <div className="md:hidden border-t border-brand-accent/15 bg-background/95 backdrop-blur-md animate-fade-in max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain">
             <div className="px-4 py-5 pb-safe space-y-5">
-              <form onSubmit={handleSearch}>
+              {searchMounted && (
+              <form onSubmit={handleSearch} suppressHydrationWarning>
                 <div className="relative border-b border-neutral-300/60 focus-within:border-brand py-1">
                   <Search className="absolute left-1 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                   <input
                     type="text"
+                    suppressHydrationWarning
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search products..."
@@ -263,6 +275,7 @@ export function Navbar() {
                   />
                 </div>
               </form>
+              )}
               <div className="space-y-3">
                 {NAV_TYPES.map((t) => (
                   <div key={t.slug} className="border-b border-brand-accent/10 pb-3 last:border-0 last:pb-0">

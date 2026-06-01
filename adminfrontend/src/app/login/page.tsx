@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,6 +37,11 @@ export default function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const {
     register,
@@ -51,7 +56,11 @@ export default function LoginPage() {
     try {
       const res = await api.post<LoginResponse>('/api/auth/login', data);
       if (res.user.role !== 'admin' && res.user.role !== 'employee') {
-        setError('Access denied. Admin or employee account required.');
+        if (res.user.role === 'superadmin') {
+          setError('Access denied. Use the platform console to sign in.');
+        } else {
+          setError('Access denied. Admin or employee account required.');
+        }
         return;
       }
       setAuth(res.token, res.user);
@@ -92,7 +101,14 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {!mounted ? (
+            <div className="space-y-4 animate-pulse">
+              <div className="h-9 bg-gray-100 rounded-lg" />
+              <div className="h-9 bg-gray-100 rounded-lg" />
+              <div className="h-11 bg-gray-100 rounded-lg" />
+            </div>
+          ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" suppressHydrationWarning>
             <div className="space-y-1.5">
               <Label htmlFor="email">Email address</Label>
               <Input
@@ -120,6 +136,8 @@ export default function LoginPage() {
                 />
                 <button
                   type="button"
+                  suppressHydrationWarning
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   onClick={() => setShowPassword(!showPassword)}
                 >
@@ -139,6 +157,7 @@ export default function LoginPage() {
               {isSubmitting ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
+          )}
 
           <p className="text-xs text-center text-gray-400 mt-6">
             For admin and employee accounts only

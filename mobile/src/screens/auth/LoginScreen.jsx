@@ -52,6 +52,14 @@ export default function LoginScreen({ navigation }) {
       const data = await login(email, password);
       const u = data.user ?? {};
 
+      if (u.role === 'superadmin') {
+        notifyDialog({
+          title: 'Access denied',
+          message: 'This account cannot sign in here. Use the platform console instead.',
+        });
+        return;
+      }
+
       // Employees must be approved before they can enter the app.
       if (u.role === 'employee' && u.employee_status !== 'approved') {
         notifyDialog({

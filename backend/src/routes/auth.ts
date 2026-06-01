@@ -84,10 +84,22 @@ router.post(
       .eq('id', data.user.id)
       .single()
 
+    const metadataRole = data.user.user_metadata?.role as string | undefined
+    let role = profile?.role ?? metadataRole ?? 'customer'
+
+    // Profile can lag after CLI create-superadmin or if enum migration ran late
+    if (metadataRole === 'superadmin' && profile?.role !== 'superadmin') {
+      await supabase
+        .from('profiles')
+        .update({ role: 'superadmin', employee_status: null, updated_at: new Date().toISOString() })
+        .eq('id', data.user.id)
+      role = 'superadmin'
+    }
+
     res.json({
       token: data.session.access_token,
       refreshToken: data.session.refresh_token,
-      user: { ...profile, email: data.user.email },
+      user: { ...profile, role, email: data.user.email },
     })
   }
 )

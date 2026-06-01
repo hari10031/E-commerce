@@ -12,6 +12,11 @@ const isBanned = (u?: { banned_until?: string | null } | null) =>
 // per-user order stats so the Customers screen can show spend at a glance.
 export async function listUsers(req: AuthRequest, res: Response) {
   const { role = 'customer', search, page = '1', limit = '20' } = req.query
+
+  if (role === 'superadmin') {
+    return res.status(403).json({ error: 'Forbidden' })
+  }
+
   const from = (+page - 1) * +limit
   const to = +page * +limit - 1
 
@@ -67,6 +72,7 @@ export async function getUser(req: AuthRequest, res: Response) {
     .single()
 
   if (error) return res.status(404).json({ error: 'User not found' })
+  if (profile.role === 'superadmin') return res.status(404).json({ error: 'User not found' })
 
   const { data: authUser } = await supabase.auth.admin.getUserById(req.params.id)
   res.json({
@@ -120,6 +126,11 @@ export async function deleteUser(req: AuthRequest, res: Response) {
     return res.status(400).json({ error: 'You cannot delete your own account' })
   }
 
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', id).single()
+  if (profile?.role === 'superadmin') {
+    return res.status(404).json({ error: 'User not found' })
+  }
+
   const { error } = await supabase.auth.admin.deleteUser(id)
   if (error) {
     return res.status(400).json({
@@ -135,6 +146,11 @@ export async function deleteUser(req: AuthRequest, res: Response) {
 export async function resetUserPassword(req: AuthRequest, res: Response) {
   const { id } = req.params
   const { password } = req.body
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', id).single()
+  if (profile?.role === 'superadmin') {
+    return res.status(404).json({ error: 'User not found' })
+  }
 
   if (!password || String(password).length < 6) {
     return res.status(400).json({ error: 'password must be at least 6 characters' })
@@ -156,6 +172,11 @@ export async function setUserActive(req: AuthRequest, res: Response) {
   }
   if (id === req.user!.id && !active) {
     return res.status(400).json({ error: 'You cannot deactivate your own account' })
+  }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', id).single()
+  if (profile?.role === 'superadmin') {
+    return res.status(404).json({ error: 'User not found' })
   }
 
   const { error } = await supabase.auth.admin.updateUserById(id, {

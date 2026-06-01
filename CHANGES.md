@@ -77,6 +77,7 @@ See detailed report: [`mobile/CHANGES.md`](mobile/CHANGES.md)
 | App | File | Notes |
 |-----|------|-------|
 | Mobile | `mobile/.env.example` | `EXPO_PUBLIC_API_URL` template |
+| Super admin | `superadmin/.env.example` | `NEXT_PUBLIC_API_URL` template |
 | Backend | `backend/.env` | Not committed (gitignored) |
 
 ---
@@ -95,6 +96,9 @@ cd frontend && npm install && npm run dev
 
 # Mobile
 cd mobile && npm install && npx expo start
+
+# Super admin console (Gemini quota — not linked from other apps)
+cd superadmin && npm install && npm run dev
 ```
 
 Mobile API URL: set `EXPO_PUBLIC_API_URL` in `mobile/.env` (see `.env.example`).
@@ -104,6 +108,45 @@ Mobile API URL: set `EXPO_PUBLIC_API_URL` in `mobile/.env` (see `.env.example`).
 ## Navigation performance (2026-05-29)
 
 Faster page/tab transitions on mobile app, customer website, and admin website. See [`NAVIGATION_PERFORMANCE.md`](NAVIGATION_PERFORMANCE.md) for causes and estimated gains.
+
+---
+
+## Super Admin — Gemini AI Quota (2026-05-31)
+
+Hidden **5th app** for platform-level Gemini usage control. Not linked from admin or mobile.
+
+### Setup
+
+1. Run SQL migration in Supabase: [`backend/supabase_migrations/superadmin_ai_quota.sql`](backend/supabase_migrations/superadmin_ai_quota.sql)
+2. Create super admin account (credentials **only** in shell env, never in code):
+
+```bash
+cd backend
+SUPERADMIN_EMAIL=sbox-platform-admin@yourdomain.com \
+SUPERADMIN_PASSWORD='your-strong-password-min-16-chars' \
+node scripts/create-superadmin.js
+```
+
+3. Add `http://localhost:3002` to `ALLOWED_ORIGINS` in `backend/.env`
+4. Start superadmin app: `cd superadmin && npm install && npm run dev` → http://localhost:3002
+
+### Features
+
+- Dashboard: images/content used, remaining, limits
+- Edit image and content limits + monthly vs lifetime reset
+- Manual usage counter reset
+- Backend enforces quota on `/api/ai/generate-image` and `/api/ai/generate-content` (429 when exhausted)
+- `superadmin` role hidden from admin user/employee lists; blocked on admin + mobile login
+
+### Key files
+
+| Area | File |
+|------|------|
+| Migration | `backend/supabase_migrations/superadmin_ai_quota.sql` |
+| Quota service | `backend/src/services/aiQuotaService.ts` |
+| Super admin API | `backend/src/routes/superadmin.ts` |
+| Create account | `backend/scripts/create-superadmin.js` |
+| Console UI | `superadmin/` (port 3002) |
 
 ---
 

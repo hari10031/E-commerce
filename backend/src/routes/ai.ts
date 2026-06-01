@@ -1,11 +1,12 @@
-import { Router, Request, Response } from 'express'
+import { Router, Response } from 'express'
 import sharp from 'sharp'
 import multer from 'multer'
-import { authenticate, requireApprovedEmployee } from '../middleware/auth'
+import { authenticate, requireApprovedEmployee, AuthRequest } from '../middleware/auth'
 import { aiLimiter } from '../middleware/rateLimiter'
 import { uploadImage } from '../services/storageService'
 import { generateProductImage, generateProductContent } from '../services/geminiService'
 import { optimizeSourceImage } from '../services/imagePrep'
+import { consumeQuota, QuotaExceededError } from '../services/aiQuotaService'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
@@ -18,10 +19,11 @@ router.post(
   authenticate,
   requireApprovedEmployee,
   upload.single('image'),
-  async (req: Request, res: Response) => {
+  async (req: AuthRequest, res: Response) => {
     const { productType, color, category, imageUrl } = req.body
 
     try {
+      await consumeQuota('content', req.user?.id)
       let buffer: Buffer
       let mimeType: string
 
@@ -46,6 +48,9 @@ router.post(
       })
       res.json(content)
     } catch (err) {
+      if (err instanceof QuotaExceededError) {
+        return res.status(429).json({ error: err.message })
+      }
       res.status(502).json({ error: err instanceof Error ? err.message : 'Content generation failed' })
     }
   }
@@ -60,7 +65,7 @@ router.post(
   authenticate,
   requireApprovedEmployee,
   upload.single('image'),
-  async (req: Request, res: Response) => {
+  async (req: AuthRequest, res: Response) => {
     let sourceBuffer: Buffer
     let mimeType: string
 
@@ -77,6 +82,7 @@ router.post(
     const timing = { prepareMs: 0, geminiMs: 0, uploadMs: 0, totalMs: 0 }
 
     try {
+      await consumeQuota('image', req.user?.id)
       if (imageUrls.length > 0) {
         const prepStart = Date.now()
         const urls = imageUrls.slice(0, 7)
@@ -155,6 +161,9 @@ router.post(
 
       res.json({ url, timing, productType: productType || 'saree' })
     } catch (err) {
+      if (err instanceof QuotaExceededError) {
+        return res.status(429).json({ error: err.message })
+      }
       res.status(502).json({ error: err instanceof Error ? err.message : 'Image generation failed' })
     }
   }
