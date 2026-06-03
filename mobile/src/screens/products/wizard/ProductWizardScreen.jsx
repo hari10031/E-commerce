@@ -22,6 +22,7 @@ import TypeBadge from '../../../components/products/TypeBadge';
 import { formatPrice, discountedPrice } from '../../../lib/utils';
 import { useHardwareBackHandler } from '../../../hooks/useHardwareBackHandler';
 import { resolveColorHex } from '../../../lib/colors';
+import HeroPhotoPreviewModal from '../../../components/products/HeroPhotoPreviewModal';
 
 const WARM_BG = '#fffaf5';
 const CARD_BG = '#ffffff';
@@ -405,7 +406,7 @@ export default function ProductWizardScreen({ route, navigation }) {
     }
     Alert.alert(
       label,
-      'Use full photo or crop to 3:4 listing frame?',
+      'Use full photo or crop with the system editor (fixed 3:4)?',
       [
         { text: 'Use photo', onPress: () => finalizePhotoUpload(color, label, asset) },
         { text: 'Crop 3:4', onPress: () => pickImage(color, label, source, { forceCrop: true }) },
@@ -1494,84 +1495,31 @@ export default function ProductWizardScreen({ route, navigation }) {
         </Pressable>
       </Modal>
 
-      {/* Hero slot — optional crop before upload (web) */}
-      <Modal
-        visible={!!photoPreview}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
+      {/* Hero slot — free crop + auto 3:4 (web) */}
+      <HeroPhotoPreviewModal
+        photoPreview={photoPreview}
+        onClose={() => {
           if (photoPreview?.previewUri?.startsWith('blob:')) {
             revokeBlobUri(photoPreview.previewUri);
           }
           setPhotoPreview(null);
         }}
-      >
-        <Pressable
-          className="flex-1 items-center justify-center px-6"
-          onPress={() => {
-            if (photoPreview?.previewUri?.startsWith('blob:')) {
-              revokeBlobUri(photoPreview.previewUri);
-            }
-            setPhotoPreview(null);
-          }}
-          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
-        >
-          <Pressable className="w-full rounded-2xl p-4" style={{ backgroundColor: '#ffffff' }} onPress={() => {}}>
-            <Text className="text-base font-bold mb-1" style={{ color: '#78350f' }}>
-              {photoPreview?.label}
-            </Text>
-            <Text className="text-sm mb-3" style={{ color: '#6b7280' }}>
-              Use full photo or crop to 3:4 listing frame.
-            </Text>
-            {photoPreview?.previewUri && (
-              <View className="rounded-xl overflow-hidden mb-3" style={{ aspectRatio: 3 / 4, backgroundColor: '#fef7f0' }}>
-                <Image
-                  source={{ uri: photoPreview.previewUri }}
-                  className="w-full h-full"
-                  resizeMode="contain"
-                />
-              </View>
-            )}
-            <Pressable
-              onPress={() => {
-                const { color, label, asset, previewUri } = photoPreview;
-                if (Platform.OS === 'web' && previewUri?.startsWith('blob:')) {
-                  revokeBlobUri(previewUri);
-                }
-                setPhotoPreview(null);
-                finalizePhotoUpload(color, label, asset);
-              }}
-              className="py-2.5"
-            >
-              <Text className="text-sm font-semibold" style={{ color: '#1f2937' }}>Use photo</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                const { color, label, source, previewUri } = photoPreview;
-                if (Platform.OS === 'web' && previewUri?.startsWith('blob:')) {
-                  revokeBlobUri(previewUri);
-                }
-                setPhotoPreview(null);
-                pickImage(color, label, source, { forceCrop: true });
-              }}
-              className="py-2.5"
-            >
-              <Text className="text-sm font-semibold" style={{ color: '#1f2937' }}>Crop 3:4</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                if (photoPreview?.previewUri?.startsWith('blob:')) {
-                  revokeBlobUri(photoPreview.previewUri);
-                }
-                setPhotoPreview(null);
-              }}
-              className="py-2.5"
-            >
-              <Text className="text-sm font-semibold" style={{ color: '#6b7280' }}>Cancel</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        onUseOriginal={() => {
+          const { color, label, asset, previewUri } = photoPreview;
+          if (Platform.OS === 'web' && previewUri?.startsWith('blob:')) {
+            revokeBlobUri(previewUri);
+          }
+          setPhotoPreview(null);
+          finalizePhotoUpload(color, label, asset);
+        }}
+        onCroppedReady={({ color, label, asset, previewUri }) => {
+          if (photoPreview?.previewUri?.startsWith('blob:')) {
+            revokeBlobUri(photoPreview.previewUri);
+          }
+          setPhotoPreview(null);
+          finalizePhotoUpload(color, label, asset);
+        }}
+      />
 
       {/* Fullscreen AI image viewer */}
       <Modal

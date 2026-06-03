@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
@@ -9,9 +9,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Edit2, Trash2, Tag, FolderTree } from 'lucide-react';
+import { Plus, Edit2, Trash2, Tag, FolderTree, Camera, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import type { Category } from '@/types';
+
+const COLLECTION_ROOT_SLUGS = ['saree', 'jewellery'];
+
+function isCollectionRoot(cat: Category | null): boolean {
+  if (!cat) return false;
+  return !cat.parent_id && COLLECTION_ROOT_SLUGS.includes(cat.slug);
+}
+
+function isSubCategoryForm(parentId: string, editing: Category | null): boolean {
+  if (parentId) return true;
+  if (editing?.parent_id) return true;
+  return false;
+}
 
 export default function CategoriesPage() {
   const token = useAuthStore((s) => s.token);
@@ -21,8 +34,11 @@ export default function CategoriesPage() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [name, setName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [parentId, setParentId] = useState('');
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchCategories = async () => {
     if (!token) return;
@@ -40,13 +56,27 @@ export default function CategoriesPage() {
     fetchCategories();
   }, [token]);
 
+  useEffect(() => {
+    return () => {
+      if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
   const topLevel = categories.filter((c) => !c.parent_id);
   const childrenOf = (id: string) => categories.filter((c) => c.parent_id === id);
+
+  const resetImageState = () => {
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+    setImageUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const openNew = (presetParent = '') => {
     setEditingCategory(null);
     setName('');
-    setImageUrl('');
+    resetImageState();
     setParentId(presetParent);
     setDialogOpen(true);
   };
@@ -54,24 +84,67 @@ export default function CategoriesPage() {
   const openEdit = (cat: Category) => {
     setEditingCategory(cat);
     setName(cat.name);
+    resetImageState();
     setImageUrl(cat.image_url ?? '');
+    setImagePreview(cat.image_url ?? null);
     setParentId(cat.parent_id ?? '');
     setDialogOpen(true);
+  };
+
+  const showCoverPhoto = isSubCategoryForm(parentId, editingCategory);
+
+  const handlePickFile = (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file');
+      return;
+    }
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setImageUrl('');
+  };
+
+  const clearPickedImage = () => {
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(editingCategory?.image_url ?? null);
+    setImageUrl(editingCategory?.image_url ?? '');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSave = async () => {
     if (!name.trim() || !token) return;
     setSaving(true);
     try {
-      const payload = { name: name.trim(), image_url: imageUrl, parent_id: parentId || null };
-      if (editingCategory) {
-        await api.patch(`/api/categories/${editingCategory.id}`, payload, token);
-        toast.success('Category updated');
+      if (imageFile && showCoverPhoto) {
+        const fd = new FormData();
+        fd.append('name', name.trim());
+        fd.append('parent_id', parentId || '');
+        fd.append('image', imageFile);
+        if (editingCategory) {
+          await api.patchForm<Category>(`/api/categories/${editingCategory.id}`, fd, token);
+          toast.success('Category updated');
+        } else {
+          await api.submitForm<Category>('/api/categories', fd, token, 'POST');
+          toast.success('Category created');
+        }
       } else {
-        await api.post('/api/categories', payload, token);
-        toast.success('Category created');
+        const payload = {
+          name: name.trim(),
+          image_url: showCoverPhoto ? imageUrl || null : undefined,
+          parent_id: parentId || null,
+        };
+        if (editingCategory) {
+          await api.patch(`/api/categories/${editingCategory.id}`, payload, token);
+          toast.success('Category updated');
+        } else {
+          await api.post('/api/categories', payload, token);
+          toast.success('Category created');
+        }
       }
       setDialogOpen(false);
+      resetImageState();
       fetchCategories();
     } catch (err: unknown) {
       toast.error('Failed to save', err instanceof Error ? err.message : '');
@@ -95,7 +168,6 @@ export default function CategoriesPage() {
     }
   };
 
-  // Parent options: top-level categories only (max 2 levels), excluding the one being edited.
   const parentOptions = topLevel.filter((c) => c.id !== editingCategory?.id);
 
   return (
@@ -127,11 +199,10 @@ export default function CategoriesPage() {
             const kids = childrenOf(parent.id);
             return (
               <div key={parent.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                {/* Parent row */}
                 <div className="flex items-center gap-3 p-4 border-b border-gray-50">
                   <div className="relative w-12 h-12 rounded-lg bg-gray-50 overflow-hidden flex-shrink-0">
-                    {parent.image_url ? (
-                      <Image src={parent.image_url} alt={parent.name} fill className="object-contain" />
+                    {parent.image_url && !isCollectionRoot(parent) ? (
+                      <Image src={parent.image_url} alt={parent.name} fill className="object-cover" unoptimized />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Tag className="w-5 h-5 text-gray-300" />
@@ -159,15 +230,22 @@ export default function CategoriesPage() {
                   </Button>
                 </div>
 
-                {/* Sub-categories */}
                 {kids.length > 0 ? (
                   <div className="p-3 flex flex-wrap gap-2">
                     {kids.map((kid) => (
                       <div
                         key={kid.id}
-                        className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg pl-3 pr-1.5 py-1.5"
+                        className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg pl-2 pr-1.5 py-1.5"
                       >
-                        <FolderTree className="w-3.5 h-3.5 text-amber-500" />
+                        <div className="relative w-9 h-9 rounded-md bg-gray-100 overflow-hidden flex-shrink-0">
+                          {kid.image_url ? (
+                            <Image src={kid.image_url} alt={kid.name} fill className="object-cover" unoptimized />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <FolderTree className="w-3.5 h-3.5 text-amber-400" />
+                            </div>
+                          )}
+                        </div>
                         <span className="text-sm text-gray-700">{kid.name}</span>
                         <button
                           className="p-1 rounded hover:bg-gray-200 text-gray-500"
@@ -199,6 +277,47 @@ export default function CategoriesPage() {
             <DialogTitle>{editingCategory ? 'Edit Category' : 'New Category'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {showCoverPhoto && (
+              <div className="space-y-2">
+                <Label>Cover photo</Label>
+                <div className="relative aspect-[4/3] rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+                  {imagePreview ? (
+                    <Image src={imagePreview} alt="Cover preview" fill className="object-cover" unoptimized />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                      <Camera className="w-8 h-8 mb-2 opacity-50" />
+                      <p className="text-sm">No cover photo yet</p>
+                    </div>
+                  )}
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      onClick={clearPickedImage}
+                      className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white hover:bg-black/70"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handlePickFile(e.target.files?.[0] ?? null)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Camera className="w-4 h-4" />
+                  {imagePreview ? 'Change photo' : 'Choose from device'}
+                </Button>
+                <p className="text-xs text-gray-400">Or paste an image URL below</p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Category Name</Label>
               <Input
@@ -221,14 +340,24 @@ export default function CategoriesPage() {
                 ))}
               </select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Image URL (optional)</Label>
-              <Input
-                placeholder="https://..."
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-              />
-            </div>
+            {showCoverPhoto && (
+              <div className="space-y-1.5">
+                <Label>Image URL (optional)</Label>
+                <Input
+                  placeholder="https://..."
+                  value={imageUrl}
+                  onChange={(e) => {
+                    setImageUrl(e.target.value);
+                    if (imageFile) {
+                      setImageFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }
+                    setImagePreview(e.target.value || null);
+                  }}
+                  disabled={!!imageFile}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

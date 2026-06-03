@@ -67,10 +67,16 @@ async function createSuperAdmin() {
         user_metadata: { ...existing.user_metadata, name, role: 'superadmin' },
       });
 
-      const { error: profileErr } = await supabase
-        .from('profiles')
-        .update({ role: 'superadmin', name, employee_status: null })
-        .eq('id', existing.id);
+      const { error: profileErr } = await supabase.from('profiles').upsert(
+        {
+          id: existing.id,
+          name,
+          role: 'superadmin',
+          employee_status: null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
       if (profileErr) {
         console.error('Profile update failed:', profileErr.message);
         console.error(
@@ -85,10 +91,16 @@ async function createSuperAdmin() {
     throw error;
   }
 
-  const { error: profileErr } = await supabase
-    .from('profiles')
-    .update({ role: 'superadmin', name, employee_status: null })
-    .eq('id', data.user.id);
+  const { error: profileErr } = await supabase.from('profiles').upsert(
+    {
+      id: data.user.id,
+      name,
+      role: 'superadmin',
+      employee_status: null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' }
+  );
 
   if (profileErr) {
     console.error('Profile update failed:', profileErr.message);

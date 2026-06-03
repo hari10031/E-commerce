@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -48,6 +49,7 @@ export function ProductImageLightbox({
   onClose,
   onIndexChange,
 }: ProductImageLightboxProps) {
+  const [mounted, setMounted] = useState(false)
   const [index, setIndex] = useState(initialIndex)
   const [scale, setScale] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -82,6 +84,10 @@ export function ProductImageLightbox({
     },
     [images.length, onIndexChange, resetView]
   )
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -230,127 +236,140 @@ export function ProductImageLightbox({
     adjustScale(e.deltaY < 0 ? 0.15 : -0.15)
   }
 
-  if (!open || !current) return null
+  if (!open || !current || !mounted) return null
 
-  return (
+  const lightbox = (
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-black/95 touch-none"
+      className="fixed inset-0 z-[200] flex flex-col touch-none isolate"
       role="dialog"
       aria-modal="true"
       aria-label="Product image zoom"
     >
-      <div className="flex items-center justify-end px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2 shrink-0">
-        <p className="sr-only">Pinch or use buttons to zoom. Swipe left or right to change image.</p>
-        {hasMultiple && (
-          <span className="mr-auto text-white/70 text-xs font-medium tabular-nums md:hidden">
-            {index + 1} / {images.length}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors touch-target"
-          aria-label="Close"
-        >
-          <X className="h-6 w-6" />
-        </button>
-      </div>
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/95 cursor-default"
+        aria-label="Close image viewer"
+        onClick={onClose}
+      />
 
-      <div
-        className={cn(
-          'flex-1 relative overflow-hidden flex items-center justify-center min-h-0 w-full',
-          scale > 1 && 'cursor-grab active:cursor-grabbing'
-        )}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchEnd}
-        onWheel={onWheel}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={endMousePan}
-        onMouseLeave={endMousePan}
-        onClick={handleDoubleTap}
-      >
-        {hasMultiple && scale <= 1 && (
-          <>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                goTo(index - 1)
-              }}
-              className="absolute left-2 z-10 h-10 w-10 rounded-full bg-white/15 text-white flex items-center justify-center hover:bg-white/25 touch-target"
-              aria-label="Previous image"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                goTo(index + 1)
-              }}
-              className="absolute right-2 z-10 h-10 w-10 rounded-full bg-white/15 text-white flex items-center justify-center hover:bg-white/25 touch-target"
-              aria-label="Next image"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-          </>
-        )}
+      <div className="relative z-10 flex flex-col h-full min-h-0 pointer-events-none">
+        <div className="flex items-center justify-end px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2 shrink-0 pointer-events-auto">
+          <p className="sr-only">Pinch or use buttons to zoom. Swipe left or right to change image.</p>
+          {hasMultiple && (
+            <span className="mr-auto text-white/70 text-xs font-medium tabular-nums md:hidden">
+              {index + 1} / {images.length}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors touch-target"
+            aria-label="Close"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
 
         <div
-          className="relative w-full h-full max-w-full max-h-[min(80vh,48rem)] mx-auto px-2 transition-transform duration-75 ease-out"
-          style={{
-            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-            transformOrigin: 'center center',
-          }}
-        >
-          <Image
-            key={current.src}
-            src={current.src}
-            alt={current.alt}
-            fill
-            className="object-contain select-none pointer-events-none"
-            sizes="100vw"
-            quality={95}
-            priority
-            draggable={false}
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-center gap-3 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shrink-0">
-        <button
-          type="button"
-          onClick={() => adjustScale(-0.5)}
-          className="h-11 w-11 rounded-full border border-white/25 text-white flex items-center justify-center hover:bg-white/10 touch-target"
-          aria-label="Zoom out"
-        >
-          <ZoomOut className="h-5 w-5" />
-        </button>
-        <span className="text-white text-sm font-semibold tabular-nums min-w-[3.5rem] text-center">
-          {Math.round(scale * 100)}%
-        </span>
-        <button
-          type="button"
-          onClick={() => adjustScale(0.5)}
-          className="h-11 w-11 rounded-full border border-white/25 text-white flex items-center justify-center hover:bg-white/10 touch-target"
-          aria-label="Zoom in"
-        >
-          <ZoomIn className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
-          onClick={resetView}
           className={cn(
-            'px-4 py-2 rounded-full text-xs font-semibold border border-white/25 text-white/90 touch-target',
-            scale === 1 && offset.x === 0 && offset.y === 0 && 'opacity-40 pointer-events-none'
+            'flex-1 relative overflow-hidden flex items-center justify-center min-h-0 w-full pointer-events-auto',
+            scale > 1 && 'cursor-grab active:cursor-grabbing'
           )}
+          onClick={onClose}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
+          onWheel={onWheel}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={endMousePan}
+          onMouseLeave={endMousePan}
         >
-          Reset
-        </button>
+          {hasMultiple && scale <= 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  goTo(index - 1)
+                }}
+                className="absolute left-2 sm:left-4 z-20 h-10 w-10 rounded-full bg-white/15 text-white flex items-center justify-center hover:bg-white/25 touch-target"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  goTo(index + 1)
+                }}
+                className="absolute right-2 sm:right-4 z-20 h-10 w-10 rounded-full bg-white/15 text-white flex items-center justify-center hover:bg-white/25 touch-target"
+                aria-label="Next image"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+
+          <div
+            className="relative w-full max-w-4xl h-[min(80vh,48rem)] mx-auto px-4 transition-transform duration-75 ease-out"
+            style={{
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+              transformOrigin: 'center center',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={handleDoubleTap}
+          >
+            <Image
+              key={current.src}
+              src={current.src}
+              alt={current.alt}
+              fill
+              className="object-contain select-none pointer-events-none"
+              sizes="(max-width: 1024px) 100vw, 896px"
+              quality={95}
+              priority
+              draggable={false}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shrink-0 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => adjustScale(-0.5)}
+            className="h-11 w-11 rounded-full border border-white/25 text-white flex items-center justify-center hover:bg-white/10 touch-target"
+            aria-label="Zoom out"
+          >
+            <ZoomOut className="h-5 w-5" />
+          </button>
+          <span className="text-white text-sm font-semibold tabular-nums min-w-[3.5rem] text-center">
+            {Math.round(scale * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={() => adjustScale(0.5)}
+            className="h-11 w-11 rounded-full border border-white/25 text-white flex items-center justify-center hover:bg-white/10 touch-target"
+            aria-label="Zoom in"
+          >
+            <ZoomIn className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={resetView}
+            className={cn(
+              'px-4 py-2 rounded-full text-xs font-semibold border border-white/25 text-white/90 touch-target',
+              scale === 1 && offset.x === 0 && offset.y === 0 && 'opacity-40 pointer-events-none'
+            )}
+          >
+            Reset
+          </button>
+        </div>
       </div>
     </div>
   )
+
+  return createPortal(lightbox, document.body)
 }

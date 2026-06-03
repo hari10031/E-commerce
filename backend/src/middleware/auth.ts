@@ -33,7 +33,22 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
   if (metadataRole === 'superadmin') {
     role = 'superadmin'
-    if (profile?.role !== 'superadmin') {
+    const name =
+      typeof user.user_metadata?.name === 'string' && user.user_metadata.name.trim()
+        ? user.user_metadata.name.trim()
+        : user.email?.split('@')[0] || 'Super Admin'
+    if (!profile) {
+      await supabase.from('profiles').upsert(
+        {
+          id: user.id,
+          name,
+          role: 'superadmin',
+          employee_status: null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      )
+    } else if (profile.role !== 'superadmin') {
       await supabase
         .from('profiles')
         .update({ role: 'superadmin', employee_status: null, updated_at: new Date().toISOString() })

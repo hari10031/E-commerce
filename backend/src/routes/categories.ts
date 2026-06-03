@@ -56,8 +56,13 @@ router.post(
     const slug = req.body.slug?.trim() || slugify(name)
 
     let image_url: string | undefined = req.body.image_url || undefined
-    if (req.file) {
-      image_url = await uploadImage(req.file.buffer, req.file.originalname, 'category-images')
+    try {
+      if (req.file) {
+        image_url = await uploadImage(req.file.buffer, req.file.originalname, 'category-images')
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Image upload failed'
+      return res.status(500).json({ error: message })
     }
 
     const { data, error } = await supabase
@@ -90,10 +95,19 @@ router.patch(
       updates.parent_id = parent_id || null
     }
 
-    if (req.file) {
-      updates.image_url = await uploadImage(req.file.buffer, req.file.originalname, 'category-images')
-    } else if (req.body.image_url !== undefined) {
-      updates.image_url = req.body.image_url || null
+    try {
+      if (req.file) {
+        updates.image_url = await uploadImage(req.file.buffer, req.file.originalname, 'category-images')
+      } else if (req.body.image_url !== undefined) {
+        updates.image_url = req.body.image_url || null
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Image upload failed'
+      return res.status(500).json({ error: message })
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No updates provided' })
     }
 
     const { data, error } = await supabase

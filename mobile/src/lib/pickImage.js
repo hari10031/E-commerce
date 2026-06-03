@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 /** Pick one photo from gallery; returns local `uri` or null if cancelled. */
@@ -25,9 +25,18 @@ export async function pickImageFromGallery() {
   }
 }
 
-export function appendImageFile(formData, uri, fieldName = 'image') {
-  const filename = uri.split('/').pop() || `category-${Date.now()}.jpg`;
+/** Append picked image to multipart body (native + Expo web). */
+export async function appendImageFile(formData, uri, fieldName = 'image') {
+  const filename = uri.split('/').pop()?.split('?')[0] || `category-${Date.now()}.jpg`;
   const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
   const type = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
+
+  if (Platform.OS === 'web') {
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    formData.append(fieldName, blob, filename);
+    return;
+  }
+
   formData.append(fieldName, { uri, name: filename, type });
 }

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import sharp from 'sharp'
 import { supabase } from '../supabase'
 
@@ -6,7 +7,8 @@ export async function uploadImage(
   originalName: string,
   bucket: 'product-images' | 'category-images'
 ): Promise<string> {
-  const filename = `${Date.now()}-${originalName.replace(/\s+/g, '-').replace(/\.[^.]+$/, '')}.webp`
+  const stem = originalName.replace(/\s+/g, '-').replace(/\.[^.]+$/, '') || 'image'
+  const filename = `${Date.now()}-${stem}-${randomUUID()}.webp`
 
   const pipeline = sharp(buffer)
 

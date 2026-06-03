@@ -72,7 +72,7 @@ export default function ProductsScreen({ navigation, route }) {
   const uploadCategoryImageMutation = useMutation({
     mutationFn: async ({ categoryId, uri }) => {
       const fd = new FormData();
-      appendImageFile(fd, uri);
+      await appendImageFile(fd, uri);
       return updateCategory(categoryId, fd);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),

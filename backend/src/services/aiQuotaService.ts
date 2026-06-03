@@ -102,9 +102,15 @@ export async function updateLimits(
   input: UpdateLimitsInput,
   updatedBy: string
 ): Promise<QuotaStats> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', updatedBy)
+    .maybeSingle()
+
   const patch: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
-    updated_by: updatedBy,
+    updated_by: profile?.id ?? null,
   }
 
   if (input.imageLimit !== undefined) {

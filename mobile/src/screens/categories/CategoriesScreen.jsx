@@ -199,7 +199,7 @@ export default function CategoriesScreen({ navigation }) {
       fd.append('name', payload.name);
       fd.append('slug', payload.slug);
       if (payload.parent_id) fd.append('parent_id', payload.parent_id);
-      if (payload.imageUri && !payload.skipImage) appendImageFile(fd, payload.imageUri);
+      if (payload.imageUri && !payload.skipImage) await appendImageFile(fd, payload.imageUri);
       if (payload.id) return updateCategory(payload.id, fd);
       return createCategory(fd);
     },
@@ -215,7 +215,7 @@ export default function CategoriesScreen({ navigation }) {
   const quickPhotoMutation = useMutation({
     mutationFn: async ({ id, uri }) => {
       const fd = new FormData();
-      appendImageFile(fd, uri);
+      await appendImageFile(fd, uri);
       return updateCategory(id, fd);
     },
     onSuccess: () => {

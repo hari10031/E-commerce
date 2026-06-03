@@ -97,7 +97,8 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
     })
   }
 
-  function openLightbox() {
+  function openLightbox(e?: React.MouseEvent) {
+    e?.stopPropagation()
     const img = sorted[activeIndex]
     if (img?.url) setLightboxOpen(true)
   }
@@ -128,7 +129,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
               <div
                 role="button"
                 tabIndex={0}
-                onClick={openLightbox}
+                onClick={(e) => openLightbox(e)}
                 onKeyDown={(e) => e.key === 'Enter' && openLightbox()}
                 className={cn(
                   'relative w-full aspect-[3/4] overflow-hidden bg-neutral-50 cursor-pointer',

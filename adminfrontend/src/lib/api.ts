@@ -61,6 +61,43 @@ async function apiFetch<T>(
   return response.text() as unknown as Promise<T>;
 }
 
+async function submitForm<T>(
+  endpoint: string,
+  formData: FormData,
+  token?: string,
+  method: 'POST' | 'PATCH' = 'POST'
+): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method,
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    let message = `HTTP error ${response.status}`;
+    try {
+      const data = await response.json();
+      message = data.message || data.error || message;
+    } catch {
+      // ignore
+    }
+
+    if (response.status === 401 && token && typeof window !== 'undefined') {
+      const { useAuthStore } = await import('@/store/authStore');
+      useAuthStore.getState().clearAuth();
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
+
+    throw new ApiError(message, response.status);
+  }
+  return response.json() as Promise<T>;
+}
+
 export const api = {
   get: <T>(endpoint: string, token?: string) =>
     apiFetch<T>(endpoint, { method: 'GET', token }),
@@ -89,41 +126,13 @@ export const api = {
   delete: <T>(endpoint: string, token?: string) =>
     apiFetch<T>(endpoint, { method: 'DELETE', token }),
 
-  uploadForm: async <T>(
-    endpoint: string,
-    formData: FormData,
-    token?: string
-  ): Promise<T> => {
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-    if (!response.ok) {
-      let message = `HTTP error ${response.status}`;
-      try {
-        const data = await response.json();
-        message = data.message || data.error || message;
-      } catch {
-        // ignore
-      }
+  submitForm,
 
-      if (response.status === 401 && token && typeof window !== 'undefined') {
-        const { useAuthStore } = await import('@/store/authStore');
-        useAuthStore.getState().clearAuth();
-        if (!window.location.pathname.startsWith('/login')) {
-          window.location.href = '/login';
-        }
-      }
+  uploadForm: <T>(endpoint: string, formData: FormData, token?: string) =>
+    submitForm<T>(endpoint, formData, token, 'POST'),
 
-      throw new ApiError(message, response.status);
-    }
-    return response.json() as Promise<T>;
-  },
+  patchForm: <T>(endpoint: string, formData: FormData, token?: string) =>
+    submitForm<T>(endpoint, formData, token, 'PATCH'),
 };
 
 export { ApiError };

@@ -25,11 +25,13 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
     return jewelleryRoot ? categories.filter((c) => c.parent_id === jewelleryRoot.id) : []
   }, [categories, jewelleryRoot])
 
-  // Helper to find cover image from any product belonging to a subcategory
-  const getSubcategoryImage = (subCatId: string, typeKey: string) => {
-    const product = products.find((p) => p.category?.id === subCatId)
-    if (product && product.images && product.images.length > 0) {
-      const primary = product.images.find(img => img.is_primary) || product.images[0]
+  // Prefer admin sub-category cover (image_url); fall back to a product image, then defaults
+  const getSubcategoryImage = (cat: Category, typeKey: string) => {
+    if (cat.image_url) return cat.image_url
+
+    const product = products.find((p) => p.category?.id === cat.id)
+    if (product?.images?.length) {
+      const primary = product.images.find((img) => img.is_primary) || product.images[0]
       return primary.url
     }
     // High-quality fallback matching category type
@@ -82,7 +84,7 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
           {subCats.length > 0 ? (
             <div className="flex gap-5 overflow-x-auto no-scrollbar pb-3 snap-x snap-mandatory min-w-0">
               {subCats.map((cat) => {
-                const coverImage = getSubcategoryImage(cat.id, typeKey)
+                const coverImage = getSubcategoryImage(cat, typeKey)
                 return (
                   <Link
                     key={cat.id}
