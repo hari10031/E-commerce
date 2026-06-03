@@ -13,7 +13,7 @@ const isBanned = (u?: { banned_until?: string | null } | null) =>
 export async function listUsers(req: AuthRequest, res: Response) {
   const { role = 'customer', search, page = '1', limit = '20' } = req.query
 
-  if (role === 'superadmin') {
+  if (role === 'superadmin' || role === 'admin') {
     return res.status(403).json({ error: 'Forbidden' })
   }
 
@@ -72,7 +72,9 @@ export async function getUser(req: AuthRequest, res: Response) {
     .single()
 
   if (error) return res.status(404).json({ error: 'User not found' })
-  if (profile.role === 'superadmin') return res.status(404).json({ error: 'User not found' })
+  if (profile.role === 'superadmin' || profile.role === 'admin') {
+    return res.status(404).json({ error: 'User not found' })
+  }
 
   const { data: authUser } = await supabase.auth.admin.getUserById(req.params.id)
   res.json({
@@ -95,6 +97,9 @@ export async function createUser(req: AuthRequest, res: Response) {
   }
   if (!VALID_ROLES.includes(role)) {
     return res.status(400).json({ error: 'role must be customer, employee or admin' })
+  }
+  if (role === 'admin') {
+    return res.status(403).json({ error: 'Only super admins can create admin accounts' })
   }
 
   const { data, error } = await supabase.auth.admin.createUser({
@@ -150,6 +155,9 @@ export async function resetUserPassword(req: AuthRequest, res: Response) {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', id).single()
   if (profile?.role === 'superadmin') {
     return res.status(404).json({ error: 'User not found' })
+  }
+  if (profile?.role === 'admin') {
+    return res.status(403).json({ error: 'Only super admins can reset admin passwords' })
   }
 
   if (!password || String(password).length < 6) {

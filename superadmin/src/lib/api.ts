@@ -62,6 +62,9 @@ export const api = {
 
   patch: <T>(endpoint: string, body: unknown, token?: string) =>
     apiFetch<T>(endpoint, { method: 'PATCH', body: JSON.stringify(body), token }),
+
+  delete: <T>(endpoint: string, token?: string) =>
+    apiFetch<T>(endpoint, { method: 'DELETE', token }),
 };
 
 export { ApiError };

@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'S-Box Platform Console',
-  description: 'Gemini AI quota management',
+  description: 'Platform console — store admins and AI quota',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Shield } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
+import { DashboardNav } from '@/components/layout/DashboardNav';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -30,7 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-cyan-400" />
             <span className="font-semibold text-slate-100">S-Box Platform Console</span>
-            <span className="text-xs text-slate-500 hidden sm:inline">· Gemini quota</span>
+            <span className="text-xs text-slate-500 hidden sm:inline">· Platform console</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-500 hidden sm:inline">{user?.email}</span>
@@ -41,7 +42,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">{children}</main>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <div className="mb-8">
+          <DashboardNav />
+        </div>
+        {children}
+      </main>
     </div>
   );
 }
