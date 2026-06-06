@@ -1,15 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Shield } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
 import { LoginForm } from './LoginForm';
 
 export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
+  const token = useAuthStore((s) => s.token);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (hasHydrated && token) router.replace('/dashboard');
+  }, [hasHydrated, token, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a0e14] via-[#111827] to-[#0a0e14] px-4">

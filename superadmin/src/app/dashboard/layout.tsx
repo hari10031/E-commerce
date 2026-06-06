@@ -10,14 +10,16 @@ import { DashboardNav } from '@/components/layout/DashboardNav';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const router = useRouter();
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!token) router.replace('/login');
-  }, [token, router]);
+  }, [token, hasHydrated, router]);
 
-  if (!token) return null;
+  if (!hasHydrated || !token) return null;
 
   const logout = () => {
     clearAuth();
