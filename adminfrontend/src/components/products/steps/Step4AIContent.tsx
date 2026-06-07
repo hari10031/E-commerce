@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Sparkles } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { quotaUserMessage } from '@/lib/quotaError';
 import type { ColorImagePair } from '@/lib/productImages';
 import type { ProductType } from '@/types';
 
@@ -44,6 +45,7 @@ export function Step4AIContent({
   images,
 }: Step4Props) {
   const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
   const [generating, setGenerating] = useState(false);
   const MAX_TITLE = 80;
 
@@ -69,7 +71,12 @@ export function Step4AIContent({
       onChange({ title: res.title?.slice(0, MAX_TITLE) ?? data.title, description: res.description ?? data.description });
       toast.success('AI content generated');
     } catch (err: unknown) {
-      toast.error('Generation failed', err instanceof Error ? err.message : '');
+      const quotaMsg = quotaUserMessage(err, user?.role === 'admin');
+      if (quotaMsg) {
+        toast.error('AI quota exhausted', quotaMsg);
+      } else {
+        toast.error('Generation failed', err instanceof Error ? err.message : '');
+      }
     } finally {
       setGenerating(false);
     }

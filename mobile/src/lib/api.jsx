@@ -69,7 +69,9 @@ async function apiFetch(path, options = {}, _retry = false) {
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data?.message || data?.error || `Request failed (${res.status})`);
+    const err = new Error(data?.message || data?.error || `Request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
   }
 
   return data;
@@ -352,8 +354,6 @@ export const generateContent = (payload) =>
     body: JSON.stringify(payload),
   });
 
-// Gemini "nano banana" image generation. Pass a local `uri` (sends the file)
-// or an `imageUrl` (server fetches it). Returns { url } of the generated image.
 export const generateProductImage = ({ uri, imageUrl, imageUrls, productType, color, category }) => {
   if (uri) {
     const filename = uri.split('/').pop();
@@ -371,6 +371,15 @@ export const generateProductImage = ({ uri, imageUrl, imageUrls, productType, co
     body: JSON.stringify({ imageUrl, imageUrls, productType, color, category }),
   });
 };
+
+// ─── AI Quota (admin only) ────────────────────────────────────────────────────
+
+export const getAiQuota = () => apiFetch('/ai/quota');
+
+export const listAiQuotaRequests = () => apiFetch('/ai/quota/requests');
+
+export const createAiQuotaRequest = (payload) =>
+  apiFetch('/ai/quota/requests', { method: 'POST', body: JSON.stringify(payload) });
 
 // ─── Sales (offline / mark-as-sold) ───────────────────────────────────────────
 

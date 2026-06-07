@@ -4,8 +4,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { generateContent } from '../../../lib/api';
+import useAuthStore from '../../../store/authStore';
+import { quotaUserMessage } from '../../../lib/quotaError';
 
 export default function StepContent({ wizardData, update }) {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
   const [isGenerating, setIsGenerating] = useState(false);
   const { title, description } = wizardData.content;
 
@@ -25,7 +29,8 @@ export default function StepContent({ wizardData, update }) {
       });
       update({ content: { title: result.title, description: result.description } });
     } catch (err) {
-      Alert.alert('AI Error', err.message);
+      const quotaMsg = quotaUserMessage(err, isAdmin);
+      Alert.alert(quotaMsg ? 'AI quota exhausted' : 'AI Error', quotaMsg || err.message);
     } finally {
       setIsGenerating(false);
     }

@@ -30,6 +30,7 @@ import TeamScreen from '../screens/team/TeamScreen';
 import EmployeeDetailScreen from '../screens/team/EmployeeDetailScreen';
 import CreateUserScreen from '../screens/users/CreateUserScreen';
 import MySalesScreen from '../screens/sales/MySalesScreen';
+import AiQuotaScreen from '../screens/settings/AiQuotaScreen';
 
 const Tab = createBottomTabNavigator();
 const DashStack = createNativeStackNavigator();
@@ -89,6 +90,7 @@ function MoreStack() {
       <MoreStk.Screen name="EmployeeDetail" component={EmployeeDetailScreen} />
       <MoreStk.Screen name="CreateUser" component={CreateUserScreen} />
       <MoreStk.Screen name="SalesHistory" component={MySalesScreen} />
+      <MoreStk.Screen name="AiQuota" component={AiQuotaScreen} />
     </MoreStk.Navigator>
   );
 }

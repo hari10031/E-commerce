@@ -21,6 +21,8 @@ import { PRODUCT_SIZES, PRODUCT_TYPES } from '../../../constants';
 import TypeBadge from '../../../components/products/TypeBadge';
 import { formatPrice, discountedPrice } from '../../../lib/utils';
 import { useHardwareBackHandler } from '../../../hooks/useHardwareBackHandler';
+import useAuthStore from '../../../store/authStore';
+import { quotaUserMessage } from '../../../lib/quotaError';
 import { resolveColorHex } from '../../../lib/colors';
 import HeroPhotoPreviewModal from '../../../components/products/HeroPhotoPreviewModal';
 
@@ -139,6 +141,13 @@ export default function ProductWizardScreen({ route, navigation }) {
   const { mode = 'create', type = 'saree', productId } = route.params ?? {};
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
+
+  const showAiError = (err, title = 'AI generation failed') => {
+    const quotaMsg = quotaUserMessage(err, isAdmin);
+    Alert.alert(quotaMsg ? 'AI quota exhausted' : title, quotaMsg || err.message);
+  };
 
   const handleBack = useCallback(() => {
     const referrer = route.params?.referrer;
@@ -477,7 +486,7 @@ export default function ProductWizardScreen({ route, navigation }) {
       update({ images: newImages });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
-      Alert.alert('AI generation failed', err.message);
+      showAiError(err);
     } finally {
       setAiSlot(null);
     }
@@ -517,7 +526,7 @@ export default function ProductWizardScreen({ route, navigation }) {
       // Draft the product name & description from the uploaded photo.
       autoGenerateContent(color, ordered[0]?.uploadedUrl);
     } catch (err) {
-      Alert.alert('AI generation failed', err.message);
+      showAiError(err);
     } finally {
       setAiColor(null);
     }

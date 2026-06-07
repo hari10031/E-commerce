@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, Trash2, Sparkles, Plus, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { quotaUserMessage } from '@/lib/quotaError';
 import { HeroPhotoReviewModal } from '@/components/products/HeroPhotoReviewModal';
 import { JEWELLERY_PSEUDO_COLOR, isHeroPhotoSlot, photoBlocksFor } from '@/lib/photoBlocks';
 import { slotKey, type ColorImagePair } from '@/lib/productImages';
@@ -32,6 +33,7 @@ export function Step2ImageUpload({
   onChange,
 }: Step2Props) {
   const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [uploadingKey, setUploadingKey] = useState('');
   const [generatingKey, setGeneratingKey] = useState('');
@@ -156,7 +158,12 @@ export function Step2ImageUpload({
       });
       toast.success('AI image generated');
     } catch (err: unknown) {
-      toast.error('AI generation failed', err instanceof Error ? err.message : '');
+      const quotaMsg = quotaUserMessage(err, user?.role === 'admin');
+      if (quotaMsg) {
+        toast.error('AI quota exhausted', quotaMsg);
+      } else {
+        toast.error('AI generation failed', err instanceof Error ? err.message : '');
+      }
     } finally {
       setGeneratingKey('');
     }

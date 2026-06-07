@@ -7,6 +7,12 @@ import {
   resetPeriodCounters,
 } from '../services/aiQuotaService'
 import {
+  listRequestsForSuperadmin,
+  reviewRequest,
+  countPendingRequests,
+  type RequestStatus,
+} from '../services/aiQuotaRequestService'
+import {
   listAdmins,
   getAdmin,
   createAdmin,
@@ -73,6 +79,66 @@ router.post(
       res.json(stats)
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to reset period' })
+    }
+  }
+)
+
+router.get(
+  '/ai-quota/requests/pending-count',
+  authenticate,
+  requireSuperAdmin,
+  async (_req: AuthRequest, res: Response) => {
+    try {
+      const count = await countPendingRequests()
+      res.json({ count })
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to count requests' })
+    }
+  }
+)
+
+router.get(
+  '/ai-quota/requests',
+  authenticate,
+  requireSuperAdmin,
+  async (req: AuthRequest, res: Response) => {
+    const status = req.query.status as RequestStatus | undefined
+    const allowed: RequestStatus[] = ['pending', 'approved', 'denied', 'cancelled']
+    if (status && !allowed.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status filter' })
+    }
+
+    try {
+      const requests = await listRequestsForSuperadmin(status)
+      res.json(requests)
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to load requests' })
+    }
+  }
+)
+
+router.patch(
+  '/ai-quota/requests/:id',
+  authenticate,
+  requireSuperAdmin,
+  body('action').isIn(['approve', 'deny']),
+  body('applyLimits').optional().isBoolean(),
+  body('reviewNote').optional().isString(),
+  async (req: AuthRequest, res: Response) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
+
+    const { action, applyLimits, reviewNote } = req.body
+
+    try {
+      const request = await reviewRequest(req.params.id, req.user!.id, {
+        action,
+        applyLimits: applyLimits === true,
+        reviewNote,
+      })
+      res.json(request)
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to review request' })
     }
   }
 )

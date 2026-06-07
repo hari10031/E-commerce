@@ -122,6 +122,11 @@ export default function MoreScreen({ navigation }) {
             label="Coupons"
             onPress={() => navigation.navigate('Coupons')}
           />
+          <MenuItem
+            icon="sparkles"
+            label="AI Quota"
+            onPress={() => navigation.navigate('AiQuota')}
+          />
         </MenuSection>
       )}
     </ScrollView>

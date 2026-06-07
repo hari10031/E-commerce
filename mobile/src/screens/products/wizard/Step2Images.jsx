@@ -5,9 +5,13 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { uploadImage, generateProductImage } from '../../../lib/api';
+import useAuthStore from '../../../store/authStore';
+import { quotaUserMessage } from '../../../lib/quotaError';
 import { COLORS } from '../../../constants';
 
 export default function Step2Images({ wizardData, update }) {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
   const [uploading, setUploading] = useState(null);
   const [enhancing, setEnhancing] = useState(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -60,7 +64,8 @@ export default function Step2Images({ wizardData, update }) {
       );
       update({ images: imgs });
     } catch (err) {
-      Alert.alert('AI generation failed', err.message);
+      const quotaMsg = quotaUserMessage(err, isAdmin);
+      Alert.alert(quotaMsg ? 'AI quota exhausted' : 'AI generation failed', quotaMsg || err.message);
     } finally {
       setEnhancing(null);
     }

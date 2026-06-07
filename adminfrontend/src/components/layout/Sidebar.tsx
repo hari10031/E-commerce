@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -56,6 +57,12 @@ const navItems = [
     href: '/dashboard/coupons',
     label: 'Coupons',
     icon: Ticket,
+    roles: ['admin'],
+  },
+  {
+    href: '/dashboard/ai-quota',
+    label: 'AI Quota',
+    icon: Sparkles,
     roles: ['admin'],
   },
   {

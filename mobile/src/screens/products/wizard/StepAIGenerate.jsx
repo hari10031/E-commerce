@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { generateProductImage } from '../../../lib/api';
+import useAuthStore from '../../../store/authStore';
+import { quotaUserMessage } from '../../../lib/quotaError';
 
 export default function StepAIGenerate({ wizardData, update }) {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState(null);
   const [lastTiming, setLastTiming] = useState(null);
@@ -46,7 +50,8 @@ export default function StepAIGenerate({ wizardData, update }) {
       setGeneratedUrl(result.url);
       if (result.timing) setLastTiming(result.timing);
     } catch (err) {
-      Alert.alert('Generation Failed', err.message);
+      const quotaMsg = quotaUserMessage(err, isAdmin);
+      Alert.alert(quotaMsg ? 'AI quota exhausted' : 'Generation Failed', quotaMsg || err.message);
     } finally {
       setIsGenerating(false);
     }

@@ -30,6 +30,7 @@ import salesRoutes from './routes/sales'
 import userRoutes from './routes/users'
 import shipmentRoutes from './routes/shipments'
 import superadminRoutes from './routes/superadmin'
+import quotaRoutes from './routes/quota'
 
 const app = express()
 
@@ -66,6 +67,7 @@ app.use('/api/orders', orderRoutes)
 app.use('/api/addresses', addressRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/ai', aiRoutes)
+app.use('/api/ai/quota', quotaRoutes)
 app.use('/api/razorpay', razorpayRoutes)
 app.use('/api/employees', employeeRoutes)
 app.use('/api/analytics', analyticsRoutes)

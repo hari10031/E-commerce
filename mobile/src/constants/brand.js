@@ -6,7 +6,7 @@ export const BRAND = {
   phone: '+91 84988 37027',
   address:
     'H, No. 1-10-1/214Chakripuram, Sri Chakri Puram Colony, Kushaiguda, Hyderabad, Secunderabad, Telangana 500062',
-  logo: require('../../assets/brand/logo.png'),
+  logo: require('../../assets/brand/logo.jpg'),
   colors: {
     charcoal: '#1C1C1C',
     gold: '#C9A227',
