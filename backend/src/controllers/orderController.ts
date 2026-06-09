@@ -6,6 +6,8 @@ import {
   notifyAdminOrderPlaced,
   notifyCustomerStatusUpdate,
 } from '../services/notificationService'
+import { notificationQueue } from '../services/queueService'
+import { autoCreateShipment } from './shipmentController'
 import { AuthRequest } from '../middleware/auth'
 import { VALID_ORDER_TRANSITIONS, OrderStatus } from '../types'
 
@@ -246,6 +248,9 @@ export async function verifyPayment(req: AuthRequest, res: Response) {
   await supabase.from('cart_items').delete().eq('user_id', req.user!.id)
   // Non-blocking notifications
   notifyAdminOrderPlaced(order)
+  // Auto-create the Shiprocket shipment off the request path (gated by
+  // SHIPROCKET_AUTO_CREATE). Failures are logged, never block the response.
+  notificationQueue.enqueue(() => autoCreateShipment(order.id))
 
   res.json({ success: true, order })
 }

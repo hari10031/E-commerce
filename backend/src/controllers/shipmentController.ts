@@ -12,9 +12,11 @@ import {
   generateManifest,
   getPickupLocation,
   getPickupPincode,
+  selectBestCourier,
   trackByAwb,
   type CreateAdhocOrderPayload,
 } from '../services/shiprocketService'
+import { logger } from '../logger'
 import type { OrderStatus } from '../types'
 
 const ORDER_SELECT = `
@@ -141,39 +143,68 @@ export async function checkServiceabilityHandler(req: AuthRequest, res: Response
   res.json({ couriers, weight, delivery_pincode: addr.pincode })
 }
 
-export async function createShipmentHandler(req: AuthRequest, res: Response) {
-  const { orderId, courier_id, weight: weightOverride } = req.body as {
-    orderId?: string
-    courier_id?: number
-    weight?: number
-  }
-  if (!orderId || courier_id == null) {
-    return res.status(400).json({ error: 'orderId and courier_id are required' })
-  }
+type CreateShipmentResult = {
+  order: ShipmentOrder
+  awb: string
+  courier_id: number
+  courier_name: string
+  tracking_url: string
+  shiprocket_order_id: number
+  shiprocket_shipment_id: number
+}
 
-  const order = await loadOrderForShipment(orderId)
-  if (!order) return res.status(404).json({ error: 'Order not found' })
+/**
+ * Core shipment-creation routine shared by the manual admin endpoint and the
+ * automatic post-payment flow. Validates the order, resolves a courier
+ * (auto-selecting the best one per SHIPROCKET_COURIER_STRATEGY when `courierId`
+ * is omitted), creates the Shiprocket order, assigns an AWB, and persists the
+ * result. Throws on any failure — callers decide how to surface it.
+ */
+async function createShipmentForOrder(
+  order: ShipmentOrder,
+  opts: { courierId?: number; weight?: number } = {}
+): Promise<CreateShipmentResult> {
   if (order.shiprocket_awb) {
-    return res.status(400).json({ error: 'Shipment already created for this order' })
+    throw new Error('Shipment already created for this order')
   }
   if (!order.address) {
-    return res.status(400).json({ error: 'Order has no delivery address' })
+    throw new Error('Order has no delivery address')
+  }
+  if (!['confirmed', 'processing'].includes(order.status)) {
+    throw new Error(
+      `Cannot ship order with status "${order.status}". Order must be confirmed first.`
+    )
   }
 
-  const allowedStatuses = ['confirmed', 'processing']
-  if (!allowedStatuses.includes(order.status)) {
-    return res.status(400).json({
-      error: `Cannot ship order with status "${order.status}". Order must be confirmed first.`,
+  const items = (order.order_items ?? []) as Array<{
+    quantity: number
+    product?: { type?: string }
+  }>
+  const weight = opts.weight ?? defaultWeightKg(items)
+
+  // Resolve the courier: caller-supplied, else best available per strategy.
+  let courierId = opts.courierId
+  if (courierId == null) {
+    const addr = order.address as { pincode: string }
+    const couriers = await checkServiceability({
+      pickup_postcode: getPickupPincode(),
+      delivery_postcode: addr.pincode,
+      weight,
+      cod: 0,
+      order_id: order.id.slice(0, 8),
     })
+    const best = selectBestCourier(couriers)
+    if (!best) {
+      throw new Error(`No courier available for pincode ${addr.pincode}`)
+    }
+    courierId = best.courier_company_id
   }
 
-  const items = (order.order_items ?? []) as Array<{ quantity: number; product?: { type?: string } }>
-  const weight = weightOverride ?? defaultWeightKg(items)
   const email = await getCustomerEmail(order.user_id)
   const payload = buildAdhocPayload(order, email, weight)
 
   const created = await createAdhocOrder(payload)
-  const awbResult = await assignAwb(created.shipment_id, courier_id)
+  const awbResult = await assignAwb(created.shipment_id, courierId)
 
   const trackingUrl = `https://shiprocket.co/tracking/${awbResult.awb_code}`
 
@@ -183,29 +214,95 @@ export async function createShipmentHandler(req: AuthRequest, res: Response) {
       shiprocket_order_id: String(created.order_id),
       shiprocket_shipment_id: String(created.shipment_id),
       shiprocket_awb: awbResult.awb_code,
-      shiprocket_courier_id: courier_id,
+      shiprocket_courier_id: awbResult.courier_company_id ?? courierId,
       shiprocket_courier_name: awbResult.courier_name,
       tracking_url: trackingUrl,
       shipment_status: 'AWB ASSIGNED',
       status: 'processing',
       updated_at: new Date().toISOString(),
     })
-    .eq('id', orderId)
+    .eq('id', order.id)
     .select(ORDER_SELECT)
     .single()
 
-  if (error) return res.status(500).json({ error: error.message })
+  if (error || !updated) {
+    throw new Error(error?.message ?? 'Failed to persist shipment')
+  }
 
-  notifyCustomerStatusUpdate(order.user_id, orderId, 'processing')
+  notifyCustomerStatusUpdate(order.user_id, order.id, 'processing')
 
-  res.json({
+  return {
     order: updated,
     awb: awbResult.awb_code,
+    courier_id: awbResult.courier_company_id ?? courierId,
     courier_name: awbResult.courier_name,
     tracking_url: trackingUrl,
     shiprocket_order_id: created.order_id,
     shiprocket_shipment_id: created.shipment_id,
-  })
+  }
+}
+
+/**
+ * Fire-and-forget shipment creation triggered after successful payment.
+ * Gated by SHIPROCKET_AUTO_CREATE (default on). Always resolves — failures are
+ * logged so an admin can still create the shipment manually from the dashboard.
+ */
+export async function autoCreateShipment(orderId: string): Promise<void> {
+  if (process.env.SHIPROCKET_AUTO_CREATE === 'false') return
+  try {
+    const order = await loadOrderForShipment(orderId)
+    if (!order) {
+      logger.warn({ orderId }, 'autoCreateShipment: order not found')
+      return
+    }
+    if (order.shiprocket_awb) return // already shipped
+    const result = await createShipmentForOrder(order)
+    logger.info(
+      { orderId, awb: result.awb, courier: result.courier_name },
+      'Shiprocket shipment auto-created'
+    )
+  } catch (err) {
+    logger.error({ orderId, err }, 'autoCreateShipment failed — admin must create manually')
+  }
+}
+
+export async function createShipmentHandler(req: AuthRequest, res: Response) {
+  const { orderId, courier_id, weight: weightOverride } = req.body as {
+    orderId?: string
+    courier_id?: number
+    weight?: number
+  }
+  if (!orderId) {
+    return res.status(400).json({ error: 'orderId is required' })
+  }
+
+  const order = await loadOrderForShipment(orderId)
+  if (!order) return res.status(404).json({ error: 'Order not found' })
+
+  try {
+    const result = await createShipmentForOrder(order, {
+      courierId: courier_id ?? undefined,
+      weight: weightOverride,
+    })
+    res.json({
+      order: result.order,
+      awb: result.awb,
+      courier_id: result.courier_id,
+      courier_name: result.courier_name,
+      tracking_url: result.tracking_url,
+      shiprocket_order_id: result.shiprocket_order_id,
+      shiprocket_shipment_id: result.shiprocket_shipment_id,
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to create shipment'
+    // Validation-style messages → 400; upstream/persist failures → 502.
+    const isValidation =
+      msg.includes('already created') ||
+      msg.includes('no delivery address') ||
+      msg.includes('must be confirmed') ||
+      msg.includes('No courier available')
+    res.status(isValidation ? 400 : 502).json({ error: msg })
+  }
 }
 
 type ShipmentOrder = NonNullable<Awaited<ReturnType<typeof loadOrderForShipment>>>
@@ -329,18 +426,43 @@ export async function cancelShipmentHandler(req: AuthRequest, res: Response) {
   res.json({ order: data, message: 'Shipment cancelled on Shiprocket' })
 }
 
-function mapWebhookToOrderStatus(currentStatus: string): OrderStatus | null {
-  const s = currentStatus.toUpperCase()
-  if (s.includes('DELIVERED')) return 'delivered'
-  if (
-    s.includes('PICKED') ||
-    s.includes('TRANSIT') ||
-    s.includes('OUT FOR DELIVERY') ||
-    s.includes('SHIPPED')
-  ) {
-    return 'shipped'
-  }
+// Granular shipment lifecycle stored in orders.shipment_status (text).
+// The order_status enum is intentionally coarse, so several shipment states
+// collapse onto a single order status (see mapWebhookToOrderStatus).
+export type NormalizedShipmentStatus =
+  | 'PICKED UP'
+  | 'IN TRANSIT'
+  | 'OUT FOR DELIVERY'
+  | 'DELIVERED'
+  | 'RETURNED'
+  | 'CANCELLED'
+
+function normalizeShipmentStatus(raw: string): NormalizedShipmentStatus | null {
+  const s = raw.toUpperCase()
+  if (s.includes('DELIVERED')) return 'DELIVERED'
+  if (s.includes('OUT FOR DELIVERY')) return 'OUT FOR DELIVERY'
+  if (s.includes('RTO') || s.includes('RETURN')) return 'RETURNED'
+  if (s.includes('CANCEL')) return 'CANCELLED'
+  if (s.includes('TRANSIT') || s.includes('SHIPPED')) return 'IN TRANSIT'
+  if (s.includes('PICKED') || s.includes('PICK')) return 'PICKED UP'
   return null
+}
+
+// Maps the granular shipment status onto the coarse order_status enum.
+// 'RETURNED' has no enum equivalent — handled separately in the webhook.
+function mapWebhookToOrderStatus(normalized: NormalizedShipmentStatus | null): OrderStatus | null {
+  switch (normalized) {
+    case 'DELIVERED':
+      return 'delivered'
+    case 'PICKED UP':
+    case 'IN TRANSIT':
+    case 'OUT FOR DELIVERY':
+      return 'shipped'
+    case 'CANCELLED':
+      return 'cancelled'
+    default:
+      return null
+  }
 }
 
 export async function webhookHandler(req: AuthRequest, res: Response) {
@@ -366,7 +488,7 @@ export async function webhookHandler(req: AuthRequest, res: Response) {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, user_id, status')
+    .select('id, user_id, status, refund_status')
     .eq('shiprocket_awb', awb)
     .maybeSingle()
 
@@ -374,8 +496,11 @@ export async function webhookHandler(req: AuthRequest, res: Response) {
     return res.status(200).json({ ok: true, skipped: 'order not found' })
   }
 
+  const normalized = normalizeShipmentStatus(shipmentStatus)
+
   const patch: Record<string, unknown> = {
-    shipment_status: shipmentStatus,
+    // Store the normalized stage when recognised, else the raw upstream label.
+    shipment_status: normalized ?? shipmentStatus,
     updated_at: new Date().toISOString(),
   }
 
@@ -383,16 +508,26 @@ export async function webhookHandler(req: AuthRequest, res: Response) {
     patch.expected_delivery_date = body.etd.slice(0, 10)
   }
 
-  const newStatus = mapWebhookToOrderStatus(shipmentStatus)
+  const newStatus = mapWebhookToOrderStatus(normalized)
   if (newStatus && newStatus !== order.status) {
     patch.status = newStatus
   }
 
-  await supabase.from('orders').update(patch).eq('id', order.id)
-
-  if (newStatus && newStatus !== order.status) {
-    notifyCustomerStatusUpdate(order.user_id, order.id, newStatus)
+  // A returned shipment (RTO) has no order_status equivalent. Flag it for a
+  // refund so an admin can reconcile, without forcing the order off its status.
+  if (normalized === 'RETURNED' && !order.refund_status) {
+    patch.refund_status = 'requested'
+    patch.refund_reason = 'Shipment returned to origin (RTO)'
   }
 
-  res.json({ ok: true })
+  await supabase.from('orders').update(patch).eq('id', order.id)
+
+  // Notify on a coarse status change, or specifically when the parcel returns.
+  if (newStatus && newStatus !== order.status) {
+    notifyCustomerStatusUpdate(order.user_id, order.id, newStatus)
+  } else if (normalized === 'RETURNED') {
+    notifyCustomerStatusUpdate(order.user_id, order.id, 'returned')
+  }
+
+  res.json({ ok: true, shipment_status: patch.shipment_status })
 }

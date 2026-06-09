@@ -103,37 +103,76 @@ async function login(force = false): Promise<string> {
   return data.token
 }
 
+function getRetryMax(): number {
+  const n = Number(process.env.SHIPROCKET_RETRY_MAX)
+  return Number.isFinite(n) && n >= 0 ? n : 3
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// A status worth retrying: 429 (throttled) or any 5xx (transient upstream).
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500
+}
+
 async function srFetch<T>(
   path: string,
   options: RequestInit = {},
-  retried = false
+  retriedAuth = false
 ): Promise<T> {
   const token = await login()
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(options.headers as Record<string, string>),
-    },
-  })
+  const maxRetries = getRetryMax()
 
-  if (res.status === 401 && !retried) {
-    tokenCache = null
-    await login(true)
-    return srFetch<T>(path, options, true)
-  }
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    let res: globalThis.Response
+    try {
+      res = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(options.headers as Record<string, string>),
+        },
+      })
+    } catch (err) {
+      // Network/DNS/timeout — retry with backoff, then give up.
+      lastErr = err
+      logger.warn({ path, attempt, err }, 'Shiprocket request network error, retrying')
+      if (attempt < maxRetries) {
+        await sleep(2 ** attempt * 500)
+        continue
+      }
+      throw err instanceof Error ? err : new Error('Shiprocket network error')
+    }
 
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) {
+    // Expired token — refresh once and restart the retry loop fresh.
+    if (res.status === 401 && !retriedAuth) {
+      tokenCache = null
+      await login(true)
+      return srFetch<T>(path, options, true)
+    }
+
+    const data = await res.json().catch(() => ({}))
+    if (res.ok) return data as T
+
     const msg =
       (data as { message?: string }).message ??
       (data as { error?: string }).error ??
       `Shiprocket API error (${res.status})`
+
+    if (isRetryableStatus(res.status) && attempt < maxRetries) {
+      logger.warn({ path, status: res.status, attempt }, 'Shiprocket request transient error, retrying')
+      await sleep(2 ** attempt * 500)
+      lastErr = new Error(msg)
+      continue
+    }
+
     logger.error({ path, status: res.status, data }, 'Shiprocket request failed')
     throw new Error(msg)
   }
-  return data as T
+
+  throw lastErr instanceof Error ? lastErr : new Error('Shiprocket request failed after retries')
 }
 
 export async function checkServiceability(params: {
@@ -260,6 +299,37 @@ export async function cancelByAwbs(awbs: string[]): Promise<void> {
     method: 'POST',
     body: JSON.stringify({ awbs }),
   })
+}
+
+export type CourierStrategy = 'cheapest' | 'fastest' | 'rating'
+
+export function getCourierStrategy(): CourierStrategy {
+  const s = (process.env.SHIPROCKET_COURIER_STRATEGY ?? 'cheapest').toLowerCase()
+  if (s === 'fastest' || s === 'rating') return s
+  return 'cheapest'
+}
+
+// Picks the best courier from a serviceability response per the configured
+// strategy. Returns null when no courier is available for the route.
+export function selectBestCourier(
+  couriers: CourierOption[],
+  strategy: CourierStrategy = getCourierStrategy()
+): CourierOption | null {
+  if (couriers.length === 0) return null
+
+  const sorted = [...couriers]
+  if (strategy === 'fastest') {
+    sorted.sort((a, b) => {
+      const da = Number(a.estimated_delivery_days) || Number.MAX_SAFE_INTEGER
+      const db = Number(b.estimated_delivery_days) || Number.MAX_SAFE_INTEGER
+      return da - db || a.rate - b.rate
+    })
+  } else if (strategy === 'rating') {
+    sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || a.rate - b.rate)
+  } else {
+    sorted.sort((a, b) => a.rate - b.rate)
+  }
+  return sorted[0]
 }
 
 export function getPickupLocation(): string {
