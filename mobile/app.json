@@ -2,7 +2,7 @@
   "expo": {
     "name": "Yuvarani Silks",
     "slug": "yuvarani-silks",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -48,9 +48,8 @@
     "extra": {
       "apiUrl": "https://api.yuvaranisilks.com/api",
       "eas": {
-        "projectId": "35d28b41-2050-440e-832c-c8a9b13cd257"
+        "projectId": "2fe2ae1e-142f-4955-8312-288d2d58ccb0"
       }
-    },
-    "owner": "hari12211"
+    }
   }
 }

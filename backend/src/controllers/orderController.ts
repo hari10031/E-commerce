@@ -149,6 +149,7 @@ export async function createRazorpayOrder(req: AuthRequest, res: Response) {
     amount: rzpOrder.amount,
     currency: rzpOrder.currency,
     order_id: order.id,
+    key_id: process.env.RAZORPAY_KEY_ID,
   })
 }
 

@@ -82,6 +82,7 @@ export function RazorpayButton({ addressData, totalAmount, coupon, onSuccess }: 
         amount: number
         currency: string
         order_id: string
+        key_id: string
       }>(
         '/api/razorpay/create',
         { address: addressData, coupon },
@@ -89,7 +90,7 @@ export function RazorpayButton({ addressData, totalAmount, coupon, onSuccess }: 
       )
 
       const options: RazorpayOptions = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
+        key: orderData.key_id ?? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
         amount: orderData.amount,
         currency: orderData.currency ?? 'INR',
         name: 'Yuvarani Silks',
