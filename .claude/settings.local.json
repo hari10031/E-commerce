@@ -49,7 +49,8 @@
       "Bash(sed -n '35,50p' adminfrontend/src/app/dashboard/products/[id]/edit/page.tsx)",
       "Bash(sed -n '148,160p' adminfrontend/src/app/dashboard/orders/[id]/page.tsx)",
       "Bash(npx next *)",
-      "Bash(nslookup api.yuvaranisilks.com)"
+      "Bash(nslookup api.yuvaranisilks.com)",
+      "PowerShell(npx tsc --noEmit)"
     ]
   }
 }

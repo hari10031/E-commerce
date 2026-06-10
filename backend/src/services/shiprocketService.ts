@@ -227,10 +227,12 @@ export async function assignAwb(
         awb_code?: string
         courier_name?: string
         courier_company_id?: number
+        awb_assign_error?: string
       }
     }
     awb_code?: string
     courier_name?: string
+    message?: string
   }>('/courier/assign/awb', {
     method: 'POST',
     body: JSON.stringify({ shipment_id, courier_id }),
@@ -240,7 +242,11 @@ export async function assignAwb(
   const awb_code = inner?.awb_code ?? data.awb_code
   const courier_name = inner?.courier_name ?? data.courier_name
   if (!awb_code) {
-    throw new Error('Shiprocket did not return AWB code')
+    logger.error({ shipment_id, courier_id, data }, 'Shiprocket AWB assignment failed')
+    const reason = inner?.awb_assign_error ?? data.message
+    throw new Error(
+      reason ? `Shiprocket did not return AWB code: ${reason}` : 'Shiprocket did not return AWB code'
+    )
   }
   return {
     awb_code,
