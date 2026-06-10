@@ -28,6 +28,9 @@ coverage/
 # Next.js
 .next/
 
+/mobile/.android/*
+
+
 # Vite
 .vite/
 

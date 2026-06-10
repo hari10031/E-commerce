@@ -137,7 +137,9 @@ export async function checkServiceabilityHandler(req: AuthRequest, res: Response
     delivery_postcode: addr.pincode,
     weight,
     cod: 0,
-    order_id: order.shiprocket_order_id ?? order.id.slice(0, 8),
+    // Only pass Shiprocket's own numeric order id — our internal UUID makes
+    // the serviceability API return an empty courier list.
+    order_id: order.shiprocket_order_id ?? undefined,
   })
 
   res.json({ couriers, weight, delivery_pincode: addr.pincode })
@@ -191,7 +193,6 @@ async function createShipmentForOrder(
       delivery_postcode: addr.pincode,
       weight,
       cod: 0,
-      order_id: order.id.slice(0, 8),
     })
     const best = selectBestCourier(couriers)
     if (!best) {
