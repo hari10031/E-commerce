@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Yuvarani Silks",
+    "slug": "yuvarani-silks",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1C1C1C"
+    },
+    "scheme": "yuvaranisilks",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.nanabanana.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Upload product images",
+        "NSPhotoLibraryUsageDescription": "Choose product images from library"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1C1C1C"
+      },
+      "package": "com.nanabanana.mobile",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Yuvarani Silks to access your photos to upload product images.",
+          "cameraPermission": "Allow Yuvarani Silks to use your camera to capture product images."
+        }
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "apiUrl": "https://api.yuvaranisilks.com/api",
+      "eas": {
+        "projectId": "35d28b41-2050-440e-832c-c8a9b13cd257"
+      }
+    },
+    "owner": "hari12211"
+  }
+}

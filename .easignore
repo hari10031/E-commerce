@@ -1,0 +1,9 @@
+mobile/android/
+mobile/ios/
+mobile/node_modules/
+mobile/.expo/
+mobile/.env
+**/node_modules/
+**/.gradle/
+**/.cxx/
+**/build/
