@@ -25,7 +25,6 @@ import type {
   CategorySalesPoint,
   OrderStatusCount,
   InventoryItem,
-  OrderStatus,
 } from '@/types';
 
 interface RawInventory {
@@ -89,17 +88,8 @@ export default function AnalyticsPage() {
       )
       .catch(() => setInventory([]));
 
-    // No dedicated endpoint for status counts — derive from the orders list.
-    api.get<{ data: Array<{ status: OrderStatus }> }>('/api/orders?limit=500', token)
-      .then((res) => {
-        const counts: Record<string, number> = {};
-        for (const o of res.data ?? []) {
-          counts[o.status] = (counts[o.status] ?? 0) + 1;
-        }
-        setStatusCounts(
-          Object.entries(counts).map(([status, count]) => ({ status: status as OrderStatus, count }))
-        );
-      })
+    api.get<OrderStatusCount[]>('/api/analytics/order-status-counts', token)
+      .then((rows) => setStatusCounts(rows ?? []))
       .catch(() => setStatusCounts([]));
   }, [token]);
 

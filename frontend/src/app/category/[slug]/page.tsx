@@ -19,12 +19,12 @@ async function getCategoryData(slug: string) {
     if (!category) {
       const fallback = await api.get<Category>(`/api/categories/${slug}`)
       const productsRes = await api.get<{ data: Product[] }>(
-        `/api/products?category=${fallback.id}&published=true&limit=40`
+        `/api/products?category=${fallback.id}&published=true&limit=24`
       )
       return { category: fallback, products: productsRes.data ?? [] }
     }
     const productsRes = await api.get<{ data: Product[] }>(
-      `/api/products?category=${category.id}&published=true&limit=40`
+      `/api/products?category=${category.id}&published=true&limit=24`
     )
     return { category, products: productsRes.data ?? [] }
   } catch {

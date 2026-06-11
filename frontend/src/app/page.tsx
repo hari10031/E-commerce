@@ -8,8 +8,10 @@ import { ChevronRight, Sparkles, Truck, Shield, RotateCcw } from 'lucide-react'
 
 async function getHomeData() {
   try {
+    // Small product sample only — used as fallback covers for subcategories
+    // without an image_url. Keeps the home payload light.
     const [productsRes, categoriesRes] = await Promise.all([
-      api.get<{ data: Product[]; total: number }>('/api/products?limit=48&published=true'),
+      api.get<{ data: Product[]; total: number }>('/api/products?limit=12&published=true'),
       api.get<Category[]>('/api/categories'),
     ])
     return {

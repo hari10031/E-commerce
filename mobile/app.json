@@ -43,7 +43,14 @@
           "cameraPermission": "Allow Yuvarani Silks to use your camera to capture product images."
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#f59e0b",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "extra": {
       "apiUrl": "https://api.yuvaranisilks.com/api",

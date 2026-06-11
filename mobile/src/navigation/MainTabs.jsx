@@ -14,12 +14,15 @@ import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import InventoryListScreen from '../screens/dashboard/InventoryListScreen';
 import ProductsScreen from '../screens/products/ProductsScreen';
 import ProductDetailScreen from '../screens/products/ProductDetailScreen';
-import ProductWizardScreen from '../screens/products/wizard/ProductWizardScreen';
 import AddProductTypeScreen from '../screens/products/AddProductTypeScreen';
 import OrdersScreen from '../screens/orders/OrdersScreen';
 import OrderDetailScreen from '../screens/orders/OrderDetailScreen';
-import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
 import MoreScreen from '../screens/MoreScreen';
+import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+
+// Heavy screens (wizard, charts) load on first navigation, not at app startup.
+const getProductWizardScreen = () => require('../screens/products/wizard/ProductWizardScreen').default;
+const getAnalyticsScreen = () => require('../screens/analytics/AnalyticsScreen').default;
 import CategoriesScreen from '../screens/categories/CategoriesScreen';
 import EmployeesScreen from '../screens/employees/EmployeesScreen';
 import CouponsScreen from '../screens/coupons/CouponsScreen';
@@ -52,6 +55,7 @@ function DashboardStack() {
       <DashStack.Screen name="Dashboard" component={DashboardScreen} />
       <DashStack.Screen name="InventoryList" component={InventoryListScreen} />
       <DashStack.Screen name="MySales" component={MySalesScreen} />
+      <DashStack.Screen name="Notifications" component={NotificationsScreen} />
     </DashStack.Navigator>
   );
 }
@@ -61,7 +65,7 @@ function CollectionsStack() {
     <CollStack.Navigator screenOptions={STACK_OPTS}>
       <CollStack.Screen name="Products" component={ProductsScreen} />
       <CollStack.Screen name="ProductDetail" component={ProductDetailScreen} />
-      <CollStack.Screen name="ProductWizard" component={ProductWizardScreen} />
+      <CollStack.Screen name="ProductWizard" getComponent={getProductWizardScreen} />
     </CollStack.Navigator>
   );
 }
@@ -79,7 +83,7 @@ function MoreStack() {
   return (
     <MoreStk.Navigator screenOptions={STACK_OPTS}>
       <MoreStk.Screen name="More" component={MoreScreen} />
-      <MoreStk.Screen name="Analytics" component={AnalyticsScreen} />
+      <MoreStk.Screen name="Analytics" getComponent={getAnalyticsScreen} />
       <MoreStk.Screen name="Categories" component={CategoriesScreen} />
       <MoreStk.Screen name="Employees" component={EmployeesScreen} />
       <MoreStk.Screen name="Coupons" component={CouponsScreen} />
@@ -91,6 +95,7 @@ function MoreStack() {
       <MoreStk.Screen name="CreateUser" component={CreateUserScreen} />
       <MoreStk.Screen name="SalesHistory" component={MySalesScreen} />
       <MoreStk.Screen name="AiQuota" component={AiQuotaScreen} />
+      <MoreStk.Screen name="Notifications" component={NotificationsScreen} />
     </MoreStk.Navigator>
   );
 }
@@ -118,7 +123,7 @@ function CreateStack() {
   return (
     <CreateStackNav.Navigator screenOptions={STACK_OPTS}>
       <CreateStackNav.Screen name="AddProductType" component={AddProductTypeScreen} />
-      <CreateStackNav.Screen name="ProductWizard" component={ProductWizardScreen} />
+      <CreateStackNav.Screen name="ProductWizard" getComponent={getProductWizardScreen} />
     </CreateStackNav.Navigator>
   );
 }

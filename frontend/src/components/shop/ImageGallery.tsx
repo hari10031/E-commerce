@@ -47,6 +47,19 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
   const shown = activeColor ? images.filter((i) => i.color === activeColor) : images
   const sorted = sortImages(shown)
 
+  // Mount full-size slides lazily: active slide + neighbours, plus anything
+  // already loaded (so navigating back doesn't flash a blank frame).
+  const [loadedSlides, setLoadedSlides] = useState<Set<number>>(new Set([0, 1]))
+  useEffect(() => {
+    setLoadedSlides((prev) => {
+      const next = new Set(prev)
+      next.add(activeIndex)
+      next.add(activeIndex + 1)
+      if (activeIndex > 0) next.add(activeIndex - 1)
+      return next
+    })
+  }, [activeIndex])
+
   const onSelect = useCallback((api: CarouselApi) => {
     if (!api) return
     setActiveIndex(api.selectedScrollSnap())
@@ -140,19 +153,21 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                 onMouseLeave={handleMouseLeave}
                 aria-label={`View image ${idx + 1} of ${sorted.length}`}
               >
-                <Image
-                  src={img.url}
-                  alt={img.alt_text ?? `${title} ${idx + 1}`}
-                  fill
-                  className={cn(
-                    'object-cover object-center transition-transform duration-150 ease-out',
-                    !isTouch && 'group-hover:transition-transform'
-                  )}
-                  style={idx === activeIndex && !isTouch ? zoomStyle : undefined}
-                  sizes="(max-width: 640px) 100vw, 50vw"
-                  quality={IMAGE_QUALITY}
-                  priority={idx === 0}
-                />
+                {loadedSlides.has(idx) && (
+                  <Image
+                    src={img.url}
+                    alt={img.alt_text ?? `${title} ${idx + 1}`}
+                    fill
+                    className={cn(
+                      'object-cover object-center transition-transform duration-150 ease-out',
+                      !isTouch && 'group-hover:transition-transform'
+                    )}
+                    style={idx === activeIndex && !isTouch ? zoomStyle : undefined}
+                    sizes="(max-width: 640px) 100vw, 50vw"
+                    quality={IMAGE_QUALITY}
+                    priority={idx === 0}
+                  />
+                )}
                 {idx === activeIndex && (
                   <span className="absolute top-3 right-3 hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white pointer-events-none">
                     <Expand className="h-4 w-4" />

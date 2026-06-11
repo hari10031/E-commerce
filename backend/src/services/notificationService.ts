@@ -43,22 +43,53 @@ export function notifyAdminOrderPlaced(order: {
       logger.error({ err }, 'WhatsApp notification failed')
     }
 
-    // Expo push to admin device
-    const { data: admin } = await supabase
-      .from('profiles')
-      .select('fcm_token')
-      .eq('role', 'admin')
-      .not('fcm_token', 'is', null)
-      .limit(1)
-      .single()
+    const title = '🛍️ New Order!'
+    const body = `Order #${order.id.slice(0, 8)} — ₹${order.total_amount}`
 
-    if (admin?.fcm_token) {
-      await sendExpoNotification(
-        admin.fcm_token,
-        '🛍️ New Order!',
-        `Order #${order.id.slice(0, 8)} — ₹${order.total_amount}`,
-        { orderId: order.id, screen: 'OrderDetail' }
-      )
+    // All admins + approved employees
+    const { data: staff, error } = await supabase
+      .from('profiles')
+      .select('id, role, employee_status, fcm_token')
+      .in('role', ['admin', 'employee'])
+
+    if (error || !staff?.length) {
+      if (error) logger.error({ error }, 'Failed to load staff for order notification')
+      return
+    }
+
+    const recipients = staff.filter(
+      (p) => p.role === 'admin' || p.employee_status === 'approved'
+    )
+    if (!recipients.length) return
+
+    // In-app inbox row per staff member
+    const { error: insertErr } = await supabase.from('notifications').insert(
+      recipients.map((p) => ({ user_id: p.id, title, body }))
+    )
+    if (insertErr) logger.error({ error: insertErr }, 'Failed to insert order notifications')
+
+    // Batched Expo push to every staff device
+    const messages = recipients
+      .filter((p) => p.fcm_token && Expo.isExpoPushToken(p.fcm_token))
+      .map((p) => ({
+        to: p.fcm_token as string,
+        title,
+        body,
+        sound: 'default' as const,
+        data: { type: 'order', orderId: order.id, screen: 'OrderDetail' },
+      }))
+
+    if (messages.length) {
+      try {
+        for (const chunk of expo.chunkPushNotifications(messages)) {
+          const tickets = await expo.sendPushNotificationsAsync(chunk)
+          for (const ticket of tickets) {
+            if (ticket.status === 'error') logger.warn({ ticket }, 'Expo push failed')
+          }
+        }
+      } catch (err) {
+        logger.error({ err }, 'Expo push error')
+      }
     }
   })
 }

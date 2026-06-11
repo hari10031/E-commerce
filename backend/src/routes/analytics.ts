@@ -8,6 +8,7 @@ import {
   getCategoryInventory,
   getEmployeePerformance,
   getSalesSummary,
+  getOrderStatusCounts,
 } from '../controllers/analyticsController'
 
 const router = Router()
@@ -16,6 +17,7 @@ router.use(authenticate)
 
 router.get('/dashboard', requireRole('admin', 'employee'), getDashboardStats)
 router.get('/sales', requireRole('admin'), getSalesTimeline)
+router.get('/order-status-counts', requireRole('admin', 'employee'), getOrderStatusCounts)
 router.get('/inventory', requireRole('admin', 'employee'), getInventory)
 router.get('/category-sales', requireRole('admin'), getCategorySales)
 router.get('/category-inventory', requireRole('admin', 'employee'), getCategoryInventory)

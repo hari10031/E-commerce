@@ -52,6 +52,19 @@ export async function getDashboardStats(_req: AuthRequest, res: Response) {
   })
 }
 
+// Lightweight grouped count for the admin pie chart — replaces fetching
+// hundreds of order rows client-side just to count statuses.
+export async function getOrderStatusCounts(_req: AuthRequest, res: Response) {
+  const { data, error } = await supabase.from('orders').select('status')
+  if (error) return res.status(500).json({ error: error.message })
+
+  const counts: Record<string, number> = {}
+  for (const row of data ?? []) {
+    counts[row.status] = (counts[row.status] ?? 0) + 1
+  }
+  res.json(Object.entries(counts).map(([status, count]) => ({ status, count })))
+}
+
 export async function getSalesTimeline(_req: AuthRequest, res: Response) {
   const { data, error } = await supabase.rpc('daily_sales_last_30_days')
   if (error) return res.status(500).json({ error: error.message })

@@ -10,6 +10,7 @@ import { getDashboard, getOfflineSales, getCategoryInventory, getProducts } from
 import { formatPrice } from '../../lib/utils';
 import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 import { resolveColorHex } from '../../lib/colors';
+import NotificationBell from '../../components/ui/NotificationBell';
 
 function SubCategoryDetailProducts({ subCategoryId }) {
   const { data, isLoading } = useQuery({
@@ -268,13 +269,20 @@ export default function DashboardScreen({ navigation }) {
         end={{ x: 1, y: 1 }}
         style={{ paddingTop: 16, paddingBottom: 32, paddingHorizontal: 20, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}
       >
-        <Text className="text-amber-100 text-sm font-medium">{getFormattedDate()}</Text>
-        <Text className="text-white text-2xl font-bold mt-1">
-          Welcome back ✨
-        </Text>
-        <Text className="text-amber-100 text-base mt-0.5">
-          {user?.name?.split(' ')[0] || 'there'}
-        </Text>
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1 mr-3">
+            <Text className="text-amber-100 text-sm font-medium">{getFormattedDate()}</Text>
+            <Text className="text-white text-2xl font-bold mt-1">
+              Welcome back ✨
+            </Text>
+            <Text className="text-amber-100 text-base mt-0.5">
+              {user?.name?.split(' ')[0] || 'there'}
+            </Text>
+          </View>
+          {(isAdmin || isEmployee) && (
+            <NotificationBell light onPress={() => navigation.navigate('Notifications')} />
+          )}
+        </View>
       </LinearGradient>
 
       <View className="px-4 -mt-5">

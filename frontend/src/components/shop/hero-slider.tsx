@@ -7,7 +7,6 @@ import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 
 import heroSaree1 from '@/assets/hero-saree-1.jpg'
 import heroSaree2 from '@/assets/hero-saree-2.jpg'
-import fabric1 from '@/assets/fabric-1.jpg'
 import fabric2 from '@/assets/fabric-2.jpg'
 import storefront from '@/assets/storefront.jpg'
 
@@ -95,6 +94,7 @@ export function HeroSlider() {
                   fill
                   sizes="100vw"
                   priority={idx === 0}
+                  placeholder="blur"
                   quality={80}
                   className={`object-cover object-center w-full h-full transition-transform duration-[4500ms] ease-out ${
                     isActive ? 'sm:scale-105 scale-100' : 'scale-100'
