@@ -1,4 +1,12 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+/** SSR on same EC2 as API — use loopback to skip nginx/SSL hairpin. */
+function apiBase(): string {
+  if (typeof window === 'undefined') {
+    return process.env.API_URL || PUBLIC_API;
+  }
+  return PUBLIC_API;
+}
 
 interface RequestOptions extends RequestInit {
   token?: string;
@@ -28,7 +36,7 @@ async function apiFetch<T>(
     requestHeaders['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(`${apiBase()}${endpoint}`, {
     ...rest,
     headers: requestHeaders,
   });
@@ -71,7 +79,7 @@ async function submitForm<T>(
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(`${apiBase()}${endpoint}`, {
     method,
     headers,
     body: formData,

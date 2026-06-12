@@ -1,6 +1,8 @@
 import { Request, Response } from 'express'
 import { supabase } from '../supabase'
 import { AuthRequest } from '../middleware/auth'
+import { setPrivateNoStore, setPublicCache } from '../middleware/cacheHeaders'
+import { mapProductCdn } from '../utils/cdnUrl'
 
 const productSelect = `
   *,
@@ -46,8 +48,14 @@ export async function getAllProducts(req: Request, res: Response) {
   const { data, error, count } = await query
   if (error) return res.status(500).json({ error: error.message })
 
+  if (published === 'all') {
+    setPrivateNoStore(res)
+  } else {
+    setPublicCache(res, 60)
+  }
+
   res.json({
-    data,
+    data: (data ?? []).map(mapProductCdn),
     count,
     total: count,
     page: +page,
@@ -64,7 +72,8 @@ export async function getProductById(req: Request, res: Response) {
     .single()
 
   if (error) return res.status(404).json({ error: 'Product not found' })
-  res.json(data)
+  setPublicCache(res, 30)
+  res.json(mapProductCdn(data))
 }
 
 export async function createProduct(req: AuthRequest, res: Response) {

@@ -1,4 +1,12 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+
+/** SSR on same EC2 as API — use loopback to skip nginx/SSL hairpin. */
+function apiBase(): string {
+  if (typeof window === 'undefined') {
+    return process.env.API_URL ?? PUBLIC_API
+  }
+  return PUBLIC_API
+}
 
 // Shared in-flight refresh so concurrent 401s trigger only one refresh call.
 let refreshPromise: Promise<string | null> | null = null
@@ -13,7 +21,7 @@ async function refreshAccessToken(): Promise<string | null> {
       return null
     }
     try {
-      const res = await fetch(`${BASE}/api/auth/refresh`, {
+      const res = await fetch(`${PUBLIC_API}/api/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
@@ -59,7 +67,7 @@ async function request<T>(path: string, options?: RequestInit & { token?: string
   const method = init.method ?? 'GET'
 
   function doFetch(authToken?: string) {
-    return fetch(`${BASE}${path}`, {
+    return fetch(`${apiBase()}${path}`, {
       ...init,
       headers: {
         'Content-Type': 'application/json',

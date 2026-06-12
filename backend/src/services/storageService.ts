@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import sharp from 'sharp'
 import { supabase } from '../supabase'
+import { toCdnUrl } from '../utils/cdnUrl'
 
 export async function uploadImage(
   buffer: Buffer,
@@ -34,7 +35,7 @@ export async function uploadImage(
     data: { publicUrl },
   } = supabase.storage.from(bucket).getPublicUrl(filename)
 
-  return publicUrl
+  return toCdnUrl(publicUrl) ?? publicUrl
 }
 
 export async function deleteImage(bucket: string, filename: string): Promise<void> {

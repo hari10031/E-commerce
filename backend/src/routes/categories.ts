@@ -3,6 +3,8 @@ import { body, validationResult } from 'express-validator'
 import { supabase } from '../supabase'
 import { authenticate, requireApprovedEmployee } from '../middleware/auth'
 import { uploadImage } from '../services/storageService'
+import { setPublicCache } from '../middleware/cacheHeaders'
+import { mapCategoryCdn } from '../utils/cdnUrl'
 import multer from 'multer'
 
 const router = Router()
@@ -28,7 +30,8 @@ router.get('/', async (req: Request, res: Response) => {
 
   const { data, error } = await query
   if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+  setPublicCache(res, 300)
+  res.json((data ?? []).map(mapCategoryCdn))
 })
 
 router.get('/:slug', async (req: Request, res: Response) => {
@@ -39,7 +42,8 @@ router.get('/:slug', async (req: Request, res: Response) => {
     .single()
 
   if (error) return res.status(404).json({ error: 'Category not found' })
-  res.json(data)
+  setPublicCache(res, 300)
+  res.json(mapCategoryCdn(data))
 })
 
 router.post(

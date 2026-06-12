@@ -56,3 +56,6 @@ ios/build/
 !**/.env.local.example
 
 backend/dist/
+
+# Perf baseline reports (re-run npm run perf:baseline)
+perf-reports/*.json

@@ -8,7 +8,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "start:cluster": "node dist/cluster.js",
-    "check:integrations": "tsx scripts/check-integrations.ts"
+    "check:integrations": "tsx scripts/check-integrations.ts",
+    "perf:baseline": "tsx scripts/perf-baseline.ts",
+    "perf:baseline:lighthouse": "tsx scripts/perf-baseline.ts lighthouse"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",

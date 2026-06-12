@@ -10,6 +10,7 @@ import pinoHttp from 'pino-http'
 import { logger } from './logger'
 import { errorHandler, notFound } from './middleware/errorHandler'
 import { apiLimiter } from './middleware/rateLimiter'
+import { requestTiming } from './middleware/requestTiming'
 
 import authRoutes from './routes/auth'
 import categoryRoutes from './routes/categories'
@@ -47,6 +48,7 @@ app.use(
 app.use(compression())
 
 app.use(pinoHttp({ logger }))
+app.use(requestTiming)
 
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
@@ -54,7 +56,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use('/api', apiLimiter)
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime() })
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    cdn: process.env.STORAGE_CDN_URL ? 'configured' : 'direct',
+  })
 })
 
 app.use('/api/auth', authRoutes)
