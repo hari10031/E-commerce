@@ -5,7 +5,10 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "prebuild:android": "expo prebuild --platform android --clean",
+    "build:apk:cloud": "eas build --platform android --profile production --non-interactive",
+    "build:apk:status": "eas build:list --platform android --limit 1 --non-interactive"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

@@ -11,6 +11,7 @@ import { format } from 'date-fns'
 import type { Order, OrderStatus } from '@/types'
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
+  pending_payment: 'bg-neutral-50 text-neutral-600',
   placed: 'bg-blue-50 text-blue-700',
   confirmed: 'bg-indigo-50 text-indigo-700',
   processing: 'bg-amber-50 text-amber-700',

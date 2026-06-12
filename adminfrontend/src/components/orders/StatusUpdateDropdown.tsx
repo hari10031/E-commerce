@@ -18,6 +18,7 @@ interface StatusUpdateDropdownProps {
 }
 
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending_payment: ['cancelled'],
   placed: ['confirmed', 'cancelled'],
   confirmed: ['processing', 'cancelled'],
   processing: ['shipped', 'cancelled'],
@@ -27,6 +28,7 @@ const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 };
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
+  pending_payment: 'Awaiting payment',
   placed: 'Placed',
   confirmed: 'Confirmed',
   processing: 'Processing',

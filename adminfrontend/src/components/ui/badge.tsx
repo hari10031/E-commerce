@@ -34,6 +34,7 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 }
 
 const statusBadgeConfig: Record<OrderStatus, { label: string; className: string }> = {
+  pending_payment: { label: 'Awaiting payment', className: 'badge-pending-payment' },
   placed: { label: 'Placed', className: 'badge-placed' },
   confirmed: { label: 'Confirmed', className: 'badge-confirmed' },
   processing: { label: 'Processing', className: 'badge-processing' },

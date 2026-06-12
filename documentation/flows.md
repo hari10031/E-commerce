@@ -95,7 +95,7 @@ sequenceDiagram
     BE->>DB: load cart_items
     BE->>BE: validate stock per item
     BE->>BE: compute subtotal, shipping, coupon discount
-    BE->>DB: insert addresses, orders (status: placed), order_items
+    BE->>DB: insert addresses, orders (status: pending_payment), order_items
     BE->>RZP: orders.create(amount, receipt: order.id)
     RZP-->>BE: razorpay_order_id
     BE-->>C: { razorpay_order_id, amount, order_id }
@@ -103,13 +103,18 @@ sequenceDiagram
     C->>RZP: open checkout.js modal → pay
     RZP-->>C: razorpay_payment_id + signature
 
-    C->>BE: POST /api/razorpay/verify {ids, signature}
-    BE->>BE: HMAC-SHA256 signature check
-    BE->>DB: orders.status = confirmed
-    BE->>DB: decrement_variant_stock per item (RPC)
-    BE->>DB: clear cart_items
-    BE->>BE: enqueue admin notification
-    BE-->>C: { success, order }
+    alt Payment success
+        C->>BE: POST /api/razorpay/verify {ids, signature}
+        BE->>BE: HMAC-SHA256 signature check
+        BE->>DB: orders.status = confirmed
+        BE->>DB: decrement_variant_stock per item (RPC)
+        BE->>DB: clear cart_items
+        BE->>BE: enqueue admin notification
+        BE-->>C: { success, order }
+    else Modal dismissed
+        C->>BE: POST /api/razorpay/abandon {order_id}
+        BE->>DB: orders.status = cancelled
+    end
 ```
 
 Stock is checked at order creation **and** atomically decremented on payment

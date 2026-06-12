@@ -55,6 +55,7 @@ export function RazorpayButton({ addressData, totalAmount, coupon, onSuccess }: 
   const { clear } = useCartStore()
   const [loading, setLoading] = React.useState(false)
   const scriptLoaded = useRef(false)
+  const pendingOrderId = useRef<string | null>(null)
 
   useEffect(() => {
     if (scriptLoaded.current) return
@@ -89,6 +90,8 @@ export function RazorpayButton({ addressData, totalAmount, coupon, onSuccess }: 
         token
       )
 
+      pendingOrderId.current = orderData.order_id
+
       const options: RazorpayOptions = {
         key: orderData.key_id ?? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
         amount: orderData.amount,
@@ -114,6 +117,7 @@ export function RazorpayButton({ addressData, totalAmount, coupon, onSuccess }: 
               },
               token
             )
+            pendingOrderId.current = null
             clear()
             toast({ title: 'Payment successful!', description: 'Your order has been placed.' })
             onSuccess(orderData.order_id)
@@ -123,7 +127,12 @@ export function RazorpayButton({ addressData, totalAmount, coupon, onSuccess }: 
         },
         modal: {
           ondismiss: () => {
+            const orderId = pendingOrderId.current
+            pendingOrderId.current = null
             setLoading(false)
+            if (orderId && token) {
+              api.post('/api/razorpay/abandon', { order_id: orderId }, token).catch(() => {})
+            }
           },
         },
       }

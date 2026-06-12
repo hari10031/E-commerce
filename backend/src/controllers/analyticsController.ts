@@ -10,14 +10,15 @@ export async function getDashboardStats(_req: AuthRequest, res: Response) {
     lowStock, outOfStock, totalProducts, totalCustomers, totalEmployees,
     allOffline, monthOffline,
   ] = await Promise.all([
-    supabase.from('orders').select('total_amount').not('status', 'eq', 'cancelled'),
+    supabase.from('orders').select('total_amount').not('status', 'eq', 'cancelled').not('status', 'eq', 'pending_payment'),
     supabase
       .from('orders')
       .select('total_amount')
       .gte('created_at', monthStart)
-      .not('status', 'eq', 'cancelled'),
-    supabase.from('orders').select('id', { count: 'exact', head: true }),
-    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'placed'),
+      .not('status', 'eq', 'cancelled')
+      .not('status', 'eq', 'pending_payment'),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).not('status', 'eq', 'pending_payment'),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'confirmed'),
     // Low stock = 1-4 left; out of stock = 0 left (separate so neither goes negative).
     supabase.from('variants').select('id', { count: 'exact', head: true }).gt('quantity', 0).lt('quantity', 5),
     supabase.from('variants').select('id', { count: 'exact', head: true }).eq('quantity', 0),
@@ -143,7 +144,7 @@ export async function getEmployeePerformance(req: AuthRequest, res: Response) {
 // Online (web orders) vs offline (in-person) sales totals.
 export async function getSalesSummary(_req: AuthRequest, res: Response) {
   const [online, offline] = await Promise.all([
-    supabase.from('orders').select('total_amount').not('status', 'eq', 'cancelled'),
+    supabase.from('orders').select('total_amount').not('status', 'eq', 'cancelled').not('status', 'eq', 'pending_payment'),
     supabase.from('offline_sales').select('quantity, unit_price'),
   ])
 

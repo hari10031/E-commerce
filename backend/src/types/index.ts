@@ -1,6 +1,7 @@
 export type UserRole = 'admin' | 'employee' | 'customer' | 'superadmin'
 export type EmployeeStatus = 'pending' | 'approved' | 'rejected'
 export type OrderStatus =
+  | 'pending_payment'
   | 'placed'
   | 'confirmed'
   | 'processing'
@@ -154,6 +155,7 @@ export interface Notification {
 }
 
 export const VALID_ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending_payment: ['cancelled'],
   placed:     ['confirmed', 'cancelled'],
   confirmed:  ['processing', 'cancelled', 'refunded'],
   processing: ['shipped', 'refunded'],

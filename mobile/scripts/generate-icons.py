@@ -1,10 +1,11 @@
 from PIL import Image
 import os
 
-SRC = r"C:\Users\nithi\.cursor\projects\d-c-disk-Downloads-E-commerce-main-1-E-commerce-main\assets\c__Users_nithi_AppData_Roaming_Cursor_User_workspaceStorage_ccf9c86e199ad29d685156fc4c8f7187_images_image-1f268859-7bf7-4acb-9da0-641f54a6dc25.png"
+SRC = r"C:\Users\nithi\.cursor\projects\d-c-disk-Downloads-E-commerce-main-E-commerce-main\assets\c__Users_nithi_AppData_Roaming_Cursor_User_workspaceStorage_6c7faf70d7b6250ab5e82e8936693cde_images_Screenshot_2026-06-01_213649-098053bc-a253-4e32-88b8-e2d3f8b6df99.png"
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "assets")
 SIZE = 1024
-BG = (28, 28, 28, 255)
+# Deep maroon from Yuvarani Silks brand logo
+BG = (107, 21, 32, 255)
 
 img = Image.open(SRC).convert("RGBA")
 w, h = img.size
@@ -28,5 +29,8 @@ icon.save(os.path.join(OUT_DIR, "icon.png"), "PNG")
 
 adaptive = make_icon(0.72, transparent_bg=True)
 adaptive.save(os.path.join(OUT_DIR, "adaptive-icon.png"), "PNG")
+
+splash = make_icon(0.55, transparent_bg=False)
+splash.save(os.path.join(OUT_DIR, "splash.png"), "PNG")
 
 print("Done:", OUT_DIR)

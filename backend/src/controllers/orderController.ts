@@ -16,6 +16,16 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 })
 
+const PAYABLE_STATUSES: OrderStatus[] = ['pending_payment', 'placed']
+
+async function cancelUserPendingPayments(userId: string) {
+  await supabase
+    .from('orders')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('status', 'pending_payment')
+}
+
 const orderSelect = `
   *,
   user:profiles!user_id(id, name, phone),
@@ -34,6 +44,8 @@ const orderSelect = `
 export async function createRazorpayOrder(req: AuthRequest, res: Response) {
   const { address, coupon } = req.body
   const userId = req.user!.id
+
+  await cancelUserPendingPayments(userId)
 
   const { data: cart } = await supabase
     .from('cart_items')
@@ -120,13 +132,12 @@ export async function createRazorpayOrder(req: AuthRequest, res: Response) {
     addressId = addr?.id ?? null
   }
 
-  // Internal order — awaiting payment
   const { data: order, error: orderErr } = await supabase
     .from('orders')
     .insert({
       user_id: userId,
       address_id: addressId,
-      status: 'placed',
+      status: 'pending_payment',
       total_amount: total,
       discount_amount: discount,
       coupon_applied: couponCode,
@@ -137,17 +148,33 @@ export async function createRazorpayOrder(req: AuthRequest, res: Response) {
 
   await supabase.from('order_items').insert(items.map((i) => ({ order_id: order.id, ...i })))
 
-  const rzpOrder = await razorpay.orders.create({
-    amount: Math.round(total * 100),
-    currency: 'INR',
-    receipt: order.id,
-  })
+  let rzpOrder
+  try {
+    rzpOrder = await razorpay.orders.create({
+      amount: Math.round(total * 100),
+      currency: 'INR',
+      receipt: order.id,
+    })
+  } catch (err) {
+    await supabase
+      .from('orders')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', order.id)
+    const msg = err instanceof Error ? err.message : 'Failed to create Razorpay order'
+    return res.status(502).json({ error: msg })
+  }
 
   const { error: bindErr } = await supabase
     .from('orders')
     .update({ razorpay_order_id: rzpOrder.id, updated_at: new Date().toISOString() })
     .eq('id', order.id)
-  if (bindErr) return res.status(500).json({ error: 'Failed to bind payment order' })
+  if (bindErr) {
+    await supabase
+      .from('orders')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', order.id)
+    return res.status(500).json({ error: 'Failed to bind payment order' })
+  }
 
   res.json({
     razorpay_order_id: rzpOrder.id,
@@ -237,7 +264,7 @@ export async function verifyPayment(req: AuthRequest, res: Response) {
     return res.json({ success: true, order: existing, alreadyVerified: true })
   }
 
-  if (existing.status !== 'placed') {
+  if (!PAYABLE_STATUSES.includes(existing.status as OrderStatus)) {
     return res.status(400).json({ error: `Cannot verify payment for order with status ${existing.status}` })
   }
 
@@ -261,7 +288,7 @@ export async function verifyPayment(req: AuthRequest, res: Response) {
     })
     .eq('id', order_id)
     .eq('user_id', req.user!.id)
-    .eq('status', 'placed')
+    .in('status', PAYABLE_STATUSES)
     .select('*, order_items(id, variant_id, quantity)')
     .single()
 
@@ -290,6 +317,37 @@ export async function verifyPayment(req: AuthRequest, res: Response) {
   res.json({ success: true, order })
 }
 
+// Customer closed Razorpay without paying — cancel the draft checkout order.
+export async function abandonRazorpayOrder(req: AuthRequest, res: Response) {
+  const { order_id } = req.body
+  if (!order_id) return res.status(400).json({ error: 'order_id is required' })
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, status, razorpay_payment_id')
+    .eq('id', order_id)
+    .eq('user_id', req.user!.id)
+    .single()
+
+  if (!order) return res.status(404).json({ error: 'Order not found' })
+  if (order.razorpay_payment_id) {
+    return res.status(400).json({ error: 'Payment already completed for this order' })
+  }
+  if (order.status !== 'pending_payment') {
+    return res.json({ success: true, alreadyHandled: true })
+  }
+
+  const { error } = await supabase
+    .from('orders')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', order_id)
+    .eq('user_id', req.user!.id)
+    .eq('status', 'pending_payment')
+
+  if (error) return res.status(400).json({ error: error.message })
+  res.json({ success: true })
+}
+
 export async function getOrders(req: AuthRequest, res: Response) {
   const { status, userId, page = '1', limit = '20' } = req.query
 
@@ -302,6 +360,7 @@ export async function getOrders(req: AuthRequest, res: Response) {
   // Customers see only their orders; staff may scope to one customer via userId.
   if (req.user!.role === 'customer') {
     query = query.eq('user_id', req.user!.id)
+    if (!status) query = query.neq('status', 'pending_payment')
   } else if (userId) {
     query = query.eq('user_id', userId as string)
   }
@@ -333,6 +392,9 @@ export async function getOrderById(req: AuthRequest, res: Response) {
 
   const { data, error } = await query.single()
   if (error) return res.status(404).json({ error: 'Order not found' })
+  if (req.user!.role === 'customer' && data.status === 'pending_payment') {
+    return res.status(404).json({ error: 'Order not found' })
+  }
   res.json(data)
 }
 

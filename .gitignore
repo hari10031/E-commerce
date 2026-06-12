@@ -54,3 +54,5 @@ ios/build/
 **/.env.*
 !**/.env.example
 !**/.env.local.example
+
+backend/dist/

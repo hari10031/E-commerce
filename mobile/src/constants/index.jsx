@@ -3,9 +3,10 @@ import Constants from 'expo-constants';
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ??
   Constants.expoConfig?.extra?.apiUrl ??
-  'http://192.168.31.166:4000/api';
+  'https://api.yuvaranisilks.com/api';
 
 export const VALID_ORDER_TRANSITIONS = {
+  pending_payment: ['cancelled'],
   placed: ['confirmed', 'cancelled'],
   confirmed: ['processing', 'cancelled', 'refunded'],
   processing: ['shipped', 'cancelled', 'refunded'],
@@ -27,6 +28,7 @@ export const PRODUCT_TYPES = [
 ];
 
 export const ORDER_STATUS_CONFIG = {
+  pending_payment: { label: 'Awaiting payment', bg: '#f3f4f6', text: '#4b5563', dot: '#9ca3af' },
   placed: { label: 'Placed', bg: '#dbeafe', text: '#1d4ed8', dot: '#3b82f6' },
   confirmed: { label: 'Confirmed', bg: '#e0e7ff', text: '#4338ca', dot: '#6366f1' },
   processing: { label: 'Processing', bg: '#fef3c7', text: '#b45309', dot: '#f59e0b' },

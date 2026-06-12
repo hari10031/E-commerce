@@ -13,6 +13,7 @@ import { useRefetchOnFocus } from '../../hooks/useRefetchOnFocus';
 
 const STATUS_TABS = [
   { label: 'All', value: null },
+  { label: 'Awaiting pay', value: 'pending_payment' },
   { label: 'Placed', value: 'placed' },
   { label: 'Confirmed', value: 'confirmed' },
   { label: 'Processing', value: 'processing' },

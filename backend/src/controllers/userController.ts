@@ -42,6 +42,7 @@ export async function listUsers(req: AuthRequest, res: Response) {
       .select('user_id, total_amount, status')
       .in('user_id', ids)
       .not('status', 'eq', 'cancelled')
+      .not('status', 'eq', 'pending_payment')
     for (const o of orders ?? []) {
       const k = o.user_id as string
       if (!statsMap[k]) statsMap[k] = { orderCount: 0, totalSpent: 0 }

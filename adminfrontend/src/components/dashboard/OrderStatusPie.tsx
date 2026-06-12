@@ -15,6 +15,7 @@ interface OrderStatusPieProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
+  pending_payment: '#9ca3af',
   placed: '#3b82f6',
   confirmed: '#6366f1',
   processing: '#f59e0b',

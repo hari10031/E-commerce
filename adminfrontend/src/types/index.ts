@@ -1,6 +1,7 @@
 export type ProductType = 'saree' | 'jewellery';
 
 export type OrderStatus =
+  | 'pending_payment'
   | 'placed'
   | 'confirmed'
   | 'processing'

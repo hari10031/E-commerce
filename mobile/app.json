@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Yuvarani Silks",
+    "name": "yuvarani silks",
     "slug": "yuvarani-silks",
     "version": "1.0.1",
     "orientation": "portrait",
@@ -9,12 +9,12 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1C1C1C"
+      "backgroundColor": "#6B1520"
     },
     "scheme": "yuvaranisilks",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.nanabanana.mobile",
+      "bundleIdentifier": "com.yuvaranisilks.mobile",
       "infoPlist": {
         "NSCameraUsageDescription": "Upload product images",
         "NSPhotoLibraryUsageDescription": "Choose product images from library"
@@ -23,9 +23,10 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1C1C1C"
+        "backgroundColor": "#6B1520"
       },
-      "package": "com.nanabanana.mobile",
+      "package": "com.yuvaranisilks.mobile",
+      "label": "yuvarani silks",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -55,9 +56,9 @@
     "extra": {
       "apiUrl": "https://api.yuvaranisilks.com/api",
       "eas": {
-        "projectId": "35d28b41-2050-440e-832c-c8a9b13cd257"
+        "projectId": "2fe2ae1e-142f-4955-8312-288d2d58ccb0"
       }
     },
-    "owner": "hari12211"
+    "owner": "akshith7707"
   }
 }

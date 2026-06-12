@@ -17,12 +17,31 @@ begin
     create type employee_status as enum ('pending', 'approved', 'rejected');
   end if;
   if not exists (select 1 from pg_type where typname = 'order_status') then
-    create type order_status as enum ('placed', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded');
+    create type order_status as enum ('pending_payment', 'placed', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded');
   end if;
   if not exists (select 1 from pg_type where typname = 'product_type') then
     create type product_type as enum ('saree', 'jewellery');
   end if;
 end $$;
+
+-- Add pending_payment to order_status on databases created before this value existed.
+do $$
+begin
+  if not exists (
+    select 1 from pg_enum e
+    join pg_type t on e.enumtypid = t.oid
+    where t.typname = 'order_status' and e.enumlabel = 'pending_payment'
+  ) then
+    alter type order_status add value 'pending_payment' before 'placed';
+  end if;
+end $$;
+
+-- Cancel ghost checkouts: Razorpay opened but never paid (legacy status was placed).
+update orders
+set status = 'cancelled', updated_at = now()
+where status = 'placed'
+  and razorpay_payment_id is null
+  and razorpay_order_id is not null;
 
 -- Migrate legacy product_type values on pre-existing databases.
 -- 'dress' has been retired; any existing dress rows are remapped to 'saree'
