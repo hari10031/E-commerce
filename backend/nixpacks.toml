@@ -1,0 +1,9 @@
+# Dokploy / Nixpacks — backend must compile TypeScript before start.
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm start"

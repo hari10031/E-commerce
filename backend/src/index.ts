@@ -88,11 +88,20 @@ app.use(notFound)
 app.use(errorHandler)
 
 const PORT = Number.parseInt(process.env.PORT ?? '4000', 10)
+const HOST = process.env.HOST ?? '0.0.0.0'
 
-const server = app.listen(PORT)
+const server = app.listen(PORT, HOST)
 
 server.once('listening', () => {
-  logger.info(`Backend running on http://localhost:${PORT}`)
+  logger.info(
+    {
+      host: HOST,
+      port: PORT,
+      nodeEnv: process.env.NODE_ENV ?? 'development',
+      supabase: process.env.SUPABASE_URL ? 'configured' : 'missing',
+    },
+    `Backend running on http://${HOST}:${PORT}`
+  )
 })
 
 server.on('error', (err: NodeJS.ErrnoException) => {

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "prestart": "node scripts/ensure-dist.js",
     "start": "node dist/index.js",
     "start:cluster": "node dist/cluster.js",
     "check:integrations": "tsx scripts/check-integrations.ts",
@@ -34,7 +35,8 @@
     "razorpay": "^2.9.5",
     "sharp": "^0.33.5",
     "twilio": "^5.3.5",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "typescript": "^5.6.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -47,7 +49,6 @@
     "@types/node": "^22.7.0",
     "@types/uuid": "^10.0.0",
     "pino-pretty": "^13.0.0",
-    "tsx": "^4.19.1",
-    "typescript": "^5.6.3"
+    "tsx": "^4.19.1"
   }
 }

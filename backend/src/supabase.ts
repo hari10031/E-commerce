@@ -6,14 +6,11 @@ import { createClient } from '@supabase/supabase-js'
 // Load `.env` before reading `process.env`. With `tsx`, `import 'dotenv/config'` in
 // `index.ts` can run *after* route modules are evaluated, so route imports may load
 // this file first — load env here so variables are always available.
+// Dokploy/Docker inject env vars directly — skip missing or empty .env files.
 const envPaths = [join(process.cwd(), '.env'), join(__dirname, '..', '.env')]
 for (const envPath of envPaths) {
   if (!existsSync(envPath)) continue
-  if (statSync(envPath).size === 0) {
-    throw new Error(
-      `backend env file is empty: ${envPath}\nSave your variables to this file (or copy from .env.example), then restart.`
-    )
-  }
+  if (statSync(envPath).size === 0) continue
   config({ path: envPath })
   break
 }
