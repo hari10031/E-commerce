@@ -3,23 +3,33 @@ import sharp from 'sharp'
 import { supabase } from '../supabase'
 import { toCdnUrl } from '../utils/cdnUrl'
 
+export type ImageFrame = 'hero' | 'detail'
+
 export async function uploadImage(
   buffer: Buffer,
   originalName: string,
-  bucket: 'product-images' | 'category-images'
+  bucket: 'product-images' | 'category-images',
+  frame: ImageFrame = 'hero',
+  preframed = false
 ): Promise<string> {
   const stem = originalName.replace(/\s+/g, '-').replace(/\.[^.]+$/, '') || 'image'
   const filename = `${Date.now()}-${stem}-${randomUUID()}.webp`
 
   const pipeline = sharp(buffer)
 
-  // Product catalog: center-crop to 3:4 portrait (Myntra-style consistency)
   const optimized =
     bucket === 'product-images'
-      ? await pipeline
-          .resize(1200, 1600, { fit: 'cover', position: 'centre' })
-          .webp({ quality: 85 })
-          .toBuffer()
+      ? frame === 'hero'
+        ? preframed
+          ? await pipeline.webp({ quality: 85 }).toBuffer()
+          : await pipeline
+              .resize(1200, 1600, { fit: 'cover', position: 'centre' })
+              .webp({ quality: 85 })
+              .toBuffer()
+        : await pipeline
+            .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 85 })
+            .toBuffer()
       : await pipeline
           .resize({ width: 1200, withoutEnlargement: true })
           .webp({ quality: 85 })

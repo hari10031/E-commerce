@@ -326,7 +326,7 @@ export const getCategoryInventory = () => apiFetch('/analytics/category-inventor
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
-export const uploadImage = async (source, bucket = 'product-images') => {
+export const uploadImage = async (source, bucket = 'product-images', frame = 'hero', preframed = false) => {
   const formData = new FormData();
 
   if (Platform.OS === 'web' && source && typeof source === 'object' && source.file) {
@@ -342,6 +342,8 @@ export const uploadImage = async (source, bucket = 'product-images') => {
   }
 
   formData.append('bucket', bucket);
+  formData.append('frame', frame);
+  formData.append('preframed', preframed ? 'true' : 'false');
 
   return apiFetch('/upload/image', { method: 'POST', body: formData });
 };

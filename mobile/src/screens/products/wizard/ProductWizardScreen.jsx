@@ -49,6 +49,7 @@ const PHOTO_BLOCKS = {
 
 const HERO_SLOT_BY_TYPE = {
   saree: 'Saree image',
+  jewellery: 'Full Piece',
 };
 
 function isHeroSlot(productType, label) {
@@ -381,7 +382,7 @@ export default function ProductWizardScreen({ route, navigation }) {
   const imageFor = (color, label) =>
     wizardData.images.find((i) => i.color === color && i.label === label);
 
-  const finalizePhotoUpload = async (color, label, asset) => {
+  const finalizePhotoUpload = async (color, label, asset, { preframed = false } = {}) => {
     const existing = imageFor(color, label);
     if (existing?.uri) revokeBlobUri(existing.uri);
 
@@ -391,16 +392,31 @@ export default function ProductWizardScreen({ route, navigation }) {
     const uploadSource = Platform.OS === 'web' && asset.file
       ? { file: asset.file, name: asset.file.name, uri: asset.uri }
       : asset.uri;
+    const frame = isHeroSlot(t, label) ? 'hero' : 'detail';
+
+    const optimistic = [
+      ...wizardData.images.filter((i) => !(i.color === color && i.label === label)),
+      { color, label, uri: previewUri, uploadedUrl: null, generatedUrl: null, existing: false },
+    ];
+    update({ images: optimistic });
     setUploading(`${color}::${label}`);
 
     try {
-      const { url } = await uploadImage(uploadSource);
-      const newImages = [
-        ...wizardData.images.filter((i) => !(i.color === color && i.label === label)),
-        { color, label, uri: previewUri, uploadedUrl: url, generatedUrl: null, existing: false },
-      ];
-      update({ images: newImages });
+      const { url } = await uploadImage(uploadSource, 'product-images', frame, preframed);
+      setWizardData((prev) => ({
+        ...prev,
+        images: prev.images.map((i) =>
+          i.color === color && i.label === label ? { ...i, uploadedUrl: url } : i
+        ),
+      }));
       autoGenerateContent(color, url);
+    } catch (err) {
+      setWizardData((prev) => ({
+        ...prev,
+        images: prev.images.filter((i) => !(i.color === color && i.label === label)),
+      }));
+      revokeBlobUri(previewUri);
+      Alert.alert('Upload failed', err?.message || 'Could not upload photo. Try again.');
     } finally {
       setUploading(null);
     }
@@ -429,12 +445,11 @@ export default function ProductWizardScreen({ route, navigation }) {
         }
       }
 
-      // Native: single picker launch with system 3:4 crop editor (avoids Android
-      // ActivityResultLauncher crash from re-launching picker inside Alert callbacks).
+      const hero = isHeroSlot(t, label);
       const options = {
         mediaTypes: ['images'],
         quality: 0.85,
-        ...(Platform.OS !== 'web' ? { allowsEditing: true, aspect: [3, 4] } : {}),
+        ...(Platform.OS !== 'web' && hero ? { allowsEditing: true } : {}),
       };
       const result = source === 'camera'
         ? await ImagePicker.launchCameraAsync(options)
@@ -443,7 +458,7 @@ export default function ProductWizardScreen({ route, navigation }) {
       if (result.canceled) return;
       const asset = result.assets[0];
 
-      if (Platform.OS === 'web' && isHeroSlot(t, label)) {
+      if (Platform.OS === 'web' && hero) {
         openWebHeroPreview(color, label, asset);
         return;
       }
@@ -1511,14 +1526,14 @@ cachePolicy="memory-disk"
             revokeBlobUri(previewUri);
           }
           setPhotoPreview(null);
-          finalizePhotoUpload(color, label, asset);
+          finalizePhotoUpload(color, label, asset, { preframed: false });
         }}
         onCroppedReady={({ color, label, asset, previewUri }) => {
           if (photoPreview?.previewUri?.startsWith('blob:')) {
             revokeBlobUri(photoPreview.previewUri);
           }
           setPhotoPreview(null);
-          finalizePhotoUpload(color, label, asset);
+          finalizePhotoUpload(color, label, asset, { preframed: true });
         }}
       />
 

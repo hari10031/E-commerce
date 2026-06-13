@@ -28,8 +28,23 @@ router.post(
       return res.status(400).json({ error: 'Invalid bucket' })
     }
 
-    const url = await uploadImage(req.file.buffer, req.file.originalname, bucket)
-    res.json({ url })
+    const frameRaw = req.body.frame as string | undefined
+    const frame = frameRaw === 'detail' ? 'detail' : 'hero'
+    const preframed = req.body.preframed === 'true' || req.body.preframed === '1'
+
+    try {
+      const url = await uploadImage(
+        req.file.buffer,
+        req.file.originalname,
+        bucket,
+        frame,
+        preframed
+      )
+      res.json({ url })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed'
+      res.status(500).json({ error: message })
+    }
   }
 )
 

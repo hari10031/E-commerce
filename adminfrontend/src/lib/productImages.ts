@@ -6,6 +6,8 @@ export interface ColorImagePair {
   slot: string;
   /** Preview URL — prefers AI shot when present. */
   imageUrl: string;
+  /** Local blob URL for instant slot preview while uploading. */
+  previewUrl?: string;
   uploadedUrl?: string;
   generatedUrl?: string;
   aiGenerated?: boolean;

@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, Pressable, Image, Modal, ActivityIndicator, Platform,
+  View, Text, Pressable, Image, Modal, ActivityIndicator, Platform, Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import {
   FULL_CROP,
   clampCrop,
@@ -198,18 +197,21 @@ export default function HeroPhotoPreviewModal({
   onUseOriginal,
   onCroppedReady,
 }) {
-  const [cropping, setCropping] = useState(false);
+  const [cropping, setCropping] = useState(true);
   const [crop, setCrop] = useState(FULL_CROP);
   const [layout, setLayout] = useState(null);
   const [natural, setNatural] = useState({ w: 0, h: 0 });
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
   const [applying, setApplying] = useState(false);
 
+  const imageReady = natural.w > 0 && natural.h > 0;
+
   useEffect(() => {
     if (!photoPreview) {
-      setCropping(false);
+      setCropping(true);
       setCrop(FULL_CROP);
       setLayout(null);
+      setNatural({ w: 0, h: 0 });
       return;
     }
     if (photoPreview.previewUri) {
@@ -222,25 +224,15 @@ export default function HeroPhotoPreviewModal({
   }, [photoPreview]);
 
   useEffect(() => {
-    if (!containerSize.w) return;
-    const imgLayout = natural.w
-      ? containLayout(containerSize.w, containerSize.h, natural.w, natural.h)
-      : { x: 0, y: 0, width: containerSize.w, height: containerSize.h, scale: 1 };
-    setLayout(imgLayout);
-  }, [natural, containerSize]);
-
-  const startCrop = () => {
-    setCrop(FULL_CROP);
-    setCropping(true);
-  };
-
-  const cancelCrop = () => {
-    setCropping(false);
-    setCrop(FULL_CROP);
-  };
+    if (!containerSize.w || !imageReady) {
+      setLayout(null);
+      return;
+    }
+    setLayout(containLayout(containerSize.w, containerSize.h, natural.w, natural.h));
+  }, [natural, containerSize, imageReady]);
 
   const applyCrop = async () => {
-    if (!photoPreview?.previewUri) return;
+    if (!photoPreview?.previewUri || !imageReady) return;
     setApplying(true);
     try {
       const { file, name, uri } = await buildCroppedHeroAsset(photoPreview.previewUri, crop);
@@ -256,12 +248,45 @@ export default function HeroPhotoPreviewModal({
         previewUri: uri,
       });
     } catch (err) {
+      const message = err.message || 'Could not crop image';
       if (Platform.OS === 'web') {
-        window.alert(err.message || 'Could not crop image');
+        window.alert(message);
+      } else {
+        Alert.alert('Crop failed', message);
       }
     } finally {
       setApplying(false);
     }
+  };
+
+  const useFullPhoto = async () => {
+    if (Platform.OS === 'web' && photoPreview?.previewUri && imageReady) {
+      setApplying(true);
+      try {
+        const { file, name, uri } = await buildCroppedHeroAsset(
+          photoPreview.previewUri,
+          FULL_CROP
+        );
+        onCroppedReady({
+          color: photoPreview.color,
+          label: photoPreview.label,
+          asset: {
+            ...photoPreview.asset,
+            file,
+            uri,
+            name,
+          },
+          previewUri: uri,
+        });
+      } catch (err) {
+        const message = err.message || 'Could not prepare photo';
+        window.alert(message);
+      } finally {
+        setApplying(false);
+      }
+      return;
+    }
+    onUseOriginal();
   };
 
   const onContainerLayout = useCallback((e) => {
@@ -288,6 +313,10 @@ export default function HeroPhotoPreviewModal({
             {photoPreview.label}
           </Text>
 
+          <Text className="text-xs mb-3" style={{ color: '#6b7280' }}>
+            Drag handles to frame the product. We fit your pick to the shop shape automatically.
+          </Text>
+
           {photoPreview.previewUri && (
             <View
               className="rounded-xl mb-3"
@@ -311,28 +340,16 @@ export default function HeroPhotoPreviewModal({
                 }}
               />
 
-              {!cropping && (
-                <Pressable
-                  onPress={startCrop}
-                  className="absolute items-center justify-center"
-                  style={{
-                    top: 10,
-                    right: 10,
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    borderWidth: 1,
-                    borderColor: '#fde8d0',
-                    zIndex: 5,
-                  }}
-                  accessibilityLabel="Crop photo"
+              {!imageReady && (
+                <View
+                  className="absolute inset-0 items-center justify-center"
+                  style={{ backgroundColor: 'rgba(254,247,240,0.85)' }}
                 >
-                  <Ionicons name="crop" size={22} color="#b91c1c" />
-                </Pressable>
+                  <ActivityIndicator size="small" color="#b91c1c" />
+                </View>
               )}
 
-              {cropping && layout && (
+              {cropping && layout && imageReady && (
                 <CropOverlay layout={layout} crop={crop} onCropChange={setCrop} />
               )}
             </View>
@@ -342,30 +359,32 @@ export default function HeroPhotoPreviewModal({
             <>
               <Pressable
                 onPress={applyCrop}
-                disabled={applying}
+                disabled={applying || !imageReady}
                 className="py-3 rounded-xl items-center mb-2"
-                style={{ backgroundColor: '#b91c1c', opacity: applying ? 0.7 : 1 }}
+                style={{
+                  backgroundColor: '#b91c1c',
+                  opacity: applying || !imageReady ? 0.7 : 1,
+                }}
               >
                 {applying ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text className="text-sm font-bold text-white">Apply</Text>
+                  <Text className="text-sm font-bold text-white">Use selection</Text>
                 )}
               </Pressable>
-              <Pressable onPress={cancelCrop} className="py-2.5 items-center">
-                <Text className="text-sm font-semibold" style={{ color: '#6b7280' }}>Back</Text>
+              <Pressable
+                onPress={useFullPhoto}
+                disabled={applying || !imageReady}
+                className="py-2.5 items-center"
+                style={{ opacity: applying || !imageReady ? 0.6 : 1 }}
+              >
+                <Text className="text-sm font-semibold" style={{ color: '#1f2937' }}>Use full photo</Text>
               </Pressable>
-            </>
-          ) : (
-            <>
-              <Pressable onPress={onUseOriginal} className="py-2.5">
-                <Text className="text-sm font-semibold" style={{ color: '#1f2937' }}>Use photo</Text>
-              </Pressable>
-              <Pressable onPress={onClose} className="py-2.5">
+              <Pressable onPress={onClose} className="py-2.5 items-center">
                 <Text className="text-sm font-semibold" style={{ color: '#6b7280' }}>Cancel</Text>
               </Pressable>
             </>
-          )}
+          ) : null}
         </View>
       </Pressable>
     </Modal>

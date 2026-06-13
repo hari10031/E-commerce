@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import Cropper, { type Area } from 'react-easy-crop';
+import { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +10,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { cropImageFile } from '@/lib/cropImage';
+import { toast } from '@/components/ui/toast';
+import { FreeCropOverlay } from '@/components/products/FreeCropOverlay';
+import {
+  FULL_CROP,
+  buildCroppedHeroFile,
+  containLayout,
+  type NormCrop,
+} from '@/lib/heroImageCrop';
 
 interface HeroPhotoReviewModalProps {
   open: boolean;
@@ -29,11 +35,12 @@ export function HeroPhotoReviewModal({
   onConfirm,
 }: HeroPhotoReviewModalProps) {
   const [previewUrl, setPreviewUrl] = useState('');
-  const [mode, setMode] = useState<'review' | 'crop'>('review');
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
+  const [crop, setCrop] = useState<NormCrop>(FULL_CROP);
+  const [natural, setNatural] = useState({ w: 0, h: 0 });
+  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
   const [busy, setBusy] = useState(false);
+
+  const imageReady = natural.w > 0 && natural.h > 0;
 
   useEffect(() => {
     if (!file) {
@@ -46,36 +53,42 @@ export function HeroPhotoReviewModal({
   }, [file]);
 
   useEffect(() => {
-    if (open) {
-      setMode('review');
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
-      setCroppedArea(null);
+    if (open && file) {
+      setCrop(FULL_CROP);
+      setNatural({ w: 0, h: 0 });
     }
   }, [open, file]);
 
-  const onCropComplete = useCallback((_area: Area, pixels: Area) => {
-    setCroppedArea(pixels);
-  }, []);
+  const layout =
+    imageReady && containerSize.w
+      ? containLayout(containerSize.w, containerSize.h, natural.w, natural.h)
+      : null;
 
-  const handleUseOriginal = async () => {
-    if (!file) return;
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setContainerSize({ w: width, h: height });
+    });
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [open, previewUrl]);
+
+  const finish = async (useCrop: NormCrop) => {
+    if (!file || !previewUrl || !imageReady) return;
     setBusy(true);
     try {
-      onConfirm(file);
+      const framed = await buildCroppedHeroFile(previewUrl, useCrop, file.name);
+      onConfirm(framed);
       onClose();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleApplyCrop = async () => {
-    if (!file || !croppedArea) return;
-    setBusy(true);
-    try {
-      const cropped = await cropImageFile(file, croppedArea);
-      onConfirm(cropped);
-      onClose();
+    } catch (err: unknown) {
+      toast.error(
+        'Could not prepare photo',
+        err instanceof Error ? err.message : 'Try another image.'
+      );
     } finally {
       setBusy(false);
     }
@@ -88,73 +101,61 @@ export function HeroPhotoReviewModal({
         if (!next) onClose();
       }}
     >
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{slotLabel}</DialogTitle>
           <DialogDescription>
-            {mode === 'review'
-              ? 'Use the full photo or optionally crop to a 3:4 listing frame.'
-              : 'Drag and zoom to frame your main product shot.'}
+            Drag handles to choose what stays in frame. We fit your selection to the shop listing
+            shape automatically — no fixed ratio while you crop.
           </DialogDescription>
         </DialogHeader>
 
-        {previewUrl && mode === 'review' && (
-          <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden bg-[#fef7f0] border border-amber-100">
+        {previewUrl && (
+          <div
+            ref={containerRef}
+            className="relative w-full rounded-xl overflow-hidden bg-[#fef7f0] border border-amber-100"
+            style={{ height: 400 }}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
-          </div>
-        )}
-
-        {previewUrl && mode === 'crop' && (
-          <div className="relative w-full h-72 rounded-xl overflow-hidden bg-neutral-900">
-            <Cropper
-              image={previewUrl}
-              crop={crop}
-              zoom={zoom}
-              aspect={3 / 4}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onCropComplete}
+            <img
+              src={previewUrl}
+              alt="Crop preview"
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                setNatural({ w: img.naturalWidth, h: img.naturalHeight });
+              }}
             />
+            {!imageReady && (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-amber-800">
+                Loading photo…
+              </div>
+            )}
+            {layout && imageReady && (
+              <FreeCropOverlay layout={layout} crop={crop} onCropChange={setCrop} />
+            )}
           </div>
         )}
 
-        {mode === 'crop' && (
-          <input
-            type="range"
-            min={1}
-            max={3}
-            step={0.05}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="w-full accent-amber-600"
-            aria-label="Zoom"
-          />
-        )}
+        <p className="text-xs text-gray-500">
+          Tip: frame the main product shot, then choose Use selection or Use full photo. Detail
+          slots like border or pallu skip this step.
+        </p>
 
         <DialogFooter className="gap-2 sm:gap-2">
-          {mode === 'review' ? (
-            <>
-              <Button variant="outline" onClick={onClose} disabled={busy}>
-                Cancel
-              </Button>
-              <Button variant="outline" onClick={() => setMode('crop')} disabled={busy}>
-                Adjust crop (3:4)
-              </Button>
-              <Button onClick={handleUseOriginal} disabled={busy}>
-                Use photo
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" onClick={() => setMode('review')} disabled={busy}>
-                Back
-              </Button>
-              <Button onClick={handleApplyCrop} disabled={busy || !croppedArea}>
-                Apply crop
-              </Button>
-            </>
-          )}
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => finish(FULL_CROP)}
+            disabled={busy || !file || !imageReady}
+          >
+            Use full photo
+          </Button>
+          <Button onClick={() => finish(crop)} disabled={busy || !file || !imageReady}>
+            {busy ? 'Saving…' : 'Use selection'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

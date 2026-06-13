@@ -19,9 +19,10 @@ export function photoBlocksFor(type: ProductType): string[] {
   return PHOTO_BLOCKS[type] ?? PHOTO_BLOCKS.saree;
 }
 
-/** Hero slot — optional 3:4 crop offered here only (saree main shot). */
+/** Hero slot — free crop in UI; output auto-fits 3:4 listing frame. */
 export const HERO_PHOTO_SLOT: Partial<Record<ProductType, string>> = {
   saree: 'Saree image',
+  jewellery: 'Full Piece',
 };
 
 export function isHeroPhotoSlot(type: ProductType, slot: string): boolean {
