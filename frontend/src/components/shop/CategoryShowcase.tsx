@@ -5,6 +5,7 @@ import Image from 'next/image'
 import type { Product, Category } from '@/types'
 import { Sparkles, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { ProductCard } from './ProductCard'
 
 interface CategoryShowcaseProps {
   products: Product[]
@@ -80,7 +81,7 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
             </Link>
           </div>
 
-          {/* Subcategory Slider — horizontal scroll, one row */}
+          {/* Subcategory slider, or featured products when categories API is empty */}
           {subCats.length > 0 ? (
             <div className="flex gap-5 overflow-x-auto no-scrollbar pb-3 snap-x snap-mandatory min-w-0">
               {subCats.map((cat) => {
@@ -120,15 +121,27 @@ export function CategoryShowcase({ products, categories }: CategoryShowcaseProps
                 )
               })}
             </div>
-          ) : (
-            <div className="bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 p-12 text-center flex flex-col items-center">
-              <span className="text-3xl mb-3">🌸</span>
-              <h4 className="text-base font-semibold text-gray-800">Coming Soon</h4>
-              <p className="text-xs text-gray-500 mt-1 max-w-xs">
-                We are currently curating and handpicking the finest listings for this category. Check back shortly!
-              </p>
-            </div>
-          )}
+          ) : (() => {
+            const featured = products.filter((p) => p.type === typeKey).slice(0, 8)
+            if (featured.length > 0) {
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                  {featured.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )
+            }
+            return (
+              <div className="bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 p-12 text-center flex flex-col items-center">
+                <span className="text-3xl mb-3">🌸</span>
+                <h4 className="text-base font-semibold text-gray-800">Coming Soon</h4>
+                <p className="text-xs text-gray-500 mt-1 max-w-xs">
+                  We are currently curating and handpicking the finest listings for this category. Check back shortly!
+                </p>
+              </div>
+            )
+          })()}
         </div>
       </section>
     )

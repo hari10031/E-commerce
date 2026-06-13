@@ -1,9 +1,28 @@
-const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+const DEFAULT_API = 'http://localhost:4000'
+
+/** Strip accidental comma-separated env values; pick best candidate per runtime. */
+function resolveApiUrl(raw: string | undefined, fallback: string): string {
+  const candidates = (raw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (candidates.length === 0) return fallback
+  if (typeof window === 'undefined') {
+    const loopback = candidates.find(
+      (u) => u.includes('127.0.0.1') || u.includes('localhost')
+    )
+    return loopback ?? candidates[0] ?? fallback
+  }
+  const https = candidates.find((u) => u.startsWith('https://'))
+  return https ?? candidates[0] ?? fallback
+}
+
+const PUBLIC_API = resolveApiUrl(process.env.NEXT_PUBLIC_API_URL, DEFAULT_API)
 
 /** SSR on same EC2 as API — use loopback to skip nginx/SSL hairpin. */
 function apiBase(): string {
   if (typeof window === 'undefined') {
-    return process.env.API_URL ?? PUBLIC_API
+    return resolveApiUrl(process.env.API_URL, PUBLIC_API)
   }
   return PUBLIC_API
 }
