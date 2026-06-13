@@ -24,7 +24,7 @@ Production-readiness pass completed across mobile, backend, customer frontend, a
 |------|--------|-------|
 | **Razorpay create** | `razorpay_order_id` not stored on internal order; coupon burned at create | `razorpay_order_id` saved at create; coupon usage moved to **verify** only |
 | **Razorpay verify** | No idempotency; no amount check; stock could decrement twice | Idempotent (`status='placed'` guard); amount cross-check vs Razorpay order; returns `alreadyVerified` on replay |
-| **Stock RPC** | `decrement_variant_stock` floored at 0 → silent oversell | Raises `Insufficient stock` when `quantity < qty` — **run updated function in Supabase SQL Editor** from `supabase_schema.sql` |
+| **Stock RPC** | `decrement_variant_stock` floored at 0 → silent oversell | Raises `Insufficient stock` when `quantity < qty` — **run updated function in Supabase SQL Editor** from `backend/supabase_migrations/supabase_schema.sql` |
 | **Gemini image** | Quota consumed before generation; no timeout; text refusals hidden | Quota refunded on failure; 60s timeout; Gemini refusal text surfaced |
 | **Gemini content** | Raw multipart uploads; quota before success | `optimizeSourceImage` on uploads; quota refunded on failure; 15s fetch timeout on URLs |
 | **Multer errors** | Oversize/MIME → generic 500 | 413 / 415 via global error handler |
@@ -62,7 +62,7 @@ Production-readiness pass completed across mobile, backend, customer frontend, a
 
 ## Client action required
 
-1. **Supabase:** Run the updated `decrement_variant_stock` function from `backend/supabase_schema.sql` in the SQL Editor.
+1. **Supabase:** Run the updated `decrement_variant_stock` function from `backend/supabase_migrations/supabase_schema.sql` in the SQL Editor.
 2. **Rebuild mobile APK:** `cd mobile && eas build --profile production --platform android`
 3. **Verify integrations:** `cd backend && npm run check:integrations`
 4. **Type-check:** `npx tsc --noEmit` in `backend`, `frontend`, `adminfrontend`

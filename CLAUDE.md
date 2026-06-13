@@ -70,12 +70,12 @@ Thin route files in `src/routes/` wire HTTP verbs to controller functions in `sr
 
 ### Database
 
-Run `supabase_schema.sql` in the Supabase SQL Editor before first start. Contains tables, all indexes, RLS, public storage buckets, and three RPC functions:
+Run `backend/supabase_migrations/supabase_schema.sql` in the Supabase SQL Editor before first start. Contains tables, all indexes, RLS, public storage buckets, and three RPC functions:
 - `decrement_variant_stock(variant_id, qty)` — atomic stock decrement; prevents overselling under concurrent orders
 - `daily_sales_last_30_days()` — pre-aggregated revenue data for the analytics chart
 - `increment_coupon_usage(code)` — atomic coupon counter
 
-`supabase_schema.sql` is the single source of truth — there is no separate migrations folder. It also seeds 3 top-level "type root" categories (slugs `saree`/`dress`/`jewellery`); real categories are nested under them via `parent_id`, and the apps map a product type to its root category by slug.
+`backend/supabase_migrations/supabase_schema.sql` is the single source of truth (idempotent — safe to re-run on existing databases). It also seeds 3 top-level "type root" categories (slugs `saree`/`dress`/`jewellery`); real categories are nested under them via `parent_id`, and the apps map a product type to its root category by slug.
 
 `product_type` enum values are `saree | dress | jewellery`. Sizes are type-driven: Saree has none (colors only), Dress is S–XXL, Jewellery is gram weights.
 

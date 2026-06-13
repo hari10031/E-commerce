@@ -18,10 +18,11 @@ const razorpay = new Razorpay({
 
 const PAYABLE_STATUSES: OrderStatus[] = ['pending_payment', 'placed']
 
-async function cancelUserPendingPayments(userId: string) {
+// Remove unfinished checkout drafts — never expose them as cancelled orders to customers.
+async function deleteUserPendingPayments(userId: string) {
   await supabase
     .from('orders')
-    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .delete()
     .eq('user_id', userId)
     .eq('status', 'pending_payment')
 }
@@ -45,7 +46,7 @@ export async function createRazorpayOrder(req: AuthRequest, res: Response) {
   const { address, coupon } = req.body
   const userId = req.user!.id
 
-  await cancelUserPendingPayments(userId)
+  await deleteUserPendingPayments(userId)
 
   const { data: cart } = await supabase
     .from('cart_items')
@@ -156,10 +157,7 @@ export async function createRazorpayOrder(req: AuthRequest, res: Response) {
       receipt: order.id,
     })
   } catch (err) {
-    await supabase
-      .from('orders')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-      .eq('id', order.id)
+    await supabase.from('orders').delete().eq('id', order.id)
     const msg = err instanceof Error ? err.message : 'Failed to create Razorpay order'
     return res.status(502).json({ error: msg })
   }
@@ -169,10 +167,7 @@ export async function createRazorpayOrder(req: AuthRequest, res: Response) {
     .update({ razorpay_order_id: rzpOrder.id, updated_at: new Date().toISOString() })
     .eq('id', order.id)
   if (bindErr) {
-    await supabase
-      .from('orders')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-      .eq('id', order.id)
+    await supabase.from('orders').delete().eq('id', order.id)
     return res.status(500).json({ error: 'Failed to bind payment order' })
   }
 
@@ -317,7 +312,7 @@ export async function verifyPayment(req: AuthRequest, res: Response) {
   res.json({ success: true, order })
 }
 
-// Customer closed Razorpay without paying — cancel the draft checkout order.
+// Customer closed Razorpay without paying — discard the draft checkout order.
 export async function abandonRazorpayOrder(req: AuthRequest, res: Response) {
   const { order_id } = req.body
   if (!order_id) return res.status(400).json({ error: 'order_id is required' })
@@ -339,7 +334,7 @@ export async function abandonRazorpayOrder(req: AuthRequest, res: Response) {
 
   const { error } = await supabase
     .from('orders')
-    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .delete()
     .eq('id', order_id)
     .eq('user_id', req.user!.id)
     .eq('status', 'pending_payment')
@@ -360,7 +355,11 @@ export async function getOrders(req: AuthRequest, res: Response) {
   // Customers see only their orders; staff may scope to one customer via userId.
   if (req.user!.role === 'customer') {
     query = query.eq('user_id', req.user!.id)
-    if (!status) query = query.neq('status', 'pending_payment')
+    if (!status) {
+      query = query.neq('status', 'pending_payment')
+      // Hide payment-abandoned drafts that were marked cancelled before this fix.
+      query = query.or('status.neq.cancelled,razorpay_payment_id.not.is.null')
+    }
   } else if (userId) {
     query = query.eq('user_id', userId as string)
   }
@@ -393,6 +392,13 @@ export async function getOrderById(req: AuthRequest, res: Response) {
   const { data, error } = await query.single()
   if (error) return res.status(404).json({ error: 'Order not found' })
   if (req.user!.role === 'customer' && data.status === 'pending_payment') {
+    return res.status(404).json({ error: 'Order not found' })
+  }
+  if (
+    req.user!.role === 'customer' &&
+    data.status === 'cancelled' &&
+    !data.razorpay_payment_id
+  ) {
     return res.status(404).json({ error: 'Order not found' })
   }
   res.json(data)

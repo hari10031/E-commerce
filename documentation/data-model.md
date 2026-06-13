@@ -1,10 +1,9 @@
 # Data Model
 
-The database is **Supabase Postgres**. `backend/supabase_schema.sql` is the
+The database is **Supabase Postgres**. `backend/supabase_migrations/supabase_schema.sql` is the
 single source of truth — tables, indexes, RLS, storage buckets, RPC functions,
-and the seed of the three "type root" categories. There is no separate
-migrations folder; the file is idempotent (`create ... if not exists`,
-`alter table ... add column if not exists`).
+and the seed of the three "type root" categories. The file is idempotent (`create ... if not exists`,
+`alter table ... add column if not exists`) and safe to re-run on existing databases.
 
 ## 1. Entity-relationship diagram
 

@@ -36,7 +36,7 @@ SHIPROCKET_RETRY_MAX=3                            # retries for transient API er
 
 ## Database
 
-Added to the `orders` table (see `supabase_schema.sql`):
+Added to the `orders` table (see `backend/supabase_migrations/supabase_schema.sql`):
 
 | Column | Type | Purpose |
 |---|---|---|
@@ -52,7 +52,7 @@ Added to the `orders` table (see `supabase_schema.sql`):
 
 `create index idx_orders_awb on orders(shiprocket_awb)` — fast webhook lookups.
 
-Run `supabase_schema.sql` in the Supabase SQL Editor; the `alter table ... add column if not
+Run `backend/supabase_migrations/supabase_schema.sql` in the Supabase SQL Editor; the `alter table ... add column if not
 exists` statements are idempotent.
 
 ## Order flow
