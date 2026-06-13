@@ -353,13 +353,10 @@ export async function getOrders(req: AuthRequest, res: Response) {
     .range((+page - 1) * +limit, +page * +limit - 1)
 
   // Customers see only their orders; staff may scope to one customer via userId.
-  if (req.user!.role === 'customer') {
+  const isCustomer = req.user!.role === 'customer'
+  if (isCustomer) {
     query = query.eq('user_id', req.user!.id)
-    if (!status) {
-      query = query.neq('status', 'pending_payment')
-      // Hide payment-abandoned drafts that were marked cancelled before this fix.
-      query = query.or('status.neq.cancelled,razorpay_payment_id.not.is.null')
-    }
+    if (!status) query = query.neq('status', 'pending_payment')
   } else if (userId) {
     query = query.eq('user_id', userId as string)
   }
@@ -369,8 +366,17 @@ export async function getOrders(req: AuthRequest, res: Response) {
   const { data, error, count } = await query
   if (error) return res.status(500).json({ error: error.message })
 
+  // Hide payment-abandoned drafts that were marked cancelled before the delete-on-abandon fix.
+  // A real cancelled order always has a razorpay_payment_id (set in verifyPayment).
+  const filtered =
+    isCustomer && !status
+      ? (data ?? []).filter(
+          (o) => !(o.status === 'cancelled' && !o.razorpay_payment_id)
+        )
+      : data
+
   res.json({
-    data,
+    data: filtered,
     count,
     total: count,
     page: +page,
